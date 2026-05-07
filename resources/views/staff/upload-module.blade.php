@@ -78,14 +78,12 @@
                 <div class="form-group">
                     <label for="content_file">Upload Content / File</label>
                     <input type="file" id="content_file" name="content_file">
-                </div>
-
-                <div class="form-group">
+                <p class="text-muted" style="margin-top:0.5rem; font-size:0.9rem;">Allowed file types: .pdf, .doc, .docx, .ppt, .pptx, .mp4, .mov, .jpg, .jpeg, .png, .gif. Max 50MB.</p>
                     <label for="content_type">Content Type</label>
                     <select id="content_type" name="content_type" required>
+                        <option value="document">Document (.pdf, .doc, .docx, .ppt, .pptx)</option>
                         <option value="video">Video (.mp4, .mov)</option>
-                        <option value="document">Document (.pdf, .doc, .ppt)</option>
-                        <option value="link">External Link</option>
+                        <option value="image">Image (.jpg, .jpeg, .png, .gif)</option>
                     </select>
                 </div>
             </div>

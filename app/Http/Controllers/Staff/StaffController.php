@@ -4,11 +4,12 @@ namespace App\Http\Controllers\Staff;
 
 use App\Http\Controllers\Controller;
 use App\Models\Certification;
-use App\Models\Enrollment;
+use App\Models\EnrollmentRequest;
 use App\Models\Lesson;
 use App\Models\Module;
 use App\Models\Question;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class StaffController extends Controller
 {
@@ -26,11 +27,23 @@ class StaffController extends Controller
         $uploadedModules = Module::where('uploaded_by_staff_id', session('user_id'))
             ->count();
 
+        $recentLessons = Lesson::where('created_by_staff_id', session('user_id'))
+            ->latest()
+            ->take(5)
+            ->get();
+
+        $recentModules = Module::where('uploaded_by_staff_id', session('user_id'))
+            ->latest()
+            ->take(5)
+            ->get();
+
         return view('staff.dashboard', compact(
             'certifications',
             'assignedCertifications',
             'uploadedLessons',
-            'uploadedModules'
+            'uploadedModules',
+            'recentLessons',
+            'recentModules'
         ));
     }
 
@@ -89,10 +102,13 @@ class StaffController extends Controller
             'certification_id' => 'required|exists:certifications,id',
             'lesson_title' => 'required|string|max:255',
             'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'content_type' => 'required|string',
-            'content_file' => 'nullable|file|mimes:pdf,doc,docx,ppt,pptx,mp4,mov|max:20480',
-            'duration_weeks' => 'required|integer|min:1',
+            'description' => 'nullable|string|max:1000',
+            'content_type' => 'required|in:document,video,image',
+            'content_file' => 'required|file|mimes:pdf,doc,docx,ppt,pptx,mp4,mov,jpg,jpeg,png,gif|max:51200',
+            'duration_weeks' => 'required|integer|min:1|max:52',
+        ], [
+            'content_file.required' => 'Please upload a file for the selected content type.',
+            'content_file.mimes' => 'Supported file types are PDF, DOCX, PPT, MP4, MOV, JPG, PNG, GIF.',
         ]);
 
         $lesson = Lesson::firstOrCreate(
@@ -109,7 +125,11 @@ class StaffController extends Controller
         $filePath = null;
 
         if ($request->hasFile('content_file')) {
-            $filePath = $request->file('content_file')->store('modules', 'public');
+            $file = $request->file('content_file');
+            $filename = Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME));
+            $extension = $file->getClientOriginalExtension();
+            $storedName = $filename . '-' . time() . '.' . $extension;
+            $filePath = $file->storeAs('modules', $storedName, 'public');
         }
 
         Module::create([
@@ -178,17 +198,17 @@ class StaffController extends Controller
             ->with('success', 'Question added successfully.');
     }
 
-    public function enrollments()
-    {
-        $staffLessonCertIds = Lesson::where('created_by_staff_id', session('user_id'))
-            ->pluck('certification_id')
-            ->unique();
+   public function enrollments()
+{
+    $staffLessonCertIds = Lesson::where('created_by_staff_id', session('user_id'))
+        ->pluck('certification_id')
+        ->unique();
 
-        $enrollments = Enrollment::with(['user', 'certification'])
-            ->whereIn('certification_id', $staffLessonCertIds)
-            ->latest()
-            ->get();
+    $enrollments = EnrollmentRequest::with(['user', 'certification'])
+        ->whereIn('certification_id', $staffLessonCertIds)
+        ->latest('requested_at')
+        ->get();
 
-        return view('staff.enrollments', compact('enrollments'));
-    }
+    return view('staff.enrollments', compact('enrollments'));
+}
 }
