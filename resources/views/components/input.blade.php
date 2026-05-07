@@ -1,4 +1,4 @@
-@props(['label', 'name', 'type' => 'text', 'placeholder' => '', 'required' => false])
+@props(['label', 'name', 'type' => 'text', 'placeholder' => '', 'required' => false, 'value' => null])
 
 <div class="form-group">
     <label for="{{ $name }}">{{ $label }} @if($required) <span class="text-danger">*</span> @endif</label>
@@ -6,7 +6,7 @@
         type="{{ $type }}" 
         id="{{ $name }}" 
         name="{{ $name }}" 
-        value="{{ old($name) }}"
+        value="{{ old($name, $value) }}"
         placeholder="{{ $placeholder }}"
         {{ $required ? 'required' : '' }}
         {{ $attributes->merge(['class' => 'form-control']) }}

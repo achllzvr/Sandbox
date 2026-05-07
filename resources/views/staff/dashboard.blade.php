@@ -62,4 +62,38 @@
             <p>No active certifications available yet.</p>
         @endif
     </div>
+
+    <div class="grid-2 mt-4">
+        <div class="card">
+            <h2>Recent Lessons</h2>
+            @if($recentLessons->isEmpty())
+                <p class="text-muted">No lessons created yet.</p>
+            @else
+                <ul class="list-clean">
+                    @foreach($recentLessons as $lesson)
+                        <li>
+                            <strong>{{ $lesson->title }}</strong>
+                            <p class="text-muted">{{ $lesson->certification->title ?? 'Certification not found' }}</p>
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
+        </div>
+
+        <div class="card">
+            <h2>Recent Modules</h2>
+            @if($recentModules->isEmpty())
+                <p class="text-muted">No modules uploaded yet.</p>
+            @else
+                <ul class="list-clean">
+                    @foreach($recentModules as $module)
+                        <li>
+                            <strong>{{ $module->title }}</strong>
+                            <p class="text-muted">{{ $module->lesson->title ?? 'Lesson not found' }}</p>
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
+        </div>
+    </div>
 @endsection

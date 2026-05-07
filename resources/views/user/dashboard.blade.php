@@ -105,6 +105,33 @@
         @endif
     </div>
 
+    <div class="grid-2 mt-4">
+        <div class="card">
+            <h2>Recent Enrollments</h2>
+            @if($recentEnrollments->isEmpty())
+                <p class="text-muted">You have not enrolled in any certifications yet.</p>
+            @else
+                <ul class="list-clean">
+                    @foreach($recentEnrollments as $certification)
+                        <li>
+                            <strong>{{ $certification->title ?? 'Certification removed' }}</strong>
+                            <p>{{ $certification->description ? Str::limit($certification->description, 80) : 'No description provided.' }}</p>
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
+        </div>
+
+        <div class="card">
+            <h2>My Progress</h2>
+            <p class="text-muted">{{ $enrolledCount }} certifications enrolled.</p>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: {{ $availableCertifications ? min(100, ($enrolledCount / $availableCertifications) * 100) : 0 }}%;"></div>
+            </div>
+            <p class="text-muted mt-2">{{ $availableCertifications ? round(($enrolledCount / $availableCertifications) * 100) : 0 }}% of active certifications enrolled.</p>
+        </div>
+    </div>
+
     <div class="card mt-4" id="my-coursework">
         <h2>Certification Lessons and Modules</h2>
 

@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Certification;
-use App\Models\Enrollment;
 use App\Models\Voucher;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class UserDashboardController extends Controller
 {
@@ -18,26 +18,34 @@ class UserDashboardController extends Controller
 
         $availableCertifications = $certifications->count();
 
-        $enrolledIds = Enrollment::where('user_id', session('user_id'))
-            ->where('payment_status', 'paid')
+        $enrolledIds = DB::table('enrollment_requests')
+            ->where('user_id', auth()->id())
+            ->where('status', 'approved')
             ->pluck('certification_id')
             ->toArray();
 
         $enrolledCount = count($enrolledIds);
 
+        $recentEnrollments = Certification::whereIn('id', $enrolledIds)
+            ->latest()
+            ->take(3)
+            ->get();
+
         return view('user.dashboard', compact(
             'certifications',
             'availableCertifications',
             'enrolledIds',
-            'enrolledCount'
+            'enrolledCount',
+            'recentEnrollments'
         ));
     }
 
     public function showEnroll(Certification $certification)
     {
-        $alreadyEnrolled = Enrollment::where('user_id', session('user_id'))
+        $alreadyEnrolled = DB::table('enrollment_requests')
+            ->where('user_id', auth()->id())
             ->where('certification_id', $certification->id)
-            ->where('payment_status', 'paid')
+            ->where('status', 'approved')
             ->exists();
 
         if ($alreadyEnrolled) {
@@ -50,9 +58,10 @@ class UserDashboardController extends Controller
 
     public function enroll(Request $request, Certification $certification)
     {
-        $alreadyEnrolled = Enrollment::where('user_id', session('user_id'))
+        $alreadyEnrolled = DB::table('enrollment_requests')
+            ->where('user_id', auth()->id())
             ->where('certification_id', $certification->id)
-            ->where('payment_status', 'paid')
+            ->where('status', 'approved')
             ->exists();
 
         if ($alreadyEnrolled) {
@@ -89,13 +98,12 @@ class UserDashboardController extends Controller
             $voucher->increment('uses_count');
         }
 
-        Enrollment::create([
-            'user_id' => session('user_id'),
+        DB::table('enrollment_requests')->insert([
+            'user_id' => auth()->id(),
             'certification_id' => $certification->id,
-            'amount_paid' => $amountPaid,
-            'voucher_code' => $voucherCode,
-            'discount_applied' => $discountApplied,
-            'payment_status' => 'paid',
+            'status' => 'approved',
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
 
         return redirect()->route('user.dashboard')

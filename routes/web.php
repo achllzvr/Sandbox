@@ -5,7 +5,6 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Staff\StaffController;
 use App\Http\Controllers\UserDashboardController;
-use App\Models\Certification;
 
 //Pages
 Route::get('/', function () {
@@ -24,15 +23,20 @@ Route::get('/register', function () {
 
 Route::post('/register', [AuthController::class, 'register'])->name('register.store');
 
+Route::get('/verify-email', [AuthController::class, 'showVerificationForm'])->name('verification.notice');
+Route::post('/verify-email', [AuthController::class, 'verifyEmail'])->name('verification.verify')->middleware('throttle:6,1');
+Route::post('/verify-email/resend', [AuthController::class, 'resendVerification'])->name('verification.resend')->middleware('throttle:3,1');
+
 // Admin routes
 Route::middleware(['role:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
 
-    Route::get('/create-staff', function () {
-        return view('admin.create-staff');
-    })->name('staff.create');
-
+    Route::get('/create-staff', [AdminController::class, 'showCreateStaff'])->name('staff.create');
     Route::post('/create-staff', [AdminController::class, 'createStaff'])->name('staff.store');
+    Route::get('/staff/{staff}/edit', [AdminController::class, 'editStaff'])->name('staff.edit');
+    Route::post('/staff/{staff}', [AdminController::class, 'updateStaff'])->name('staff.update');
+    Route::post('/staff/{staff}/toggle-status', [AdminController::class, 'toggleStaffStatus'])->name('staff.toggle');
+    Route::post('/staff/{staff}/reset-password', [AdminController::class, 'resetStaffPassword'])->name('staff.reset-password');
 
     Route::get('/create-certification', function () {
         return view('admin.create-certification');
