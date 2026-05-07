@@ -1,0 +1,15 @@
+.nav-logout-form {
+    margin: 0;
+}
+
+.nav-user span {
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.logo a {
+    font-weight: 800;
+    font-size: 1.2rem;
+    text-decoration: none;
+    color: #111827;
+}
