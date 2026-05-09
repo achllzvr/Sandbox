@@ -74,7 +74,6 @@ class AdminController extends Controller
             'password' => 'required|string|min:6|confirmed',
             'birthday' => 'required|date',
             'contact_no' => 'required|string|max:20',
-            'affiliation' => 'nullable|string|max:255',
         ]);
 
         $password = $request->password;
@@ -86,7 +85,6 @@ class AdminController extends Controller
             'password' => Hash::make($password),
             'birthday' => $request->birthday,
             'contact_no' => $request->contact_no,
-            'affiliation' => $request->affiliation,
             'role' => 'staff',
             'is_active' => true,
             'email_verified_at' => now(),
@@ -122,7 +120,6 @@ class AdminController extends Controller
             'email' => 'required|string|email|max:255|unique:users,email,' . $staff->id,
             'birthday' => 'required|date',
             'contact_no' => 'required|string|max:20',
-            'affiliation' => 'nullable|string|max:255',
             'is_active' => 'required|boolean',
         ]);
 
@@ -132,7 +129,6 @@ class AdminController extends Controller
             'email' => $request->email,
             'birthday' => $request->birthday,
             'contact_no' => $request->contact_no,
-            'affiliation' => $request->affiliation,
             'is_active' => $request->is_active,
         ]);
 
@@ -177,6 +173,13 @@ class AdminController extends Controller
             ->with('success', 'Password reset successfully and emailed to the staff user.');
     }
 
+    public function showCertifications()
+    {
+        $certifications = Certification::latest()->get();
+
+        return view('admin.create-certification', compact('certifications'));
+    }
+
     public function createCertification(Request $request)
     {
         $request->validate([
@@ -197,13 +200,50 @@ class AdminController extends Controller
         ]);
 
         return redirect()
-            ->back()
+            ->route('admin.certifications.create')
             ->with('success', 'Certification created successfully.');
+    }
+
+    public function editCertification(Certification $certification)
+    {
+        return view('admin.edit-certification', compact('certification'));
+    }
+
+    public function updateCertification(Request $request, Certification $certification)
+    {
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'price' => 'required|numeric|min:0',
+            'pass_threshold' => 'required|integer|min:1|max:100',
+            'is_active' => 'required|in:0,1',
+        ]);
+
+        $certification->update([
+            'title' => $request->title,
+            'description' => $request->description,
+            'price' => $request->price,
+            'pass_threshold' => $request->pass_threshold,
+            'is_active' => $request->is_active == '1',
+        ]);
+
+        return redirect()
+            ->route('admin.certifications.create')
+            ->with('success', 'Certification updated successfully.');
+    }
+
+    public function deleteCertification(Certification $certification)
+    {
+        $certification->delete();
+
+        return redirect()
+            ->route('admin.certifications.create')
+            ->with('success', 'Certification deleted successfully.');
     }
 
     public function showCreateLesson()
     {
-        $certifications = Certification::where('is_active', 1)
+        $certifications = Certification::active()
             ->latest()
             ->get();
 

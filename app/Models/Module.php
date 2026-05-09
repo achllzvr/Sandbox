@@ -21,6 +21,11 @@ class Module extends Model
         return $this->belongsTo(Lesson::class);
     }
 
+    public function contents()
+    {
+        return $this->hasMany(ModuleContent::class);
+    }
+
     public function questions()
     {
         return $this->hasMany(Question::class);
