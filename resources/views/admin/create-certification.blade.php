@@ -6,7 +6,6 @@
         <li><a href="{{ url('/admin/dashboard') }}">Dashboard</a></li>
         <li><a href="{{ url('/admin/create-staff') }}">Create Staff Account</a></li>
         <li><a href="{{ url('/admin/create-certification') }}" class="active">Manage Certifications</a></li>
-        <li><a href="{{ route('admin.lessons.create') }}">Create Lessons</a></li>
         <li><a href="{{ route('admin.vouchers.index') }}">Manage Vouchers</a></li>
         <li><a href="{{ route('admin.enrollments') }}">Enrollments</a></li>
         <li>
@@ -94,7 +93,7 @@
                 <div class="form-group">
                     <label for="is_active">Status</label>
                     <select id="is_active" name="is_active" required>
-                        <option value="1" {{ old('is_active') == '1' ? 'selected' : '' }}>Active (Visible)</option>
+                        <option value="1" {{ old('is_active', '1') == '1' ? 'selected' : '' }}>Active (Visible)</option>
                         <option value="0" {{ old('is_active') == '0' ? 'selected' : '' }}>Inactive (Draft)</option>
                     </select>
                 </div>
@@ -104,5 +103,45 @@
                 <button type="submit" class="btn btn-primary">Create Certification</button>
             </div>
         </form>
+    </div>
+
+    <div class="card mt-4">
+        <h2>Certifications</h2>
+
+        @if(isset($certifications) && $certifications->count() > 0)
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Description</th>
+                        <th>Price</th>
+                        <th>Passing Score</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($certifications as $certification)
+                        <tr>
+                            <td>{{ $certification->title }}</td>
+                            <td>{{ Str::limit($certification->description, 60, '...') }}</td>
+                            <td>₱{{ number_format($certification->price, 2) }}</td>
+                            <td>{{ $certification->pass_threshold }}%</td>
+                            <td>{{ $certification->is_active ? 'Active' : 'Inactive' }}</td>
+                            <td>
+                                <a href="{{ route('admin.certifications.edit', $certification->id) }}" class="btn btn-secondary btn-sm">Edit</a>
+                                <form action="{{ route('admin.certifications.destroy', $certification->id) }}" method="POST" style="display:inline-block; margin-left:0.5rem;">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete this certification?');">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        @else
+            <p>No certifications have been created yet.</p>
+        @endif
     </div>
 @endsection

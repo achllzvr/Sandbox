@@ -15,4 +15,8 @@ class ModuleContent extends Model
     public function module() {
         return $this->belongsTo(Module::class);
     }
+
+    public function uploader() {
+        return $this->belongsTo(User::class, 'uploaded_by');
+    }
 }

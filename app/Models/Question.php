@@ -8,16 +8,16 @@ class Question extends Model
 {
     protected $fillable = [
         'module_id',
-        'question_text',
-        'option_a',
-        'option_b',
-        'option_c',
-        'option_d',
-        'correct_answer',
+        'text',
     ];
 
     public function module()
     {
         return $this->belongsTo(Module::class);
+    }
+
+    public function answers()
+    {
+        return $this->hasMany(Answer::class);
     }
 }

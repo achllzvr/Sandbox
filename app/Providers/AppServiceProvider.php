@@ -23,6 +23,16 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        //
+        view()->composer('components.navbar', function ($view) {
+            $role = session('role') ?: 'guest';
+            $navConfig = config('navigation');
+
+            $links = $navConfig[$role] ?? $navConfig['guest'];
+            $view->with([
+                'navLinks' => $links,
+                'navUserName' => session('full_name') ?? session('email'),
+                'navRole' => $role,
+            ]);
+        });
     }
 }

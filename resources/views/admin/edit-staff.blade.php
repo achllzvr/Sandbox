@@ -6,7 +6,6 @@
         <li><a href="{{ url('/admin/dashboard') }}">Dashboard</a></li>
         <li><a href="{{ route('admin.staff.create') }}">Create Staff Account</a></li>
         <li><a href="{{ url('/admin/create-certification') }}">Manage Certifications</a></li>
-        <li><a href="{{ route('admin.lessons.create') }}">Create Lessons</a></li>
         <li><a href="{{ route('admin.vouchers.index') }}">Manage Vouchers</a></li>
         <li><a href="{{ route('admin.enrollments') }}">Enrollments</a></li>
         <li>
@@ -60,11 +59,6 @@
                 <div class="form-group">
                     <label for="contact_no">Contact No.</label>
                     <input type="text" id="contact_no" name="contact_no" value="{{ old('contact_no', $staff->contact_no) }}" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="affiliation">Affiliation (Optional)</label>
-                    <input type="text" id="affiliation" name="affiliation" value="{{ old('affiliation', $staff->affiliation) }}">
                 </div>
             </div>
 

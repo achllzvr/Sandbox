@@ -2,8 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\EmailVerification;
-use App\Models\EnrollmentRequest;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -11,6 +9,11 @@ use Illuminate\Notifications\Notifiable;
 class User extends Authenticatable
 {
     use HasFactory, Notifiable;
+
+    public const ROLE_ADMIN = 'admin';
+    public const ROLE_STAFF = 'staff';
+    public const ROLE_TEACHER = 'teacher';
+    public const ROLE_USER = 'user';
 
     protected $fillable = [
         'first_name',
@@ -21,7 +24,12 @@ class User extends Authenticatable
         'contact_no',
         'affiliation',
         'role',
-        'is_active',
+        'status',
+        'institutional_credentials_url',
+        'verified_by',
+        'verified_at',
+        'sand_dollars',
+        'email_verified_at',
     ];
 
     protected $hidden = [
@@ -31,55 +39,96 @@ class User extends Authenticatable
 
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'is_active' => 'boolean',
+        'verified_at' => 'datetime',
+        'birthday' => 'date',
+        'sand_dollars' => 'integer',
     ];
-
-    public function createdCertifications() {
-        return $this->hasMany(Certification::class, 'created_by_admin_id');
-    }
-
-    public function createdLessons() {
-        return $this->hasMany(Lesson::class, 'created_by_staff_id');
-    }
-
-    public function uploadedModules() {
-        return $this->hasMany(Module::class, 'uploaded_by_staff_id');
-    }
-
-    public function enrollmentRequests()
-    {
-        return $this->hasMany(EnrollmentRequest::class);
-    }
-
-    public function emailVerification()
-    {
-        return $this->hasOne(EmailVerification::class);
-    }
+    protected $appends = [
+        'full_name',
+    ];
 
     public function getFullNameAttribute()
     {
         return trim($this->first_name . ' ' . $this->last_name);
     }
 
-    public function hasVerifiedEmail()
+    public function certifications()
     {
-        return ! is_null($this->email_verified_at);
+        return $this->hasMany(Certification::class, 'created_by');
     }
 
-    public function markEmailAsVerified()
+    public function approvedCertifications()
     {
-        return $this->forceFill([
-            'email_verified_at' => now(),
-        ])->save();
+        return $this->hasMany(Certification::class, 'approved_by');
+    }
+
+    public function uploadedModuleContents()
+    {
+        return $this->hasMany(ModuleContent::class, 'uploaded_by');
+    }
+
+    public function auditLogs()
+    {
+        return $this->hasMany(AuditLog::class, 'user_id');
+    }
+
+    public function verifiedTeachers()
+    {
+        return $this->hasMany(User::class, 'verified_by');
+    }
+
+    public function verifier()
+    {
+        return $this->belongsTo(User::class, 'verified_by');
+    }
+
+    public function scopeAdmins($query)
+    {
+        return $query->where('role', self::ROLE_ADMIN);
     }
 
     public function scopeStaff($query)
     {
-        return $query->where('role', 'staff');
+        return $query->where('role', self::ROLE_STAFF);
+    }
+
+    public function scopeTeachers($query)
+    {
+        return $query->where('role', self::ROLE_TEACHER);
+    }
+
+    public function scopeStudents($query)
+    {
+        return $query->where('role', self::ROLE_USER);
     }
 
     public function scopeActive($query)
     {
-        return $query->where('is_active', true);
+        return $query->where('status', 'active');
     }
+
+    public function isAdmin()
+    {
+        return $this->role === self::ROLE_ADMIN;
+    }
+
+    public function isStaff()
+    {
+        return $this->role === self::ROLE_STAFF;
+    }
+
+    public function isTeacher()
+    {
+        return $this->role === self::ROLE_TEACHER;
+    }
+
+    public function isStudent()
+    {
+        return $this->role === self::ROLE_USER;
+    }
+
+   public function isVerifiedTeacher()
+{
+    return $this->isTeacher() && ! is_null($this->verified_at);
+}
 }

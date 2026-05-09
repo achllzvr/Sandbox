@@ -1,77 +1,152 @@
 <?php
 
+use App\Http\Controllers\Admin\CertificationApprovalController;
+use App\Http\Controllers\Creator\CertificationController;
+use App\Http\Controllers\Creator\LessonController;
+use App\Http\Controllers\Creator\ModuleContentController;
+use App\Http\Controllers\Creator\ModuleController;
+use App\Http\Controllers\Creator\QuestionController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Student\MarketplaceController;
+use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\Admin\AdminController;
-use App\Http\Controllers\Staff\StaffController;
-use App\Http\Controllers\UserDashboardController;
+use Inertia\Inertia;
 
-//Pages
+/*
+|--------------------------------------------------------------------------
+| Public Routes
+|--------------------------------------------------------------------------
+*/
+
 Route::get('/', function () {
-    return view('pages.home');
-})->name('home');
+    return Inertia::render('Welcome', [
+        'canLogin' => Route::has('login'),
+        'canRegister' => Route::has('register'),
+        'laravelVersion' => Application::VERSION,
+        'phpVersion' => PHP_VERSION,
+    ]);
+})->name('welcome');
 
-// Login / Logout
-Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-Route::post('/login', [AuthController::class, 'login'])->name('login.submit');
-Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+/*
+|--------------------------------------------------------------------------
+| Authenticated Dashboard Redirect
+|--------------------------------------------------------------------------
+*/
 
-// Registration
-Route::get('/register', function () {
-    return view('auth.register');
-})->name('register.show');
+Route::get('/dashboard', function () {
+    $user = auth()->user();
 
-Route::post('/register', [AuthController::class, 'register'])->name('register.store');
+    return match ($user->role) {
+        'admin' => redirect()->route('admin.certifications.pending'),
+        'staff' => redirect()->route('creator.certifications.index'),
+        'teacher' => redirect()->route('teacher.dashboard'),
+        default => redirect()->route('marketplace.index'),
+    };
+})->middleware(['auth', 'otp.verified'])->name('dashboard');
 
-Route::get('/verify-email', [AuthController::class, 'showVerificationForm'])->name('verification.notice');
-Route::post('/verify-email', [AuthController::class, 'verifyEmail'])->name('verification.verify')->middleware('throttle:6,1');
-Route::post('/verify-email/resend', [AuthController::class, 'resendVerification'])->name('verification.resend')->middleware('throttle:3,1');
+/*
+|--------------------------------------------------------------------------
+| Shared Profile Routes
+|--------------------------------------------------------------------------
+*/
 
-// Admin routes
-Route::middleware(['role:admin'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
+Route::middleware(['auth', 'otp.verified'])->group(function () {
+    Route::get('/profile', [ProfileController::class, 'edit'])
+        ->name('profile.edit');
 
-    Route::get('/create-staff', [AdminController::class, 'showCreateStaff'])->name('staff.create');
-    Route::post('/create-staff', [AdminController::class, 'createStaff'])->name('staff.store');
-    Route::get('/staff/{staff}/edit', [AdminController::class, 'editStaff'])->name('staff.edit');
-    Route::post('/staff/{staff}', [AdminController::class, 'updateStaff'])->name('staff.update');
-    Route::post('/staff/{staff}/toggle-status', [AdminController::class, 'toggleStaffStatus'])->name('staff.toggle');
-    Route::post('/staff/{staff}/reset-password', [AdminController::class, 'resetStaffPassword'])->name('staff.reset-password');
+    Route::patch('/profile', [ProfileController::class, 'update'])
+        ->name('profile.update');
 
-    Route::get('/create-certification', function () {
-        return view('admin.create-certification');
-    })->name('certifications.create');
-
-    Route::post('/create-certification', [AdminController::class, 'createCertification'])->name('certifications.store');
-
-    Route::get('/create-lesson', [AdminController::class, 'showCreateLesson'])->name('lessons.create');
-    Route::post('/create-lesson', [AdminController::class, 'createLesson'])->name('lessons.store');
-
-    Route::get('/vouchers', [AdminController::class, 'showVouchers'])->name('vouchers.index');
-    Route::post('/vouchers', [AdminController::class, 'createVoucher'])->name('vouchers.store');
-
-    Route::get('/enrollments', [AdminController::class, 'enrollments'])->name('enrollments');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])
+        ->name('profile.destroy');
 });
 
-// Staff routes
-Route::middleware(['role:staff'])->prefix('staff')->name('staff.')->group(function () {
-    Route::get('/dashboard', [StaffController::class, 'dashboard'])->name('dashboard');
+/*
+|--------------------------------------------------------------------------
+| Creator / Staff Routes
+|--------------------------------------------------------------------------
+*/
 
-    Route::get('/create-lesson', [StaffController::class, 'showCreateLesson'])->name('lessons.create');
-    Route::post('/create-lesson', [StaffController::class, 'createLesson'])->name('lessons.store');
+Route::middleware(['auth', 'otp.verified', 'role:staff'])
+    ->prefix('creator')
+    ->name('creator.')
+    ->group(function () {
+        Route::get('/dashboard', function () {
+            return redirect()->route('creator.certifications.index');
+        })->name('dashboard');
 
-    Route::get('/upload-module', [StaffController::class, 'uploadModule'])->name('modules.create');
-    Route::post('/create-module', [StaffController::class, 'createModule'])->name('modules.store');
+        Route::resource('certifications', CertificationController::class)
+            ->except(['show', 'destroy']);
 
-    Route::get('/upload-questions', [StaffController::class, 'showUploadQuestions'])->name('questions.create');
-    Route::post('/store-question', [StaffController::class, 'storeQuestion'])->name('questions.store');
+        Route::post('certifications/{certification}/submit', [CertificationController::class, 'submit'])
+            ->name('certifications.submit');
 
-    Route::get('/enrollments', [StaffController::class, 'enrollments'])->name('enrollments');
-});
+        Route::post('lessons', [LessonController::class, 'store'])
+            ->name('lessons.store');
 
-// User routes
-Route::middleware(['role:user'])->prefix('user')->name('user.')->group(function () {
-    Route::get('/dashboard', [UserDashboardController::class, 'dashboard'])->name('dashboard');
-    Route::get('/enroll/{certification}', [UserDashboardController::class, 'showEnroll'])->name('enroll.show');
-    Route::post('/enroll/{certification}', [UserDashboardController::class, 'enroll'])->name('enroll.store');
-});
+        Route::post('modules', [ModuleController::class, 'store'])
+            ->name('modules.store');
+
+        Route::post('modules/{module}/content', [ModuleContentController::class, 'store'])
+            ->name('modules.content.store');
+
+        Route::post('modules/{module}/questions', [QuestionController::class, 'store'])
+            ->name('modules.questions.store');
+    });
+
+/*
+|--------------------------------------------------------------------------
+| Admin Routes
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['auth', 'otp.verified', 'role:admin'])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+        Route::get('/dashboard', function () {
+            return redirect()->route('admin.certifications.pending');
+        })->name('dashboard');
+
+        Route::get('certifications/pending', [CertificationApprovalController::class, 'index'])
+            ->name('certifications.pending');
+
+        Route::put('certifications/{certification}/status', [CertificationApprovalController::class, 'update'])
+            ->name('certifications.status.update');
+    });
+
+/*
+|--------------------------------------------------------------------------
+| Student / Learner Routes
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['auth', 'otp.verified', 'role:user'])
+    ->prefix('student')
+    ->name('student.')
+    ->group(function () {
+        Route::get('/dashboard', function () {
+            return redirect()->route('marketplace.index');
+        })->name('dashboard');
+    });
+
+Route::middleware(['auth', 'otp.verified', 'role:user'])
+    ->get('/marketplace', [MarketplaceController::class, 'index'])
+    ->name('marketplace.index');
+
+/*
+|--------------------------------------------------------------------------
+| Teacher Routes
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['auth', 'otp.verified', 'role:teacher'])
+    ->prefix('teacher')
+    ->name('teacher.')
+    ->group(function () {
+        Route::get('/dashboard', function () {
+            return Inertia::render('Teacher/Dashboard');
+        })->name('dashboard');
+    });
+
+require __DIR__ . '/auth.php';
