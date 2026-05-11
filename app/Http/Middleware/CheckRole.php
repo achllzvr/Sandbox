@@ -2,35 +2,56 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
 
 class CheckRole
 {
-    public function handle(Request $request, Closure $next, string $role)
-    {
-        if (! session()->has('user_id')) {
-            return redirect()->route('login')->withErrors(['email' => 'Please login to continue.']);
+    public function handle(
+        Request $request,
+        Closure $next,
+        string $role
+    ): mixed {
+
+        if (! $request->user()) {
+            return redirect()->route('login');
         }
 
-        if (session('role') !== $role) {
-            abort(403, 'Unauthorized Access.');
+        $user = $request->user();
+
+        // Banned
+        if ($user->status === 'inactive') {
+            auth()->logout();
+            return redirect()->route('login')
+                ->withErrors(['email' =>
+                    'Your account has been disabled. 
+                     Contact an administrator.'
+                ]);
         }
 
-        $user = User::find(session('user_id'));
-        if (! $user || ! $user->is_active) {
-            session()->flush();
-            return redirect()->route('login')->withErrors([
-                'email' => 'Your account is disabled. Contact the administrator.',
-            ]);
+        // Declined teacher
+        if ($user->status === 'declined') {
+            auth()->logout();
+            return redirect()->route('login')
+                ->withErrors(['email' =>
+                    'Your teacher registration was declined. 
+                     Contact support for assistance.'
+                ]);
         }
 
-        if ($role === 'user' && ! $user->hasVerifiedEmail()) {
-            session()->flush();
-            return redirect()->route('login')->withErrors([
-                'email' => 'Please verify your account before accessing the platform.',
-            ]);
+        // Pending teacher accessing non-teacher routes
+        if ($user->status === 'pending_verification'
+            && $role !== 'teacher') {
+            auth()->logout();
+            return redirect()->route('login')
+                ->withErrors(['email' =>
+                    'Your account is pending admin verification.'
+                ]);
+        }
+
+        // Wrong role
+        if ($user->role !== $role) {
+            abort(403, 'Unauthorized.');
         }
 
         return $next($request);

@@ -36,6 +36,17 @@ export default function Login({ status, canResetPassword }) {
 
             {status && <div className="mb-4 font-medium text-sm text-green-600">{status}</div>}
 
+            {Object.keys(errors).length > 0 && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 text-sm text-red-600">
+                    <p className="font-bold">Login Failed:</p>
+                    <ul className="list-disc pl-5 mt-1">
+                        {Object.values(errors).map((error, idx) => (
+                            <li key={idx}>{error}</li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+
             <form onSubmit={submit}>
                 <div>
                     <InputLabel htmlFor="email" value="Email" />
