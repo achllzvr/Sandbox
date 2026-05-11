@@ -16,11 +16,16 @@ class EnsureEmailOtpVerified
      */
     public function handle(Request $request, Closure $next)
     {
+        // Admin accounts are created manually — skip OTP verification
+        if ($request->user() && $request->user()->role === 'admin') {
+            return $next($request);
+        }
+
         if (!$request->user() ||
             !$request->user()->hasVerifiedEmail()) {
             return $request->expectsJson()
                     ? abort(403, 'Your email address is not verified.')
-                    : redirect()->route('otp.notice');
+                    : redirect()->route('verification.notice');
         }
 
         return $next($request);

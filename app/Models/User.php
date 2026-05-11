@@ -29,7 +29,6 @@ class User extends Authenticatable
         'verified_by',
         'verified_at',
         'sand_dollars',
-        'email_verified_at',
     ];
 
     protected $hidden = [
@@ -47,14 +46,14 @@ class User extends Authenticatable
         'full_name',
     ];
 
-    public function getFullNameAttribute()
+    public function getFullNameAttribute(): string
     {
         return trim($this->first_name . ' ' . $this->last_name);
     }
 
     public function certifications()
     {
-        return $this->hasMany(Certification::class, 'created_by');
+        return $this->hasMany(Certification::class, 'created_by_user_id');
     }
 
     public function approvedCertifications()
@@ -131,4 +130,19 @@ class User extends Authenticatable
 {
     return $this->isTeacher() && ! is_null($this->verified_at);
 }
+
+    public function isActive(): bool
+    {
+        return $this->status === 'active';
+    }
+
+    public function isPendingVerification(): bool
+    {
+        return $this->status === 'pending_verification';
+    }
+
+    public function hasVerifiedEmail(): bool
+    {
+        return ! is_null($this->email_verified_at);
+    }
 }

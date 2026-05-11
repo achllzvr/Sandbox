@@ -11,34 +11,39 @@ class Certification extends Model
         'description',
         'price',
         'pass_threshold',
-        'is_active',
         'status',
-        'created_by',
+        'created_by_user_id',
         'approved_by',
         'approved_at',
         'decline_reason',
     ];
 
     protected $casts = [
-        'is_active' => 'boolean',
         'approved_at' => 'datetime',
+        'price'       => 'decimal:2',
     ];
 
-    public function creator() {
-        return $this->belongsTo(User::class, 'created_by');
-    }
+    // ── Relationships ──────────────────────────────────────
 
-    public function approver() {
-        return $this->belongsTo(User::class, 'approved_by');
-    }
-
-    public function scopeActive($query)
+    public function creator()
     {
-        return $query->where('is_active', true);
+        return $this->belongsTo(User::class, 'created_by_user_id');
+    }
+
+    public function approver()
+    {
+        return $this->belongsTo(User::class, 'approved_by');
     }
 
     public function lessons()
     {
         return $this->hasMany(Lesson::class);
+    }
+
+    // ── Scopes ─────────────────────────────────────────────
+
+    public function scopePublished($query)
+    {
+        return $query->where('status', 'published');
     }
 }

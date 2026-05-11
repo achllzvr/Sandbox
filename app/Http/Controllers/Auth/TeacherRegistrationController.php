@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Auth\StudentRegisterRequest;
+use App\Http\Requests\Auth\TeacherRegisterRequest;
 use App\Mail\OtpMail;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
@@ -11,15 +11,20 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 
-class RegisteredUserController extends Controller
+class TeacherRegistrationController extends Controller
 {
     public function create()
     {
-        return Inertia::render('Auth/Register');
+        return Inertia::render('Auth/RegisterTeacher');
     }
 
-    public function store(StudentRegisterRequest $request)
+    public function store(TeacherRegisterRequest $request)
     {
+        // Store credential file
+        $credentialPath = $request
+            ->file('institutional_credentials')
+            ->store('teacher-credentials', 'public');
+
         $user = User::create([
             'first_name'  => $request->first_name,
             'last_name'   => $request->last_name,
@@ -28,31 +33,32 @@ class RegisteredUserController extends Controller
             'birthday'    => $request->birthday,
             'contact_no'  => $request->contact_no,
             'affiliation' => $request->affiliation,
-            'role'        => 'user',
-            'status'      => 'active',
+            'role'        => 'teacher',
+            'status'      => 'pending_verification',
+            'institutional_credentials_url' => $credentialPath,
             // email_verified_at is NULL until OTP verified
         ]);
 
-        // Generate OTP
         $otp = (string) random_int(100000, 999999);
 
-        // Store in SESSION only — no DB table
         session([
             'otp_data' => [
                 'code'         => $otp,
                 'email'        => $user->email,
-                'expires_at'   => now()->addMinutes(10)->timestamp,
+                'expires_at'   => now()->addMinutes(10)
+                                    ->timestamp,
                 'attempts'     => 0,
                 'resend_count' => 0,
             ]
         ]);
 
-        // Send via Gmail SMTP — not stored anywhere
         Mail::to($user->email)
             ->send(new OtpMail($otp, $user->first_name));
 
         Auth::login($user);
 
         return redirect()->route('verification.notice');
+        // status stays 'pending_verification' even after OTP.
+        // Only admin can set it to 'active'.
     }
 }

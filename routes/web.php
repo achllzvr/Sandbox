@@ -1,6 +1,11 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\CertificationApprovalController;
+use App\Http\Controllers\Admin\UserManagementController;
+use App\Http\Controllers\Admin\TeacherVerificationController;
+use App\Http\Controllers\Admin\AuditLogController;
+use App\Http\Controllers\Admin\FinanceController;
 use App\Http\Controllers\Creator\CertificationController;
 use App\Http\Controllers\Creator\LessonController;
 use App\Http\Controllers\Creator\ModuleContentController;
@@ -22,8 +27,7 @@ Route::get('/', function () {
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
+        'authUser' => auth()->user(),
     ]);
 })->name('welcome');
 
@@ -36,8 +40,10 @@ Route::get('/', function () {
 Route::get('/dashboard', function () {
     $user = auth()->user();
 
+    \Illuminate\Support\Facades\Log::info('Dashboard route hit by: ' . $user->email . ' with role: ' . $user->role);
+
     return match ($user->role) {
-        'admin' => redirect()->route('admin.certifications.pending'),
+        'admin' => redirect()->route('admin.dashboard'),
         'staff' => redirect()->route('creator.certifications.index'),
         'teacher' => redirect()->route('teacher.dashboard'),
         default => redirect()->route('marketplace.index'),
@@ -104,15 +110,37 @@ Route::middleware(['auth', 'otp.verified', 'role:admin'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
-        Route::get('/dashboard', function () {
-            return redirect()->route('admin.certifications.pending');
-        })->name('dashboard');
+        // Dashboard
+        Route::get('/dashboard', [AdminDashboardController::class, 'index'])
+            ->name('dashboard');
 
-        Route::get('certifications/pending', [CertificationApprovalController::class, 'index'])
-            ->name('certifications.pending');
+        // User Management
+        Route::get('/users', [UserManagementController::class, 'index'])
+            ->name('users.index');
+        Route::post('/users', [UserManagementController::class, 'store'])
+            ->name('users.store');
 
-        Route::put('certifications/{certification}/status', [CertificationApprovalController::class, 'update'])
+        // Certification Approval
+        Route::get('/certifications', [CertificationApprovalController::class, 'index'])
+            ->name('certifications.index');
+        Route::put('/certifications/{certification}/status', [CertificationApprovalController::class, 'update'])
             ->name('certifications.status.update');
+
+        // Teacher Verification
+        Route::get('/teachers', [TeacherVerificationController::class, 'index'])
+            ->name('teachers.index');
+        Route::put('/teachers/{user}/approve', [TeacherVerificationController::class, 'approve'])
+            ->name('teachers.approve');
+        Route::put('/teachers/{user}/decline', [TeacherVerificationController::class, 'decline'])
+            ->name('teachers.decline');
+
+        // Audit Logs
+        Route::get('/audit-logs', [AuditLogController::class, 'index'])
+            ->name('audit-logs.index');
+
+        // Finance
+        Route::get('/finance', [FinanceController::class, 'index'])
+            ->name('finance.index');
     });
 
 /*
