@@ -39,7 +39,10 @@ class RegisterController extends Controller
         ]);
 
         // Send Welcome Email
-        Mail::to($user->email)->send(new WelcomeUserMail($user));
+        $email = $user->email;
+        dispatch(function () use ($email, $user) {
+            Mail::to($email)->send(new WelcomeUserMail($user));
+        })->afterResponse();
 
         // You can log the user in here if desired:
         // auth()->login($user);

@@ -30,32 +30,44 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request)
     {
-        // Check status before credentials
-        $user = \App\Models\User::where('email', $request->email)
-                    ->first();
+        $request->authenticate();
 
-        if ($user) {
-            if ($user->status === 'inactive') {
-                throw \Illuminate\Validation\ValidationException
-                    ::withMessages([
-                        'email' => 'Your account has been 
-                                    disabled. Contact an 
-                                    administrator.',
-                    ]);
+        $user = auth()->user();
+
+        // Teacher specific restrictions
+        if ($user->role === 'teacher') {
+            if ($user->status === 'pending_verification') {
+                Auth::guard('web')->logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'email' => 'Your affiliate account is still pending verification by the Sandbox Administration Team.',
+                ]);
             }
 
-            if ($user->status === 'declined') {
-                throw \Illuminate\Validation\ValidationException
-                    ::withMessages([
-                        'email' => 'Your teacher registration 
-                                    was declined.',
-                    ]);
+            if ($user->status === 'rejected' || $user->status === 'declined') {
+                Auth::guard('web')->logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'email' => 'Your affiliate verification request has been rejected. Please contact the administrator.',
+                ]);
             }
-            // pending_verification teachers CAN log in —
-            // middleware gates their routes, not login itself.
         }
 
-        $request->authenticate();
+        // Global inactive check
+        if ($user->status === 'inactive') {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'email' => 'Your account has been disabled. Contact an administrator.',
+            ]);
+        }
+
         $request->session()->regenerate();
 
         $user = auth()->user();

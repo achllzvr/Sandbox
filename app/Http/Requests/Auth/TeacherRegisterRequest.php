@@ -17,7 +17,7 @@ class TeacherRegisterRequest extends FormRequest
             'birthday'    => ['nullable','date'],
             'contact_no'  => ['nullable','string','max:50'],
             'affiliation' => ['required','string','max:255'],
-            'institutional_credentials' => [
+            'credential_proof' => [
                 'required','file',
                 'mimes:pdf,jpg,jpeg,png',
                 'max:5120',

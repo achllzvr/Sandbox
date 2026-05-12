@@ -7,6 +7,8 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
+use App\Http\Requests\Admin\InviteUserRequest;
+use App\Http\Requests\Admin\VerifyTeacherRequest;
 
 class UserManagementController extends Controller
 {
@@ -35,27 +37,53 @@ class UserManagementController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function invite(InviteUserRequest $request)
     {
-        $request->validate([
-            'first_name' => ['required', 'string', 'max:100'],
-            'last_name'  => ['required', 'string', 'max:100'],
-            'email'      => ['required', 'email', 'unique:users,email'],
-            'role'       => ['required', 'in:staff,teacher'],
-            'password'   => ['required', 'string', 'min:8'],
-        ]);
+        // Check if user already exists
+        if (\App\Models\User::where('email', $request->email)->exists()) {
+            return redirect()->back()->withErrors(['email' => 'User already exists.']);
+        }
 
-        User::create([
-            'first_name'        => $request->first_name,
-            'last_name'         => $request->last_name,
-            'email'             => $request->email,
-            'password'          => Hash::make($request->password),
-            'role'              => $request->role,
-            'status'            => 'active',
-            'email_verified_at' => now(),
-        ]);
+        // Create or update invitation
+        $token = \Illuminate\Support\Str::random(60);
+        $invitation = \App\Models\UserInvitation::updateOrCreate(
+            ['email' => $request->email],
+            [
+                'role' => $request->role,
+                'token' => $token,
+            ]
+        );
+
+        // Send email
+        \Illuminate\Support\Facades\Mail::to($invitation->email)
+            ->send(new \App\Mail\UserInvitationMail($invitation));
 
         return redirect()->route('admin.users.index')
-            ->with('success', 'User account created successfully.');
+            ->with('success', 'Invitation sent successfully!');
+    }
+
+    public function verifyTeacher(VerifyTeacherRequest $request, User $user)
+    {
+        if ($user->role !== 'teacher') {
+            abort(404);
+        }
+
+        if ($request->action === 'approve') {
+            $user->update([
+                'status' => 'active',
+                'verified_by' => auth()->id(),
+                'verified_at' => now(),
+            ]);
+            $message = "Teacher {$user->first_name} has been approved.";
+        } else {
+            $user->update([
+                'status' => 'declined',
+                'verified_by' => auth()->id(),
+                'verified_at' => now(),
+            ]);
+            $message = "Teacher {$user->first_name} has been declined.";
+        }
+
+        return redirect()->back()->with('success', $message);
     }
 }

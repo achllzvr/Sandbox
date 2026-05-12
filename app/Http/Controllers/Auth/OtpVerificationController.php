@@ -87,10 +87,17 @@ class OtpVerificationController extends Controller
         $user->forceFill(['email_verified_at' => now()])->save();
         session()->forget('otp_data');
 
+        // Save role to redirect properly after logout
+        $role = $user->role;
+
         // Log the user out so they must log in with email + password
         auth()->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
+        if ($role === 'teacher') {
+            return redirect()->route('teacher.pending-approval');
+        }
 
         return redirect()->route('login')
             ->with('status', 'Email verified! Please log in to continue. 🎉');
@@ -129,8 +136,12 @@ class OtpVerificationController extends Controller
             ]
         ]);
 
-        Mail::to($user->email)
-            ->send(new OtpMail($newOtp, $user->first_name));
+        $email = $user->email;
+        $firstName = $user->first_name;
+
+        dispatch(function () use ($email, $newOtp, $firstName) {
+            Mail::to($email)->send(new OtpMail($newOtp, $firstName));
+        })->afterResponse();
 
         return back()->with('success',
             'A new verification code has been sent.');
