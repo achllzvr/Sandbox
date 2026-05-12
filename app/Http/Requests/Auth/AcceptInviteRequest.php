@@ -19,10 +19,12 @@ class AcceptInviteRequest extends FormRequest
     public function rules()
     {
         return [
-            'token' => ['required', 'string'],
+            'token'      => ['required', 'string'],
             'first_name' => ['required', 'string', 'max:100'],
-            'last_name' => ['required', 'string', 'max:100'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'last_name'  => ['required', 'string', 'max:100'],
+            'password'   => ['required', 'string', 'min:8', 'confirmed'],
+            'birthday'   => ['nullable', 'date'],
+            'contact_no' => ['nullable', 'string', 'max:50'],
         ];
     }
 }

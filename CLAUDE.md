@@ -35,24 +35,24 @@ The app runs via XAMPP at `http://localhost/certifications-main/public`.
 
 ## Architecture
 
-Laravel 9 MVC application with role-based access control. Three user roles: `admin`, `staff`, `user`.
+Laravel 9 MVC application with role-based access control. Three user roles: `admin`, `content_creator`, `user`.
 
 **Authentication flow**: Custom session-based auth via `AuthController` (not Laravel Breeze/Jetstream). On login, the session stores `user_id`, `role`, `first_name`, `last_name`, `email`. The `CheckRole` middleware (`app/Http/Middleware/CheckRole.php`) guards all role-specific routes.
 
 **Database**: The schema lives in `database/certifications.sql` — use this to import via phpMyAdmin. The Laravel migrations in `database/migrations/` are standard stubs and do not represent the actual schema.
 
 **Role-separated controllers**:
-- `app/Http/Controllers/Admin/AdminController.php` — staff account creation, certification creation
-- `app/Http/Controllers/Staff/StaffController.php` — lesson/module creation, file uploads
+- `app/Http/Controllers/Admin/AdminController.php` — content_creator account creation, certification creation
+- `app/Http/Controllers/Content Creator/StaffController.php` — lesson/module creation, file uploads
 - `app/Http/Controllers/UserDashboardController.php` — learner-facing views
 
 **Data model**:
 ```
 Certification (admin-created)
-  └── Lesson (staff-created)
-        └── Module (staff-uploaded: PDF/DOC/DOCX/MP4/MOV, max 20MB)
+  └── Lesson (content_creator-created)
+        └── Module (content_creator-uploaded: PDF/DOC/DOCX/MP4/MOV, max 20MB)
               └── ModuleContent
-User (role: admin | staff | user)
+User (role: admin | content_creator | user)
 ```
 
 **File uploads**: Stored in `storage/app/public/modules/`. Requires the `storage:link` symlink to be accessible from `public/storage`.

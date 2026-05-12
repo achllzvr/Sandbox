@@ -14,7 +14,7 @@ class AdminDashboardController extends Controller
         return Inertia::render('Admin/Dashboard', [
             'metrics' => [
                 'total_users'             => User::where('role', 'user')->count(),
-                'total_staff'             => User::where('role', 'staff')->count(),
+                'total_content_creator'             => User::whereIn('role', ['content_creator', 'content_creator'])->count(),
                 'total_teachers'          => User::where('role', 'teacher')->count(),
                 'pending_teachers'        => User::where('role', 'teacher')
                                                 ->where('status', 'pending_verification')

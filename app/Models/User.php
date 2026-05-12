@@ -11,7 +11,8 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     public const ROLE_ADMIN = 'admin';
-    public const ROLE_STAFF = 'staff';
+    public const ROLE_STAFF = 'content_creator';
+    public const ROLE_CONTENT_CREATOR = 'content_creator';
     public const ROLE_TEACHER = 'teacher';
     public const ROLE_USER = 'user';
 
@@ -88,7 +89,7 @@ class User extends Authenticatable
 
     public function scopeStaff($query)
     {
-        return $query->where('role', self::ROLE_STAFF);
+        return $query->whereIn('role', [self::ROLE_STAFF, self::ROLE_CONTENT_CREATOR]);
     }
 
     public function scopeTeachers($query)
@@ -113,7 +114,7 @@ class User extends Authenticatable
 
     public function isStaff()
     {
-        return $this->role === self::ROLE_STAFF;
+        return in_array($this->role, [self::ROLE_STAFF, self::ROLE_CONTENT_CREATOR], true);
     }
 
     public function isTeacher()

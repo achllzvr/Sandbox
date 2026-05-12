@@ -20,7 +20,7 @@ class InviteUserRequest extends FormRequest
     {
         return [
             'email' => ['required', 'email', 'unique:users,email'],
-            'role' => ['required', 'in:staff,teacher'],
+            'role' => ['required', 'in:content_creator,content_creator,teacher'],
         ];
     }
 }

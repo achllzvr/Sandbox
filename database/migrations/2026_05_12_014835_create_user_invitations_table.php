@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('user_invitations', function (Blueprint $table) {
+        Schema::create('admin_invitations', function (Blueprint $table) {
             $table->id();
             $table->string('email')->unique();
             $table->string('role');
@@ -29,6 +29,6 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('user_invitations');
+        Schema::dropIfExists('admin_invitations');
     }
 };

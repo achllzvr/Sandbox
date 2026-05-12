@@ -28,7 +28,7 @@ class CertificationController extends Controller {
     }
 
     public function edit(Certification $certification) {
-        if ($certification->created_by !== auth()->id()) abort(403);
+        if ($certification->created_by_user_id !== auth()->id()) abort(403);
         $certification->load('lessons.modules.contents', 'lessons.modules.questions.answers');
         return Inertia::render('Creator/Certifications/Edit', ['certification' => $certification]);
     }
@@ -39,7 +39,7 @@ class CertificationController extends Controller {
     }
 
     public function submit(Certification $certification) {
-        if ($certification->created_by !== auth()->id()) abort(403);
+        if ($certification->created_by_user_id !== auth()->id()) abort(403);
         try {
             $this->certService->submitForApproval($certification);
             return redirect()->back()->with('success', 'Certification submitted for approval!');

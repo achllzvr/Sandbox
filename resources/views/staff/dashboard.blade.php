@@ -1,13 +1,13 @@
 @extends('layouts.dashboard')
-@section('title', 'Staff Dashboard')
+@section('title', 'content_creator Dashboard')
 
 @section('sidebar')
     <ul>
-        <li><a href="{{ url('/staff/dashboard') }}" class="active">Dashboard</a></li>
-        <li><a href="{{ route('staff.lessons.create') }}">Manage Lessons</a></li>
-        <li><a href="{{ route('staff.modules.create') }}">Upload Modules</a></li>
-        <li><a href="{{ route('staff.questions.create') }}">Upload Questions</a></li>
-        <li><a href="{{ route('staff.enrollments') }}">Enrollments</a></li>
+        <li><a href="{{ url('/content_creator/dashboard') }}" class="active">Dashboard</a></li>
+        <li><a href="{{ route('content_creator.lessons.create') }}">Manage Lessons</a></li>
+        <li><a href="{{ route('content_creator.modules.create') }}">Upload Modules</a></li>
+        <li><a href="{{ route('content_creator.questions.create') }}">Upload Questions</a></li>
+        <li><a href="{{ route('content_creator.enrollments') }}">Enrollments</a></li>
         <li>
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
@@ -19,7 +19,7 @@
 
 @section('content')
     <div class="dashboard-header-title">
-        <h1>Staff & Teacher Overview</h1>
+        <h1>content_creator & Teacher Overview</h1>
     </div>
     
     <div class="grid-4 stats-grid">

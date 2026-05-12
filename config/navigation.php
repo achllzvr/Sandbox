@@ -20,8 +20,8 @@ return [
             'route' => 'admin.dashboard',
         ],
         [
-            'label' => 'Create Staff',
-            'route' => 'admin.staff.create',
+            'label' => 'Create Content Creator',
+            'route' => 'admin.content_creator.create',
         ],
         [
             'label' => 'Create Certification',
@@ -37,26 +37,26 @@ return [
         ],
     ],
 
-    'staff' => [
+    'content_creator' => [
         [
-            'label' => 'Staff Dashboard',
-            'route' => 'staff.dashboard',
+            'label' => 'Content Creator Dashboard',
+            'route' => 'content_creator.dashboard',
         ],
         [
             'label' => 'Manage Lessons',
-            'route' => 'staff.lessons.create',
+            'route' => 'content_creator.lessons.create',
         ],
         [
             'label' => 'Upload Modules',
-            'route' => 'staff.modules.create',
+            'route' => 'content_creator.modules.create',
         ],
         [
             'label' => 'Upload Questions',
-            'route' => 'staff.questions.create',
+            'route' => 'content_creator.questions.create',
         ],
         [
             'label' => 'Enrollments',
-            'route' => 'staff.enrollments',
+            'route' => 'content_creator.enrollments',
         ],
     ],
 

@@ -3,11 +3,11 @@
 
 @section('sidebar')
     <ul>
-        <li><a href="{{ route('staff.dashboard') }}">Dashboard</a></li>
-        <li><a href="{{ route('staff.lessons.create') }}" class="active">Manage Lessons</a></li>
-        <li><a href="{{ route('staff.modules.create') }}">Upload Modules</a></li>
-        <li><a href="{{ route('staff.questions.create') }}">Upload Questions</a></li>
-        <li><a href="{{ route('staff.enrollments') }}">Enrollments</a></li>
+        <li><a href="{{ route('content_creator.dashboard') }}">Dashboard</a></li>
+        <li><a href="{{ route('content_creator.lessons.create') }}" class="active">Manage Lessons</a></li>
+        <li><a href="{{ route('content_creator.modules.create') }}">Upload Modules</a></li>
+        <li><a href="{{ route('content_creator.questions.create') }}">Upload Questions</a></li>
+        <li><a href="{{ route('content_creator.enrollments') }}">Enrollments</a></li>
         <li>
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
@@ -36,7 +36,7 @@
     @endif
 
     <div class="card form-card">
-        <form action="{{ route('staff.lessons.store') }}" method="POST" class="dashboard-form">
+        <form action="{{ route('content_creator.lessons.store') }}" method="POST" class="dashboard-form">
             @csrf
 
             <div class="form-group">
@@ -72,7 +72,7 @@
 
         @php
             $myLessons = \App\Models\Lesson::with('certification')
-                ->where('created_by_staff_id', session('user_id'))
+                ->where('created_by_content_creator_id', session('user_id'))
                 ->latest()
                 ->get();
         @endphp
@@ -103,3 +103,4 @@
         @endif
     </div>
 @endsection
+

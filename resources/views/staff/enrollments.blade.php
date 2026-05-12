@@ -3,11 +3,11 @@
 
 @section('sidebar')
     <ul>
-        <li><a href="{{ route('staff.dashboard') }}">Dashboard</a></li>
-        <li><a href="{{ route('staff.lessons.create') }}">Manage Lessons</a></li>
-        <li><a href="{{ route('staff.modules.create') }}">Upload Modules</a></li>
-        <li><a href="{{ route('staff.questions.create') }}">Upload Questions</a></li>
-        <li><a href="{{ route('staff.enrollments') }}" class="active">Enrollments</a></li>
+        <li><a href="{{ route('content_creator.dashboard') }}">Dashboard</a></li>
+        <li><a href="{{ route('content_creator.lessons.create') }}">Manage Lessons</a></li>
+        <li><a href="{{ route('content_creator.modules.create') }}">Upload Modules</a></li>
+        <li><a href="{{ route('content_creator.questions.create') }}">Upload Questions</a></li>
+        <li><a href="{{ route('content_creator.enrollments') }}" class="active">Enrollments</a></li>
         <li>
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
@@ -54,3 +54,4 @@
         @endif
     </div>
 @endsection
+

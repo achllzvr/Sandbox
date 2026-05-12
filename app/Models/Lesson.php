@@ -10,7 +10,7 @@ class Lesson extends Model
         'certification_id',
         'title',
         'description',
-        'created_by_staff_id',
+        'created_by_content_creator_id',
     ];
 
     public function certification()

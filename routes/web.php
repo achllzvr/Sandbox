@@ -44,7 +44,7 @@ Route::get('/dashboard', function () {
 
     return match ($user->role) {
         'admin' => redirect()->route('admin.dashboard'),
-        'staff' => redirect()->route('creator.certifications.index'),
+        'content_creator', 'content_creator' => redirect()->route('creator.certifications.index'),
         'teacher' => redirect()->route('teacher.dashboard'),
         default => redirect()->route('marketplace.index'),
     };
@@ -69,11 +69,11 @@ Route::middleware(['auth', 'otp.verified'])->group(function () {
 
 /*
 |--------------------------------------------------------------------------
-| Creator / Staff Routes
+| Creator / content_creator Routes
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth', 'otp.verified', 'role:staff'])
+Route::middleware(['auth', 'otp.verified', 'role:content_creator'])
     ->prefix('creator')
     ->name('creator.')
     ->group(function () {

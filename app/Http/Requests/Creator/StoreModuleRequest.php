@@ -8,7 +8,7 @@ class StoreModuleRequest extends FormRequest
 {
     public function authorize()
     {
-        return request()->user()->role === 'staff';
+        return in_array(request()->user()->role, ['content_creator', 'content_creator'], true);
     }
 
     public function rules()

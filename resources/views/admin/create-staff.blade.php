@@ -1,10 +1,10 @@
 @extends('layouts.dashboard')
-@section('title', 'Create Staff Account')
+@section('title', 'Create content_creator Account')
 
 @section('sidebar')
     <ul>
         <li><a href="{{ url('/admin/dashboard') }}">Dashboard</a></li>
-        <li><a href="{{ url('/admin/create-staff') }}" class="active">Create Staff Account</a></li>
+        <li><a href="{{ url('/admin/create-content_creator') }}" class="active">Create content_creator Account</a></li>
         <li><a href="{{ url('/admin/create-certification') }}">Manage Certifications</a></li>
         <li><a href="{{ route('admin.vouchers.index') }}">Manage Vouchers</a></li>
         <li><a href="{{ route('admin.enrollments') }}">Enrollments</a></li>
@@ -20,8 +20,8 @@
 @section('content')
     <div class="dashboard-header-title flex-between">
         <div>
-            <h1>Create Staff / Teacher Account</h1>
-            <p class="text-muted">Only Admins can provision Staff accounts for lesson and module management.</p>
+            <h1>Create content_creator / Teacher Account</h1>
+            <p class="text-muted">Only Admins can provision content_creator accounts for lesson and module management.</p>
         </div>
     </div>
 
@@ -34,7 +34,7 @@
     @endif
 
     <div class="card form-card">
-        <form action="{{ route('admin.staff.store') }}" method="POST" class="dashboard-form">
+        <form action="{{ route('admin.content_creator.store') }}" method="POST" class="dashboard-form">
             @csrf
 
             <div class="grid-2">
@@ -79,15 +79,15 @@
             </div>
 
             <div class="form-actions">
-                <button type="submit" class="btn btn-primary">Create Staff Account</button>
+                <button type="submit" class="btn btn-primary">Create content_creator Account</button>
             </div>
         </form>
     </div>
 
     <div class="card mt-4">
-        <h2>Staff Accounts</h2>
+        <h2>content_creator Accounts</h2>
 
-        @if($staffUsers->count() > 0)
+        @if($content_creatorUsers->count() > 0)
             <table class="data-table">
                 <thead>
                     <tr>
@@ -99,19 +99,19 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($staffUsers as $staff)
+                    @foreach($content_creatorUsers as $content_creator)
                         <tr>
-                            <td>{{ $staff->full_name }}</td>
-                            <td>{{ $staff->email }}</td>
-                            <td>{{ $staff->is_active ? 'Active' : 'Deactivated' }}</td>
-                            <td>{{ $staff->created_at->format('M d, Y') }}</td>
+                            <td>{{ $content_creator->full_name }}</td>
+                            <td>{{ $content_creator->email }}</td>
+                            <td>{{ $content_creator->is_active ? 'Active' : 'Deactivated' }}</td>
+                            <td>{{ $content_creator->created_at->format('M d, Y') }}</td>
                             <td>
-                                <a href="{{ route('admin.staff.edit', $staff->id) }}" class="btn btn-secondary btn-sm">Edit</a>
-                                <form action="{{ route('admin.staff.toggle', $staff->id) }}" method="POST" style="display:inline-block; margin-left:0.5rem;">
+                                <a href="{{ route('admin.content_creator.edit', $content_creator->id) }}" class="btn btn-secondary btn-sm">Edit</a>
+                                <form action="{{ route('admin.content_creator.toggle', $content_creator->id) }}" method="POST" style="display:inline-block; margin-left:0.5rem;">
                                     @csrf
-                                    <button type="submit" class="btn btn-secondary btn-sm">{{ $staff->is_active ? 'Deactivate' : 'Activate' }}</button>
+                                    <button type="submit" class="btn btn-secondary btn-sm">{{ $content_creator->is_active ? 'Deactivate' : 'Activate' }}</button>
                                 </form>
-                                <form action="{{ route('admin.staff.reset-password', $staff->id) }}" method="POST" style="display:inline-block; margin-left:0.5rem;">
+                                <form action="{{ route('admin.content_creator.reset-password', $content_creator->id) }}" method="POST" style="display:inline-block; margin-left:0.5rem;">
                                     @csrf
                                     <button type="submit" class="btn btn-primary btn-sm">Reset Password</button>
                                 </form>
@@ -122,10 +122,10 @@
             </table>
 
             <div class="mt-4">
-                {{ $staffUsers->links() }}
+                {{ $content_creatorUsers->links() }}
             </div>
         @else
-            <p>No staff accounts have been created yet.</p>
+            <p>No content_creator accounts have been created yet.</p>
         @endif
     </div>
 @endsection

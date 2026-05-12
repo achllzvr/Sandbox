@@ -12,7 +12,7 @@ class Module extends Model
         'description',
         'content_type',
         'file_path',
-        'uploaded_by_staff_id',
+        'uploaded_by_content_creator_id',
         'duration_weeks',
     ];
 

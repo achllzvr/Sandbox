@@ -9,7 +9,7 @@ class StoreModuleContentRequest extends FormRequest
     public function authorize()
     {
         $module = $this->route('module');
-        return request()->user()->id === $module->lesson->certification->created_by;
+        return request()->user()->id === $module->lesson->certification->created_by_user_id;
     }
 
     public function rules()

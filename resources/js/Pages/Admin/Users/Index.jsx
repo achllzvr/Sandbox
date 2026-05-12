@@ -9,7 +9,7 @@ export default function UsersIndex({ users, filters }) {
     const [roleFilter, setRoleFilter] = useState(filters?.role || '');
 
     const inviteForm = useForm({
-        email: '', role: 'staff',
+        email: '', role: 'content_creator',
     });
 
     const verifyForm = useForm({
@@ -48,7 +48,7 @@ export default function UsersIndex({ users, filters }) {
     function roleBadge(role) {
         const map = {
             admin: 'bg-red-100 text-red-700',
-            staff: 'bg-purple-100 text-purple-700',
+            content_creator: 'bg-purple-100 text-purple-700',
             teacher: 'bg-teal-100 text-teal-700',
             user: 'bg-blue-100 text-blue-700',
         };
@@ -76,7 +76,7 @@ export default function UsersIndex({ users, filters }) {
                     >
                         <option value="">All Roles</option>
                         <option value="user">Student</option>
-                        <option value="staff">Staff</option>
+                        <option value="content_creator">content_creator</option>
                         <option value="teacher">Teacher</option>
                         <option value="admin">Admin</option>
                     </select>
@@ -161,7 +161,7 @@ export default function UsersIndex({ users, filters }) {
                                 <label className="block text-sm font-medium text-stone-700 mb-1">Role</label>
                                 <select value={inviteForm.data.role} onChange={e => inviteForm.setData('role', e.target.value)}
                                     className="w-full border border-stone-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-amber-500">
-                                    <option value="staff">Content Creator (Staff)</option>
+                                    <option value="content_creator">Content Creator (content_creator)</option>
                                     <option value="teacher">Teacher</option>
                                 </select>
                             </div>
@@ -235,3 +235,4 @@ export default function UsersIndex({ users, filters }) {
         </AdminLayout>
     );
 }
+

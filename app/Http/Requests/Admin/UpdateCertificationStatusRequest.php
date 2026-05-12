@@ -15,7 +15,7 @@ class UpdateCertificationStatusRequest extends FormRequest
     {
         return [
             'status' => ['required', 'in:published,declined'],
-            'decline_reason' => ['required_if:status,declined', 'string', 'nullable'],
+            'decline_reason' => ['required_if:status,declined', 'nullable', 'string', 'max:1000'],
         ];
     }
 }

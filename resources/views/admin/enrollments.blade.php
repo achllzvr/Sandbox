@@ -4,7 +4,7 @@
 @section('sidebar')
     <ul>
         <li><a href="{{ url('/admin/dashboard') }}">Dashboard</a></li>
-        <li><a href="{{ url('/admin/create-staff') }}">Create Staff Account</a></li>
+        <li><a href="{{ url('/admin/create-content_creator') }}">Create content_creator Account</a></li>
         <li><a href="{{ url('/admin/create-certification') }}">Manage Certifications</a></li>
         <li><a href="{{ route('admin.vouchers.index') }}">Manage Vouchers</a></li>
         <li><a href="{{ route('admin.enrollments') }}" class="active">Enrollments</a></li>
@@ -60,3 +60,4 @@
         @endif
     </div>
 @endsection
+
