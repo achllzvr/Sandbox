@@ -1,7 +1,11 @@
 import { Head, router } from '@inertiajs/react';
+import { useState } from 'react';
 import AdminLayout from '@/Layouts/AdminLayout';
+import Modal from '@/Components/Modal';
 
 export default function TeachersIndex({ teachers }) {
+    const [selectedFileUrl, setSelectedFileUrl] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     function statusBadge(status) {
         const map = {
@@ -36,10 +40,14 @@ export default function TeachersIndex({ teachers }) {
                                 <td className="px-6 py-3 text-stone-500">{t.affiliation || '—'}</td>
                                 <td className="px-6 py-3">
                                     {t.institutional_credentials_url ? (
-                                        <a href={`/storage/${t.institutional_credentials_url}`} target="_blank" rel="noopener noreferrer"
+                                        <button 
+                                            onClick={() => {
+                                                setSelectedFileUrl(`/storage/${t.institutional_credentials_url}`);
+                                                setIsModalOpen(true);
+                                            }}
                                             className="text-amber-600 hover:text-amber-800 text-xs font-medium underline">
                                             View file
-                                        </a>
+                                        </button>
                                     ) : <span className="text-stone-400 text-xs">None</span>}
                                 </td>
                                 <td className="px-6 py-3">
@@ -74,6 +82,40 @@ export default function TeachersIndex({ teachers }) {
                     <p className="text-center py-12 text-stone-400 text-sm">No teacher accounts found.</p>
                 )}
             </div>
+
+            <Modal show={isModalOpen} onClose={() => setIsModalOpen(false)} maxWidth="2xl">
+                <div className="p-6">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-lg font-medium text-stone-900">Credential Proof</h2>
+                        <button 
+                            onClick={() => setIsModalOpen(false)}
+                            className="text-stone-400 hover:text-stone-600 font-bold text-xl"
+                        >
+                            &times;
+                        </button>
+                    </div>
+                    
+                    <div className="flex justify-center items-center w-full bg-stone-50 rounded-lg p-2 min-h-[40vh]">
+                        {selectedFileUrl ? (
+                            selectedFileUrl.toLowerCase().match(/\.(jpeg|jpg|gif|png)$/) != null ? (
+                                <img 
+                                    src={selectedFileUrl} 
+                                    alt="Credential Proof" 
+                                    className="max-w-full max-h-[75vh] object-contain rounded-lg shadow-sm" 
+                                />
+                            ) : (
+                                <iframe 
+                                    src={selectedFileUrl} 
+                                    className="w-full h-[75vh] rounded-lg border border-stone-200 bg-white" 
+                                    title="Credential Document"
+                                />
+                            )
+                        ) : (
+                            <p className="text-stone-500 text-center py-8">File cannot be loaded.</p>
+                        )}
+                    </div>
+                </div>
+            </Modal>
         </AdminLayout>
     );
 }

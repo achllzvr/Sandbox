@@ -47,9 +47,12 @@ class RegisteredUserController extends Controller
             ]
         ]);
 
-        // Send via Gmail SMTP — not stored anywhere
-        Mail::to($user->email)
-            ->send(new OtpMail($otp, $user->first_name));
+        $email = $user->email;
+        $firstName = $user->first_name;
+
+        dispatch(function () use ($email, $otp, $firstName) {
+            Mail::to($email)->send(new OtpMail($otp, $firstName));
+        })->afterResponse();
 
         Auth::login($user);
 

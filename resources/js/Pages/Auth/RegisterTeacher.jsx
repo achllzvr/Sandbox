@@ -15,7 +15,7 @@ export default function RegisterTeacher() {
         birthday:                   '',
         contact_no:                 '',
         affiliation:                '',
-        institutional_credentials:  null,
+        credential_proof:           null,
     });
 
     const credentialRef = useRef(null);
@@ -173,7 +173,7 @@ export default function RegisterTeacher() {
                         onClick={() => credentialRef.current?.click()}
                         className="mt-2 border-2 border-dashed border-stone-300 rounded-xl p-8 text-center cursor-pointer hover:border-amber-400 transition-colors bg-stone-50 hover:bg-amber-50"
                     >
-                        {!data.institutional_credentials ? (
+                        {!data.credential_proof ? (
                             <>
                                 <div className="text-3xl mb-2">📄</div>
                                 <p className="text-stone-700 font-medium">Click to upload your institutional ID or credentials</p>
@@ -182,7 +182,7 @@ export default function RegisterTeacher() {
                         ) : (
                             <div className="flex flex-col items-center">
                                 <div className="text-3xl mb-2 text-green-500">✓</div>
-                                <p className="text-sm font-bold text-green-600 truncate max-w-xs">{data.institutional_credentials.name}</p>
+                                <p className="text-sm font-bold text-green-600 truncate max-w-xs">{data.credential_proof.name}</p>
                                 <p className="text-xs text-stone-400 mt-1">Click to change file</p>
                             </div>
                         )}
@@ -191,10 +191,10 @@ export default function RegisterTeacher() {
                             accept=".pdf,.jpg,.jpeg,.png"
                             ref={credentialRef}
                             className="hidden"
-                            onChange={e => setData('institutional_credentials', e.target.files[0])}
+                            onChange={e => setData('credential_proof', e.target.files[0])}
                         />
                     </div>
-                    <InputError message={errors.institutional_credentials} className="mt-2" />
+                    <InputError message={errors.credential_proof} className="mt-2" />
                 </div>
 
                 <div className="mt-8">

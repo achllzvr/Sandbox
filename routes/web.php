@@ -114,11 +114,12 @@ Route::middleware(['auth', 'otp.verified', 'role:admin'])
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])
             ->name('dashboard');
 
-        // User Management
-        Route::get('/users', [UserManagementController::class, 'index'])
-            ->name('users.index');
-        Route::post('/users', [UserManagementController::class, 'store'])
-            ->name('users.store');
+    // User Management
+    Route::prefix('users')->name('users.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\UserManagementController::class, 'index'])->name('index');
+        Route::post('/invite', [\App\Http\Controllers\Admin\UserManagementController::class, 'invite'])->name('invite');
+        Route::put('/{user}/verify-teacher', [\App\Http\Controllers\Admin\UserManagementController::class, 'verifyTeacher'])->name('verify-teacher');
+    });
 
         // Certification Approval
         Route::get('/certifications', [CertificationApprovalController::class, 'index'])
@@ -172,9 +173,16 @@ Route::middleware(['auth', 'otp.verified', 'role:teacher'])
     ->prefix('teacher')
     ->name('teacher.')
     ->group(function () {
-        Route::get('/dashboard', function () {
-            return Inertia::render('Teacher/Dashboard');
-        })->name('dashboard');
+        Route::get('/dashboard', [\App\Http\Controllers\Teacher\TeacherDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/purchasing', [\App\Http\Controllers\Teacher\TeacherDashboardController::class, 'purchasing'])->name('purchasing');
+        Route::get('/vouchers', [\App\Http\Controllers\Teacher\TeacherDashboardController::class, 'vouchers'])->name('vouchers');
+        Route::get('/analytics', [\App\Http\Controllers\Teacher\TeacherDashboardController::class, 'analytics'])->name('analytics');
     });
 
 require __DIR__ . '/auth.php';
+
+// Accept Invitation Routes
+Route::middleware('guest')->group(function () {
+    Route::get('/accept-invite/{token}', [\App\Http\Controllers\Auth\AcceptInvitationController::class, 'show'])->name('accept.invite');
+    Route::post('/accept-invite', [\App\Http\Controllers\Auth\AcceptInvitationController::class, 'store'])->name('accept.invite.store');
+});

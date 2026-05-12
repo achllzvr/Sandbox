@@ -22,8 +22,8 @@ class TeacherRegistrationController extends Controller
     {
         // Store credential file
         $credentialPath = $request
-            ->file('institutional_credentials')
-            ->store('teacher-credentials', 'public');
+            ->file('credential_proof')
+            ->store('credentials', 'public');
 
         $user = User::create([
             'first_name'  => $request->first_name,
@@ -52,8 +52,12 @@ class TeacherRegistrationController extends Controller
             ]
         ]);
 
-        Mail::to($user->email)
-            ->send(new OtpMail($otp, $user->first_name));
+        $email = $user->email;
+        $firstName = $user->first_name;
+
+        dispatch(function () use ($email, $otp, $firstName) {
+            Mail::to($email)->send(new OtpMail($otp, $firstName));
+        })->afterResponse();
 
         Auth::login($user);
 
