@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Staff;
+namespace App\Http\Controllers\Creator;
 
 use App\Http\Controllers\Controller;
 use App\Models\Certification;
@@ -21,23 +21,23 @@ class StaffController extends Controller
 
         $assignedCertifications = $certifications->count();
 
-        $uploadedLessons = Lesson::where('created_by_staff_id', session('user_id'))
+        $uploadedLessons = Lesson::where('created_by_content_creator_id', session('user_id'))
             ->count();
 
-        $uploadedModules = Module::where('uploaded_by_staff_id', session('user_id'))
+        $uploadedModules = Module::where('uploaded_by_content_creator_id', session('user_id'))
             ->count();
 
-        $recentLessons = Lesson::where('created_by_staff_id', session('user_id'))
+        $recentLessons = Lesson::where('created_by_content_creator_id', session('user_id'))
             ->latest()
             ->take(5)
             ->get();
 
-        $recentModules = Module::where('uploaded_by_staff_id', session('user_id'))
+        $recentModules = Module::where('uploaded_by_content_creator_id', session('user_id'))
             ->latest()
             ->take(5)
             ->get();
 
-        return view('staff.dashboard', compact(
+        return view('content_creator.dashboard', compact(
             'certifications',
             'assignedCertifications',
             'uploadedLessons',
@@ -53,7 +53,7 @@ class StaffController extends Controller
             ->latest()
             ->get();
 
-        return view('staff.create-lesson', compact('certifications'));
+        return view('content_creator.create-lesson', compact('certifications'));
     }
 
     public function createLesson(Request $request)
@@ -68,7 +68,7 @@ class StaffController extends Controller
             'certification_id' => $request->certification_id,
             'title' => $request->title,
             'description' => $request->description,
-            'created_by_staff_id' => session('user_id'),
+            'created_by_content_creator_id' => session('user_id'),
         ]);
 
         return redirect()->back()->with('success', 'Lesson created successfully.');
@@ -85,11 +85,11 @@ class StaffController extends Controller
             ->get();
 
         $modules = Module::with('lesson.certification')
-            ->where('uploaded_by_staff_id', session('user_id'))
+            ->where('uploaded_by_content_creator_id', session('user_id'))
             ->latest()
             ->get();
 
-        return view('staff.upload-module', compact(
+        return view('content_creator.upload-module', compact(
             'certifications',
             'lessons',
             'modules'
@@ -118,7 +118,7 @@ class StaffController extends Controller
             ],
             [
                 'description' => null,
-                'created_by_staff_id' => session('user_id'),
+                'created_by_content_creator_id' => session('user_id'),
             ]
         );
 
@@ -138,7 +138,7 @@ class StaffController extends Controller
             'description' => $request->description,
             'content_type' => $request->content_type,
             'file_path' => $filePath,
-            'uploaded_by_staff_id' => session('user_id'),
+            'uploaded_by_content_creator_id' => session('user_id'),
             'duration_weeks' => $request->duration_weeks,
         ]);
 
@@ -147,20 +147,20 @@ class StaffController extends Controller
 
     public function showUploadQuestions(Request $request)
     {
-        $staffModules = Module::with('lesson.certification')
-            ->where('uploaded_by_staff_id', session('user_id'))
+        $content_creatorModules = Module::with('lesson.certification')
+            ->where('uploaded_by_content_creator_id', session('user_id'))
             ->get();
 
         $selectedModule = null;
         $questions = collect();
 
         if ($request->filled('module_id')) {
-            $selectedModule = Module::where('uploaded_by_staff_id', session('user_id'))
+            $selectedModule = Module::where('uploaded_by_content_creator_id', session('user_id'))
                 ->findOrFail($request->module_id);
             $questions = Question::where('module_id', $selectedModule->id)->get();
         }
 
-        return view('staff.upload-questions', compact('staffModules', 'selectedModule', 'questions'));
+        return view('content_creator.upload-questions', compact('content_creatorModules', 'selectedModule', 'questions'));
     }
 
     public function storeQuestion(Request $request)
@@ -175,7 +175,7 @@ class StaffController extends Controller
             'correct_answer' => 'required|in:a,b,c,d',
         ]);
 
-        $module = Module::where('uploaded_by_staff_id', session('user_id'))
+        $module = Module::where('uploaded_by_content_creator_id', session('user_id'))
             ->findOrFail($request->module_id);
 
         if (Question::where('module_id', $module->id)->count() >= 5) {
@@ -194,21 +194,21 @@ class StaffController extends Controller
             'correct_answer' => $request->correct_answer,
         ]);
 
-        return redirect()->route('staff.questions.create', ['module_id' => $module->id])
+        return redirect()->route('content_creator.questions.create', ['module_id' => $module->id])
             ->with('success', 'Question added successfully.');
     }
 
    public function enrollments()
 {
-    $staffLessonCertIds = Lesson::where('created_by_staff_id', session('user_id'))
+    $content_creatorLessonCertIds = Lesson::where('created_by_content_creator_id', session('user_id'))
         ->pluck('certification_id')
         ->unique();
 
     $enrollments = EnrollmentRequest::with(['user', 'certification'])
-        ->whereIn('certification_id', $staffLessonCertIds)
+        ->whereIn('certification_id', $content_creatorLessonCertIds)
         ->latest('requested_at')
         ->get();
 
-    return view('staff.enrollments', compact('enrollments'));
+    return view('content_creator.enrollments', compact('enrollments'));
 }
 }

@@ -11,18 +11,18 @@ class StaffAccountCreatedMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public $staff;
+    public $content_creator;
     public $plainPassword;
 
-    public function __construct(User $staff, $plainPassword)
+    public function __construct(User $content_creator, $plainPassword)
     {
-        $this->staff = $staff;
+        $this->content_creator = $content_creator;
         $this->plainPassword = $plainPassword;
     }
 
     public function build()
     {
-        return $this->subject('Your Staff Account Has Been Created')
-                    ->view('emails.staff-account-created');
+        return $this->subject('Your Content Creator Account Has Been Created')
+                    ->view('emails.content_creator-account-created');
     }
 }

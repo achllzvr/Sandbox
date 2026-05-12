@@ -7,7 +7,7 @@
     <div class="auth-container">
         <div class="card auth-card">
             <h2>Platform Login</h2>
-            <p class="auth-subtitle">Access your dashboard (Admin, Staff, or Taker)</p>
+            <p class="auth-subtitle">Access your dashboard (Admin, content_creator, or Taker)</p>
 
             @if(session('success'))
                 <div class="alert alert-success">
@@ -52,7 +52,7 @@
                     <p>Not a certification taker yet? 
                         <a href="{{ route('register.show') }}">Register here</a>
                     </p>
-                    <p class="admin-notice">Note: Admin and Staff accounts are internally managed.</p>
+                    <p class="admin-notice">Note: Admin and content_creator accounts are internally managed.</p>
                 </div>
             </form>
         </div>

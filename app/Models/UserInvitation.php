@@ -9,6 +9,8 @@ class UserInvitation extends Model
 {
     use HasFactory;
 
+    protected $table = 'admin_invitations';
+
     protected $fillable = [
         'email',
         'role',

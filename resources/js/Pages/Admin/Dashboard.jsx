@@ -3,7 +3,7 @@ import AdminLayout from '@/Layouts/AdminLayout';
 
 const METRIC_CARDS = [
     { key: 'total_users',              label: 'Students',               icon: '👤', color: 'bg-blue-50 text-blue-700 border-blue-200' },
-    { key: 'total_staff',              label: 'Content Creators',       icon: '✏️', color: 'bg-purple-50 text-purple-700 border-purple-200' },
+    { key: 'total_content_creator',              label: 'Content Creators',       icon: '✏️', color: 'bg-purple-50 text-purple-700 border-purple-200' },
     { key: 'total_teachers',           label: 'Teachers',               icon: '🎓', color: 'bg-teal-50 text-teal-700 border-teal-200' },
     { key: 'pending_teachers',         label: 'Pending Teachers',       icon: '⏳', color: 'bg-amber-50 text-amber-700 border-amber-200' },
     { key: 'total_certifications',     label: 'Total Shells',           icon: '🐚', color: 'bg-stone-50 text-stone-700 border-stone-200' },

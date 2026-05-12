@@ -21,7 +21,7 @@ class AdminController extends Controller
     {
         $totalUsers = User::where('role', 'user')->count();
 
-        $totalStaff = User::where('role', 'staff')->count();
+        $totalStaff = User::where('role', 'content_creator')->count();
 
         $totalCertifications = Certification::count();
 
@@ -58,11 +58,11 @@ class AdminController extends Controller
 
     public function showCreateStaff()
     {
-        $staffUsers = User::where('role', 'staff')
+        $content_creatorUsers = User::where('role', 'content_creator')
             ->latest()
             ->paginate(12);
 
-        return view('admin.create-staff', compact('staffUsers'));
+        return view('admin.create-content_creator', compact('content_creatorUsers'));
     }
 
     public function createStaff(Request $request)
@@ -78,52 +78,52 @@ class AdminController extends Controller
 
         $password = $request->password;
 
-        $staff = User::create([
+        $content_creator = User::create([
             'first_name' => $request->first_name,
             'last_name' => $request->last_name,
             'email' => $request->email,
             'password' => Hash::make($password),
             'birthday' => $request->birthday,
             'contact_no' => $request->contact_no,
-            'role' => 'staff',
+            'role' => 'content_creator',
             'is_active' => true,
             'email_verified_at' => now(),
         ]);
 
-        Mail::to($staff->email)->queue(
-            new StaffAccountCreatedMail($staff, $password)
+        Mail::to($content_creator->email)->queue(
+            new StaffAccountCreatedMail($content_creator, $password)
         );
 
         return redirect()
-            ->route('admin.staff.create')
-            ->with('success', 'Staff account created successfully.');
+            ->route('admin.content_creator.create')
+            ->with('success', 'Content Creator account created successfully.');
     }
 
-    public function editStaff(User $staff)
+    public function editStaff(User $content_creator)
     {
-        if ($staff->role !== 'staff') {
+        if ($content_creator->role !== 'content_creator') {
             abort(404);
         }
 
-        return view('admin.edit-staff', compact('staff'));
+        return view('admin.edit-content_creator', compact('content_creator'));
     }
 
-    public function updateStaff(Request $request, User $staff)
+    public function updateStaff(Request $request, User $content_creator)
     {
-        if ($staff->role !== 'staff') {
+        if ($content_creator->role !== 'content_creator') {
             abort(404);
         }
 
         $request->validate([
             'first_name' => 'required|string|max:100',
             'last_name' => 'required|string|max:100',
-            'email' => 'required|string|email|max:255|unique:users,email,' . $staff->id,
+            'email' => 'required|string|email|max:255|unique:users,email,' . $content_creator->id,
             'birthday' => 'required|date',
             'contact_no' => 'required|string|max:20',
             'is_active' => 'required|boolean',
         ]);
 
-        $staff->update([
+        $content_creator->update([
             'first_name' => $request->first_name,
             'last_name' => $request->last_name,
             'email' => $request->email,
@@ -133,44 +133,44 @@ class AdminController extends Controller
         ]);
 
         return redirect()
-            ->route('admin.staff.create')
-            ->with('success', 'Staff details updated successfully.');
+            ->route('admin.content_creator.create')
+            ->with('success', 'Content Creator details updated successfully.');
     }
 
-    public function toggleStaffStatus(User $staff)
+    public function toggleStaffStatus(User $content_creator)
     {
-        if ($staff->role !== 'staff') {
+        if ($content_creator->role !== 'content_creator') {
             abort(404);
         }
 
-        $staff->update([
-            'is_active' => !$staff->is_active
+        $content_creator->update([
+            'is_active' => !$content_creator->is_active
         ]);
 
         return redirect()
             ->back()
-            ->with('success', 'Staff account status updated successfully.');
+            ->with('success', 'Content Creator account status updated successfully.');
     }
 
-    public function resetStaffPassword(User $staff)
+    public function resetStaffPassword(User $content_creator)
     {
-        if ($staff->role !== 'staff') {
+        if ($content_creator->role !== 'content_creator') {
             abort(404);
         }
 
         $password = Str::random(10);
 
-        $staff->update([
+        $content_creator->update([
             'password' => Hash::make($password)
         ]);
 
-        Mail::to($staff->email)->queue(
-            new StaffAccountCreatedMail($staff, $password)
+        Mail::to($content_creator->email)->queue(
+            new StaffAccountCreatedMail($content_creator, $password)
         );
 
         return redirect()
             ->back()
-            ->with('success', 'Password reset successfully and emailed to the staff user.');
+            ->with('success', 'Password reset successfully and emailed to the content_creator user.');
     }
 
     public function showCertifications()
@@ -269,7 +269,7 @@ class AdminController extends Controller
             'certification_id' => $request->certification_id,
             'title' => $request->title,
             'description' => $request->description,
-            'created_by_staff_id' => session('user_id'),
+            'created_by_content_creator_id' => session('user_id'),
         ]);
 
         return redirect()

@@ -7,6 +7,10 @@ use Illuminate\Http\Request;
 
 class CheckRole
 {
+    private const ROLE_ALIASES = [
+        'content_creator' => 'content_creator',
+    ];
+
     public function handle(
         Request $request,
         Closure $next,
@@ -49,8 +53,11 @@ class CheckRole
                 ]);
         }
 
+        $normalizedRole = self::ROLE_ALIASES[$role] ?? $role;
+        $normalizedUserRole = self::ROLE_ALIASES[$user->role] ?? $user->role;
+
         // Wrong role
-        if ($user->role !== $role) {
+        if ($normalizedUserRole !== $normalizedRole) {
             abort(403, 'Unauthorized.');
         }
 

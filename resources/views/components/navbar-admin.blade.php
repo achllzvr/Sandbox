@@ -2,7 +2,7 @@
     <a href="{{ route('admin.dashboard') }}">Admin Dashboard</a>
 </li>
 <li>
-    <a href="{{ route('admin.staff.create') }}">Create Staff</a>
+    <a href="{{ route('admin.content_creator.create') }}">Create content_creator</a>
 </li>
 <li>
     <a href="{{ route('admin.certifications.create') }}">Create Certification</a>
@@ -22,3 +22,4 @@
         <button type="submit" class="btn btn-secondary nav-btn">Logout</button>
     </form>
 </li>
+

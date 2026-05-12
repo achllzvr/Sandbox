@@ -3,11 +3,11 @@
 
 @section('sidebar')
     <ul>
-        <li><a href="{{ route('staff.dashboard') }}">Dashboard</a></li>
-        <li><a href="{{ route('staff.lessons.create') }}">Manage Lessons</a></li>
-        <li><a href="{{ route('staff.modules.create') }}" class="active">Upload Modules</a></li>
-        <li><a href="{{ route('staff.questions.create') }}">Upload Questions</a></li>
-        <li><a href="{{ route('staff.enrollments') }}">Enrollments</a></li>
+        <li><a href="{{ route('content_creator.dashboard') }}">Dashboard</a></li>
+        <li><a href="{{ route('content_creator.lessons.create') }}">Manage Lessons</a></li>
+        <li><a href="{{ route('content_creator.modules.create') }}" class="active">Upload Modules</a></li>
+        <li><a href="{{ route('content_creator.questions.create') }}">Upload Questions</a></li>
+        <li><a href="{{ route('content_creator.enrollments') }}">Enrollments</a></li>
         <li>
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
@@ -36,7 +36,7 @@
     @endif
 
     <div class="card form-card">
-        <form action="{{ route('staff.modules.store') }}" method="POST" enctype="multipart/form-data" class="dashboard-form">
+        <form action="{{ route('content_creator.modules.store') }}" method="POST" enctype="multipart/form-data" class="dashboard-form">
             @csrf
 
             <div class="grid-2">

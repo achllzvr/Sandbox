@@ -3,7 +3,7 @@
 
 -- 1. Add duration_weeks to modules
 ALTER TABLE `modules`
-  ADD COLUMN `duration_weeks` int(11) NOT NULL DEFAULT 1 AFTER `uploaded_by_staff_id`;
+  ADD COLUMN `duration_weeks` int(11) NOT NULL DEFAULT 1 AFTER `uploaded_by_content_creator_id`;
 
 -- 2. Questions table (up to 5 per module)
 CREATE TABLE `questions` (

@@ -3,11 +3,11 @@
 
 @section('sidebar')
     <ul>
-        <li><a href="{{ route('staff.dashboard') }}">Dashboard</a></li>
-        <li><a href="{{ route('staff.lessons.create') }}">Manage Lessons</a></li>
-        <li><a href="{{ route('staff.modules.create') }}">Upload Modules</a></li>
-        <li><a href="{{ route('staff.questions.create') }}" class="active">Upload Questions</a></li>
-        <li><a href="{{ route('staff.enrollments') }}">Enrollments</a></li>
+        <li><a href="{{ route('content_creator.dashboard') }}">Dashboard</a></li>
+        <li><a href="{{ route('content_creator.lessons.create') }}">Manage Lessons</a></li>
+        <li><a href="{{ route('content_creator.modules.create') }}">Upload Modules</a></li>
+        <li><a href="{{ route('content_creator.questions.create') }}" class="active">Upload Questions</a></li>
+        <li><a href="{{ route('content_creator.enrollments') }}">Enrollments</a></li>
         <li>
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
@@ -37,7 +37,7 @@
                 <label for="module_id">Select Module</label>
                 <select id="module_id" name="module_id" onchange="this.form.submit()">
                     <option value="">-- Choose a Module --</option>
-                    @foreach($staffModules as $mod)
+                    @foreach($content_creatorModules as $mod)
                         <option value="{{ $mod->id }}" {{ isset($selectedModule) && $selectedModule->id == $mod->id ? 'selected' : '' }}>
                             {{ $mod->title }} — {{ $mod->lesson->certification->title ?? '' }} / {{ $mod->lesson->title ?? '' }}
                         </option>
@@ -87,7 +87,7 @@
         @if($questions->count() < 5)
             <div class="card form-card mt-4">
                 <h2>Add Question {{ $questions->count() + 1 }}</h2>
-                <form action="{{ route('staff.questions.store') }}" method="POST" class="dashboard-form">
+                <form action="{{ route('content_creator.questions.store') }}" method="POST" class="dashboard-form">
                     @csrf
                     <input type="hidden" name="module_id" value="{{ $selectedModule->id }}">
 
@@ -138,3 +138,4 @@
         @endif
     @endif
 @endsection
+

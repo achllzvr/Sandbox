@@ -4,7 +4,7 @@
 @section('sidebar')
     <ul>
         <li><a href="{{ url('/admin/dashboard') }}">Dashboard</a></li>
-        <li><a href="{{ url('/admin/create-staff') }}">Create Staff Account</a></li>
+        <li><a href="{{ url('/admin/create-content_creator') }}">Create content_creator Account</a></li>
         <li><a href="{{ url('/admin/create-certification') }}" class="active">Manage Certifications</a></li>
         <li><a href="{{ route('admin.vouchers.index') }}">Manage Vouchers</a></li>
         <li><a href="{{ route('admin.enrollments') }}">Enrollments</a></li>
@@ -20,7 +20,7 @@
 @section('content')
     <div class="dashboard-header-title">
         <h1>Create New Certification</h1>
-        <p class="text-muted">Define a new certification track. Uploading modules is done by Staff.</p>
+        <p class="text-muted">Define a new certification track. Uploading modules is done by content_creator.</p>
     </div>
 
     @if(session('success'))
