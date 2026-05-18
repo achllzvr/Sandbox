@@ -7,11 +7,13 @@ use App\Http\Controllers\Admin\TeacherVerificationController;
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\FinanceController;
 use App\Http\Controllers\Creator\CertificationController;
+use App\Http\Controllers\Creator\CreatorDashboardController;
 use App\Http\Controllers\Creator\LessonController;
 use App\Http\Controllers\Creator\ModuleContentController;
 use App\Http\Controllers\Creator\ModuleController;
 use App\Http\Controllers\Creator\QuestionController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Student\DashboardController as StudentDashboardController;
 use App\Http\Controllers\Student\MarketplaceController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -44,9 +46,9 @@ Route::get('/dashboard', function () {
 
     return match ($user->role) {
         'admin' => redirect()->route('admin.dashboard'),
-        'content_creator', 'content_creator' => redirect()->route('creator.certifications.index'),
+        'content_creator', 'content_creator' => redirect()->route('creator.dashboard'),
         'teacher' => redirect()->route('teacher.dashboard'),
-        default => redirect()->route('marketplace.index'),
+        default => redirect()->route('student.dashboard'),
     };
 })->middleware(['auth', 'otp.verified'])->name('dashboard');
 
@@ -77,9 +79,8 @@ Route::middleware(['auth', 'otp.verified', 'role:content_creator'])
     ->prefix('creator')
     ->name('creator.')
     ->group(function () {
-        Route::get('/dashboard', function () {
-            return redirect()->route('creator.certifications.index');
-        })->name('dashboard');
+        Route::get('/dashboard', [CreatorDashboardController::class, 'index'])
+            ->name('dashboard');
 
         Route::resource('certifications', CertificationController::class)
             ->except(['show', 'destroy']);
@@ -154,9 +155,7 @@ Route::middleware(['auth', 'otp.verified', 'role:user'])
     ->prefix('student')
     ->name('student.')
     ->group(function () {
-        Route::get('/dashboard', function () {
-            return redirect()->route('marketplace.index');
-        })->name('dashboard');
+        Route::get('/dashboard', [StudentDashboardController::class, 'index'])->name('dashboard');
     });
 
 Route::middleware(['auth', 'otp.verified', 'role:user'])
