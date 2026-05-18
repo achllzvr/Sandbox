@@ -18,6 +18,13 @@ class UpdateCertificationRequest extends FormRequest
         return [
             'title' => ['sometimes', 'string', 'max:255'],
             'description' => ['sometimes', 'string'],
+            'category' => ['sometimes', 'string', 'max:255'],
+            'difficulty' => ['sometimes', 'string', 'max:255'],
+            'estimated_duration' => ['sometimes', 'string', 'max:255'],
+            'thumbnail' => ['sometimes', 'string', 'max:255'],
+            'learning_objectives' => ['sometimes', 'string'],
+            'prerequisites' => ['sometimes', 'string'],
+            'tags' => ['sometimes', 'array'],
         ];
     }
 }

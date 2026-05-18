@@ -14,8 +14,8 @@ class UpdateCertificationStatusRequest extends FormRequest
     public function rules()
     {
         return [
-            'status' => ['required', 'in:published,declined'],
-            'decline_reason' => ['required_if:status,declined', 'nullable', 'string', 'max:1000'],
+            'status' => ['required', 'in:approved,published,denied'],
+            'decline_reason' => ['required_if:status,denied', 'nullable', 'string', 'max:1000'],
         ];
     }
 }

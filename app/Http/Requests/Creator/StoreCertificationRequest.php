@@ -16,6 +16,13 @@ class StoreCertificationRequest extends FormRequest
         return [
             'title' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
+            'category' => ['nullable', 'string', 'max:255'],
+            'difficulty' => ['nullable', 'string', 'max:255'],
+            'estimated_duration' => ['nullable', 'string', 'max:255'],
+            'thumbnail' => ['nullable', 'string', 'max:255'],
+            'learning_objectives' => ['nullable', 'string'],
+            'prerequisites' => ['nullable', 'string'],
+            'tags' => ['nullable', 'array'],
         ];
     }
 }

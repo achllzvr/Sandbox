@@ -58,10 +58,17 @@ export default function Index({ certifications }) {
                                     <div className="h-1.5 bg-gradient-to-r from-amber-400 to-amber-500" />
 
                                     <div className="p-6 flex flex-col flex-grow">
-                                        {/* Title */}
-                                        <h3 className="font-bold text-lg text-stone-900 leading-snug line-clamp-2">
-                                            {cert.title}
-                                        </h3>
+                                        {/* Title & Badge */}
+                                        <div className="flex justify-between items-start gap-2">
+                                            <h3 className="font-bold text-lg text-stone-900 leading-snug line-clamp-2">
+                                                {cert.title}
+                                            </h3>
+                                            {(cert.status === 'approved' || cert.status === 'published') && (
+                                                <span title="Verified Certification" className="flex-shrink-0 bg-blue-100 text-blue-700 text-[10px] uppercase font-bold px-2 py-1 rounded-md border border-blue-200">
+                                                    ✓ Verified
+                                                </span>
+                                            )}
+                                        </div>
 
                                         {/* Creator + Date */}
                                         <p className="text-xs text-stone-400 mt-1.5">
