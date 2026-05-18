@@ -10,7 +10,7 @@ class MarketplaceController extends Controller
 {
     public function index()
     {
-        $certifications = Certification::where('status', 'published')
+        $certifications = Certification::whereIn('status', ['approved', 'published'])
             ->with('creator:id,first_name,last_name')
             ->latest()
             ->paginate(12);

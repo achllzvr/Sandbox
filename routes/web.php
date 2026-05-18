@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\FinanceController;
 use App\Http\Controllers\Creator\CertificationController;
 use App\Http\Controllers\Creator\CreatorDashboardController;
 use App\Http\Controllers\Creator\LessonController;
+use App\Http\Controllers\Creator\LearningMaterialController;
 use App\Http\Controllers\Creator\ModuleContentController;
 use App\Http\Controllers\Creator\ModuleController;
 use App\Http\Controllers\Creator\QuestionController;
@@ -88,6 +89,12 @@ Route::middleware(['auth', 'otp.verified', 'role:content_creator'])
         Route::post('certifications/{certification}/submit', [CertificationController::class, 'submit'])
             ->name('certifications.submit');
 
+        Route::post('certifications/{certification}/materials', [LearningMaterialController::class, 'store'])
+            ->name('certifications.materials.store');
+            
+        Route::delete('certifications/{certification}/materials/{material}', [LearningMaterialController::class, 'destroy'])
+            ->name('certifications.materials.destroy');
+
         Route::post('lessons', [LessonController::class, 'store'])
             ->name('lessons.store');
 
@@ -125,8 +132,12 @@ Route::middleware(['auth', 'otp.verified', 'role:admin'])
         // Certification Approval
         Route::get('/certifications', [CertificationApprovalController::class, 'index'])
             ->name('certifications.index');
+        Route::get('/certifications/{certification}', [CertificationApprovalController::class, 'show'])
+            ->name('certifications.show');
         Route::put('/certifications/{certification}/status', [CertificationApprovalController::class, 'update'])
             ->name('certifications.status.update');
+        Route::put('/certifications/{certification}/request-revision', [CertificationApprovalController::class, 'requestRevision'])
+            ->name('certifications.request_revision');
 
         // Teacher Verification
         Route::get('/teachers', [TeacherVerificationController::class, 'index'])

@@ -12,12 +12,19 @@ class CertificationService {
     public function submitForApproval(Certification $cert) {
         $this->validateSubmissionRequirements($cert);
         
-        $cert->update(['status' => 'pending_approval']);
+        $cert->update([
+            'status' => 'pending_review',
+            'submitted_at' => now(),
+        ]);
         $this->auditService->log('SUBMIT_CERTIFICATION', auth()->id(), ['certification_id' => $cert->id]);
     }
 
     private function validateSubmissionRequirements(Certification $cert) {
-        if ($cert->lessons->isEmpty()) throw new Exception("Must have at least one lesson");
+        if (empty($cert->title)) throw new Exception("Certification title is required.");
+        if (empty($cert->description)) throw new Exception("Certification description is required.");
+        if (empty($cert->category)) throw new Exception("Certification category is required.");
+        if (empty($cert->difficulty)) throw new Exception("Certification difficulty is required.");
+        if ($cert->learningMaterials->isEmpty()) throw new Exception("At least one learning material must be attached.");
         
         foreach ($cert->lessons as $lesson) {
             if ($lesson->modules->isEmpty()) throw new Exception("Lesson {$lesson->title} must have at least one module");
