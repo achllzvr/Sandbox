@@ -75,9 +75,9 @@ class AuthenticatedSessionController extends Controller
         // Always enforce role-based redirection on login
         return match ($user->role) {
             'admin' => redirect()->route('admin.dashboard'),
-            'content_creator', 'content_creator' => redirect()->route('creator.certifications.index'),
+            'content_creator' => redirect()->route('creator.certifications.index'),
             'teacher' => redirect()->route('teacher.dashboard'),
-            default => redirect()->intended(\App\Providers\RouteServiceProvider::HOME),
+            default => redirect()->route('student.dashboard'),
         };
     }
 
