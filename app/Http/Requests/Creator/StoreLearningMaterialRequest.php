@@ -26,9 +26,17 @@ class StoreLearningMaterialRequest extends FormRequest
         } else {
             $rules['file'] = ['required', 'file'];
             if ($this->input('type') === 'ppt') {
-                $rules['file'][] = 'mimes:ppt,pptx';
+                $rules['file'][] = function ($attribute, $value, $fail) {
+                    if (!in_array(strtolower($value->getClientOriginalExtension()), ['ppt', 'pptx'])) {
+                        $fail('The file must be a file of type: ppt, pptx.');
+                    }
+                };
             } elseif ($this->input('type') === 'document') {
-                $rules['file'][] = 'mimes:pdf,doc,docx';
+                $rules['file'][] = function ($attribute, $value, $fail) {
+                    if (!in_array(strtolower($value->getClientOriginalExtension()), ['pdf', 'doc', 'docx'])) {
+                        $fail('The file must be a file of type: pdf, doc, docx.');
+                    }
+                };
             }
         }
 

@@ -16,7 +16,9 @@ class LearningMaterialController extends Controller
         $data['certification_id'] = $certification->id;
 
         if ($request->hasFile('file')) {
-            $path = $request->file('file')->store('learning_materials', 'public');
+            $file = $request->file('file');
+            $filename = \Illuminate\Support\Str::random(40) . '.' . $file->getClientOriginalExtension();
+            $path = $file->storeAs('learning_materials', $filename, 'public');
             $data['file_path'] = $path;
         }
 

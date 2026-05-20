@@ -10,7 +10,7 @@ class UpdateCertificationRequest extends FormRequest
     {
         $certification = $this->route('certification');
         return request()->user()->id === $certification->created_by_user_id
-            && $certification->status === 'draft';
+            && in_array($certification->status, ['draft', 'revision_required']);
     }
 
     public function rules()
