@@ -62,11 +62,30 @@ class CertificationApprovalController extends Controller
 
     public function show(Certification $certification)
     {
-        $certification->load(['creator:id,first_name,last_name', 'learningMaterials']);
-        
+        $certification->load([
+            'creator:id,first_name,last_name',
+            'learningMaterials',
+            'lessons' => fn ($q) => $q->orderBy('id'),
+            'lessons.modules' => fn ($q) => $q->orderBy('sequence'),
+            'lessons.modules.contents',
+            'lessons.modules.questions.answers',
+        ]);
+
+        $modulesCount = $certification->lessons->sum(fn ($l) => $l->modules->count());
+        $contentsCount = $certification->lessons->sum(
+            fn ($l) => $l->modules->sum(fn ($m) => $m->contents->count())
+        );
+        $questionsCount = $certification->lessons->sum(
+            fn ($l) => $l->modules->sum(fn ($m) => $m->questions->count())
+        );
+
         return Inertia::render('Admin/Certifications/Show', [
             'certification' => array_merge($certification->toArray(), [
                 'learning_materials_count' => $certification->learningMaterials->count(),
+                'lessons_count' => $certification->lessons->count(),
+                'modules_count' => $modulesCount,
+                'contents_count' => $contentsCount,
+                'questions_count' => $questionsCount,
             ])
         ]);
     }

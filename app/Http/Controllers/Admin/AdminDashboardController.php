@@ -20,9 +20,9 @@ class AdminDashboardController extends Controller
                                                 ->where('status', 'pending_verification')
                                                 ->count(),
                 'total_certifications'    => Certification::count(),
-                'pending_certifications'  => Certification::where('status', 'pending_approval')->count(),
+                'pending_certifications'  => Certification::where('status', 'pending_review')->count(),
                 'published_certifications'=> Certification::where('status', 'published')->count(),
-                'declined_certifications' => Certification::where('status', 'declined')->count(),
+                'declined_certifications' => Certification::where('status', 'denied')->count(),
             ],
             'recent_certifications' => Certification::with('creator:id,first_name,last_name')
                 ->latest()

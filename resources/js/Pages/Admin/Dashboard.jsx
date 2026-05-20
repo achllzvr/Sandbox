@@ -23,9 +23,9 @@ export default function Dashboard({ metrics, recent_certifications, recent_users
             active:               'bg-green-100 text-green-700',
             inactive:             'bg-red-100 text-red-700',
             pending_verification: 'bg-amber-100 text-amber-700',
-            pending_approval:     'bg-amber-100 text-amber-700',
+            pending_review:       'bg-amber-100 text-amber-700',
             published:            'bg-green-100 text-green-700',
-            declined:             'bg-red-100 text-red-700',
+            denied:               'bg-red-100 text-red-700',
             draft:                'bg-stone-100 text-stone-600',
         };
         return map[status] || 'bg-stone-100 text-stone-600';
