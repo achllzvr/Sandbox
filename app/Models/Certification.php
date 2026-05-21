@@ -48,7 +48,17 @@ class Certification extends Model
 
     public function learningMaterials()
     {
-        return $this->hasMany(LearningMaterial::class);
+        return $this->hasMany(LearningMaterial::class)->orderBy('order_number')->orderBy('id');
+    }
+
+    public function quizQuestions()
+    {
+        return $this->hasMany(Question::class, 'certification_id')->where('question_type', 'module_quiz');
+    }
+
+    public function examQuestions()
+    {
+        return $this->hasMany(Question::class, 'certification_id')->where('question_type', 'final_exam');
     }
 
     public function lessons()

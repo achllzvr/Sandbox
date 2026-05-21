@@ -27,6 +27,27 @@ class LearningMaterialController extends Controller
         return redirect()->back()->with('success', 'Learning material attached successfully!');
     }
 
+    public function reorder(\Illuminate\Http\Request $request, Certification $certification)
+    {
+        if (auth()->id() !== $certification->created_by_user_id) {
+            abort(403);
+        }
+
+        $request->validate([
+            'materials' => 'required|array',
+            'materials.*.id' => 'required|exists:learning_materials,id',
+            'materials.*.order_number' => 'required|integer',
+        ]);
+
+        foreach ($request->input('materials') as $matData) {
+            $certification->learningMaterials()
+                ->where('id', $matData['id'])
+                ->update(['order_number' => $matData['order_number']]);
+        }
+
+        return redirect()->back()->with('success', 'Sequence updated successfully!');
+    }
+
     public function destroy(Certification $certification, LearningMaterial $material)
     {
         if (auth()->id() !== $certification->created_by_user_id || $material->certification_id !== $certification->id) {

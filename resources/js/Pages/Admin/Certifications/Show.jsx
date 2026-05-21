@@ -113,11 +113,9 @@ export default function Show({ certification }) {
 
                 {/* ── Stats row ───────────────────────────────────────── */}
                 <div className="flex flex-wrap gap-3 mt-5 pt-5 border-t border-stone-100">
-                    <StatPill label="Lessons"   value={certification.lessons_count}            color="blue" />
-                    <StatPill label="Modules"   value={certification.modules_count}            color="violet" />
-                    <StatPill label="Contents"  value={certification.contents_count}           color="emerald" />
-                    <StatPill label="Questions"  value={certification.questions_count}          color="amber" />
-                    <StatPill label="Materials"  value={certification.learning_materials_count} color="rose" />
+                    <StatPill label="Practice Quiz Questions" value={certification.quiz_questions_count} color="blue" />
+                    <StatPill label="Final Exam Questions" value={certification.exam_questions_count} color="amber" />
+                    <StatPill label="Learning Materials" value={certification.learning_materials_count} color="rose" />
                 </div>
 
                 <div className="mt-8">
@@ -186,153 +184,83 @@ export default function Show({ certification }) {
                 )}
             </div>
 
-            {/* ── Course Structure ────────────────────────────────────── */}
-            {lessons.length > 0 && (
-                <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6 mb-6">
-                    <h3 className="text-lg font-bold mb-4">Course Structure</h3>
-
+            {/* ── Practice Quiz ──────────────────────────────────────── */}
+            <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6 mb-6">
+                <h3 className="text-lg font-bold mb-4 text-stone-900">Practice Quiz Questions ({certification.quiz_questions_count})</h3>
+                {certification.quizQuestions?.length > 0 ? (
                     <div className="space-y-4">
-                        {lessons.map((lesson, li) => {
-                            const isLessonOpen = !!openLessons[lesson.id];
-                            return (
-                                <div key={lesson.id} className="border border-stone-200 rounded-2xl overflow-hidden">
-                                    {/* Lesson header */}
-                                    <button
-                                        type="button"
-                                        onClick={() => toggleLesson(lesson.id)}
-                                        className="w-full flex items-center justify-between px-5 py-4 bg-stone-50 hover:bg-stone-100 transition-colors text-left"
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <span className="flex-shrink-0 w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold">
-                                                {li + 1}
-                                            </span>
-                                            <div>
-                                                <span className="font-semibold text-stone-900">{lesson.title}</span>
-                                                <span className="ml-2 text-xs text-stone-400">
-                                                    {lesson.modules?.length || 0} module{(lesson.modules?.length || 0) !== 1 ? 's' : ''}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <ChevronIcon open={isLessonOpen} />
-                                    </button>
-
-                                    {/* Lesson body */}
-                                    {isLessonOpen && (
-                                        <div className="px-5 py-4 space-y-3 bg-white">
-                                            {lesson.description && (
-                                                <p className="text-sm text-stone-500 italic mb-2">{lesson.description}</p>
+                        {certification.quizQuestions.map((q, qi) => (
+                            <div key={q.id} className="border border-stone-200 rounded-xl p-4 bg-stone-50/20">
+                                <p className="text-sm font-semibold text-stone-850 mb-2">
+                                    <span className="text-stone-400 mr-1">Q{qi + 1}.</span> {q.question_text}
+                                </p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                                    {(q.answers || []).map((a, ai) => (
+                                        <div
+                                            key={a.id ?? ai}
+                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm ${
+                                                a.is_correct
+                                                    ? 'bg-emerald-50 text-emerald-750 font-semibold ring-1 ring-emerald-200'
+                                                    : 'bg-stone-50/50 text-stone-600'
+                                            }`}
+                                        >
+                                            {a.is_correct ? (
+                                                <svg className="w-4 h-4 text-emerald-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                                </svg>
+                                            ) : (
+                                                <span className="w-3 h-3 rounded-full border border-stone-300 flex-shrink-0" />
                                             )}
-
-                                            {(lesson.modules || []).map((mod, mi) => {
-                                                const isModOpen = !!openModules[mod.id];
-                                                const contents  = mod.contents  || [];
-                                                const questions = mod.questions || [];
-
-                                                return (
-                                                    <div key={mod.id} className="border border-stone-200 rounded-xl overflow-hidden">
-                                                        {/* Module header */}
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => toggleModule(mod.id)}
-                                                            className="w-full flex items-center justify-between px-4 py-3 hover:bg-stone-50 transition-colors text-left"
-                                                        >
-                                                            <div className="flex items-center gap-2.5">
-                                                                <span className="flex-shrink-0 w-6 h-6 rounded-md bg-violet-100 text-violet-700 flex items-center justify-center text-xs font-bold">
-                                                                    {mi + 1}
-                                                                </span>
-                                                                <span className="font-medium text-stone-800 text-sm">{mod.title}</span>
-                                                                <span className="text-xs text-stone-400">
-                                                                    {contents.length} content{contents.length !== 1 ? 's' : ''} · {questions.length} question{questions.length !== 1 ? 's' : ''}
-                                                                </span>
-                                                            </div>
-                                                            <ChevronIcon open={isModOpen} />
-                                                        </button>
-
-                                                        {/* Module body */}
-                                                        {isModOpen && (
-                                                            <div className="px-4 pb-4 space-y-4">
-                                                                {/* Contents */}
-                                                                {contents.length > 0 && (
-                                                                    <div>
-                                                                        <h5 className="text-xs font-semibold uppercase tracking-wider text-stone-400 mb-2 mt-1">Content Files</h5>
-                                                                        <div className="space-y-2">
-                                                                            {contents.map(c => {
-                                                                                const icon = contentTypeIcon(c.content_type);
-                                                                                return (
-                                                                                    <div key={c.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-stone-100 bg-stone-50/50">
-                                                                                        <span className={`flex-shrink-0 px-2 py-1 rounded-md text-xs font-semibold ${icon.bg} ${icon.text}`}>
-                                                                                            {icon.label}
-                                                                                        </span>
-                                                                                        <span className="text-sm text-stone-700 font-medium truncate">{c.title}</span>
-                                                                                        {c.file_url && (
-                                                                                            <a href={c.file_url} target="_blank" rel="noreferrer" className="ml-auto text-blue-600 text-xs font-bold hover:underline flex-shrink-0">
-                                                                                                Open ↗
-                                                                                            </a>
-                                                                                        )}
-                                                                                    </div>
-                                                                                );
-                                                                            })}
-                                                                        </div>
-                                                                    </div>
-                                                                )}
-
-                                                                {/* Questions */}
-                                                                {questions.length > 0 && (
-                                                                    <div>
-                                                                        <h5 className="text-xs font-semibold uppercase tracking-wider text-stone-400 mb-2">Questions</h5>
-                                                                        <div className="space-y-3">
-                                                                            {questions.map((q, qi) => (
-                                                                                <div key={q.id} className="rounded-lg border border-stone-100 p-3">
-                                                                                    <p className="text-sm font-semibold text-stone-800 mb-2">
-                                                                                        <span className="text-stone-400 mr-1">Q{qi + 1}.</span> {q.question ?? q.question_text}
-                                                                                    </p>
-                                                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                                                                                        {(q.answers || []).map((a, ai) => (
-                                                                                            <div
-                                                                                                key={a.id ?? ai}
-                                                                                                className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm ${
-                                                                                                    a.is_correct
-                                                                                                        ? 'bg-emerald-50 text-emerald-700 font-semibold ring-1 ring-emerald-200'
-                                                                                                        : 'bg-stone-50 text-stone-600'
-                                                                                                }`}
-                                                                                            >
-                                                                                                {a.is_correct ? (
-                                                                                                    <svg className="w-4 h-4 text-emerald-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                                                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                                                                                    </svg>
-                                                                                                ) : (
-                                                                                                    <span className="w-4 h-4 rounded-full border-2 border-stone-300 flex-shrink-0" />
-                                                                                                )}
-                                                                                                {a.answer_text}
-                                                                                            </div>
-                                                                                        ))}
-                                                                                    </div>
-                                                                                </div>
-                                                                            ))}
-                                                                        </div>
-                                                                    </div>
-                                                                )}
-
-                                                                {contents.length === 0 && questions.length === 0 && (
-                                                                    <p className="text-sm text-stone-400 italic py-2">This module has no content or questions yet.</p>
-                                                                )}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
-
-                                            {(!lesson.modules || lesson.modules.length === 0) && (
-                                                <p className="text-sm text-stone-400 italic">No modules in this lesson.</p>
-                                            )}
+                                            {a.answer_text}
                                         </div>
-                                    )}
+                                    ))}
                                 </div>
-                            );
-                        })}
+                            </div>
+                        ))}
                     </div>
-                </div>
-            )}
+                ) : (
+                    <p className="text-stone-450 text-sm italic">No practice quiz questions configured.</p>
+                )}
+            </div>
+
+            {/* ── Final Exam ─────────────────────────────────────────── */}
+            <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6 mb-6">
+                <h3 className="text-lg font-bold mb-4 text-stone-900">Final Exam Questions (Sandcastle Exam) ({certification.exam_questions_count})</h3>
+                {certification.examQuestions?.length > 0 ? (
+                    <div className="space-y-4">
+                        {certification.examQuestions.map((q, qi) => (
+                            <div key={q.id} className="border border-stone-200 rounded-xl p-4 bg-stone-50/20">
+                                <p className="text-sm font-semibold text-stone-850 mb-2">
+                                    <span className="text-stone-400 mr-1">Q{qi + 1}.</span> {q.question_text}
+                                </p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                                    {(q.answers || []).map((a, ai) => (
+                                        <div
+                                            key={a.id ?? ai}
+                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm ${
+                                                a.is_correct
+                                                    ? 'bg-emerald-50 text-emerald-750 font-semibold ring-1 ring-emerald-200'
+                                                    : 'bg-stone-50/50 text-stone-600'
+                                            }`}
+                                        >
+                                            {a.is_correct ? (
+                                                <svg className="w-4 h-4 text-emerald-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                                </svg>
+                                            ) : (
+                                                <span className="w-3 h-3 rounded-full border border-stone-300 flex-shrink-0" />
+                                            )}
+                                            {a.answer_text}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-stone-450 text-sm italic">No final exam questions configured.</p>
+                )}
+            </div>
 
             {/* Modal for Revise/Deny */}
             {action && (

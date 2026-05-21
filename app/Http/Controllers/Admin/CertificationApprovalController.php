@@ -12,26 +12,17 @@ class CertificationApprovalController extends Controller
     public function index()
     {
         $certifications = Certification::query()
+            ->where('status', 'pending_review')
             ->with([
                 'creator:id,first_name,last_name',
                 'approver:id,first_name,last_name',
-                'lessons:id,certification_id',
-                'lessons.modules:id,lesson_id',
-                'lessons.modules.contents:id,module_id',
-                'lessons.modules.questions:id,module_id',
-                'learningMaterials'
+                'learningMaterials',
+                'quizQuestions',
+                'examQuestions'
             ])
             ->latest()
             ->get()
             ->map(function (Certification $certification) {
-                $modulesCount = $certification->lessons->sum(fn ($lesson) => $lesson->modules->count());
-                $contentsCount = $certification->lessons->sum(
-                    fn ($lesson) => $lesson->modules->sum(fn ($module) => $module->contents->count())
-                );
-                $questionsCount = $certification->lessons->sum(
-                    fn ($lesson) => $lesson->modules->sum(fn ($module) => $module->questions->count())
-                );
-
                 return [
                     'id' => $certification->id,
                     'title' => $certification->title,
@@ -48,10 +39,8 @@ class CertificationApprovalController extends Controller
                     'approver' => $certification->approver,
                     'learning_materials' => $certification->learningMaterials,
                     'learning_materials_count' => $certification->learningMaterials->count(),
-                    'lessons_count' => $certification->lessons->count(),
-                    'modules_count' => $modulesCount,
-                    'contents_count' => $contentsCount,
-                    'questions_count' => $questionsCount,
+                    'quiz_questions_count' => $certification->quizQuestions->count(),
+                    'exam_questions_count' => $certification->examQuestions->count(),
                 ];
             });
 
@@ -65,27 +54,15 @@ class CertificationApprovalController extends Controller
         $certification->load([
             'creator:id,first_name,last_name',
             'learningMaterials',
-            'lessons' => fn ($q) => $q->orderBy('id'),
-            'lessons.modules' => fn ($q) => $q->orderBy('sequence'),
-            'lessons.modules.contents',
-            'lessons.modules.questions.answers',
+            'quizQuestions.answers',
+            'examQuestions.answers'
         ]);
-
-        $modulesCount = $certification->lessons->sum(fn ($l) => $l->modules->count());
-        $contentsCount = $certification->lessons->sum(
-            fn ($l) => $l->modules->sum(fn ($m) => $m->contents->count())
-        );
-        $questionsCount = $certification->lessons->sum(
-            fn ($l) => $l->modules->sum(fn ($m) => $m->questions->count())
-        );
 
         return Inertia::render('Admin/Certifications/Show', [
             'certification' => array_merge($certification->toArray(), [
                 'learning_materials_count' => $certification->learningMaterials->count(),
-                'lessons_count' => $certification->lessons->count(),
-                'modules_count' => $modulesCount,
-                'contents_count' => $contentsCount,
-                'questions_count' => $questionsCount,
+                'quiz_questions_count' => $certification->quizQuestions->count(),
+                'exam_questions_count' => $certification->examQuestions->count(),
             ])
         ]);
     }

@@ -26,7 +26,7 @@ class CreatorDashboardController extends Controller
         $moduleIds = Module::whereIn('lesson_id', $lessonIds)->pluck('id');
         $totalModules = $moduleIds->count();
 
-        $totalQuestions = Question::whereIn('module_id', $moduleIds)->count();
+        $totalQuestions = Question::whereIn('certification_id', $certificationIds)->count();
 
         // ── Status breakdown ─────────────────────────────────────
         $draft     = Certification::where('created_by_user_id', $userId)->where('status', 'draft')->count();

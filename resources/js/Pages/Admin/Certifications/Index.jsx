@@ -51,7 +51,8 @@ export default function CertificationsIndex({ certifications }) {
                                     {c.creator ? `${c.creator.first_name} ${c.creator.last_name}` : '—'}
                                 </td>
                                 <td className="px-6 py-3 text-xs text-stone-500">
-                                    <div>Sandboxes: {c.lessons_count}</div>
+                                    <div>Quiz: {c.quiz_questions_count} Qs</div>
+                                    <div>Exam: {c.exam_questions_count} Qs</div>
                                 </td>
                                 <td className="px-6 py-3 text-stone-500 text-center font-semibold">
                                     {c.learning_materials_count}
