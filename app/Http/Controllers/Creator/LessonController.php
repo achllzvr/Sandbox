@@ -11,5 +11,11 @@ class LessonController extends Controller {
         Lesson::create($request->validated());
         return redirect()->back()->with('success', 'Lesson created');
     }
+
+    public function destroy(Lesson $lesson) {
+        if ($lesson->certification->created_by_user_id !== auth()->id()) abort(403);
+        $lesson->delete();
+        return redirect()->back()->with('success', 'Lesson deleted');
+    }
 }
 

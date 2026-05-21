@@ -26,5 +26,17 @@ class ModuleContentController extends Controller {
 
         return redirect()->back()->with('success', 'Module content uploaded');
     }
+
+    public function destroy(Module $module, ModuleContent $content) {
+        if ($module->lesson->certification->created_by_user_id !== auth()->id()) abort(403);
+        if ($content->module_id !== $module->id) abort(404);
+
+        if ($content->content_type !== 'youtube_embed' && $content->content_url) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($content->content_url);
+        }
+
+        $content->delete();
+        return redirect()->back()->with('success', 'Content deleted successfully');
+    }
 }
 

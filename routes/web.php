@@ -92,20 +92,17 @@ Route::middleware(['auth', 'otp.verified', 'role:content_creator'])
         Route::post('certifications/{certification}/materials', [LearningMaterialController::class, 'store'])
             ->name('certifications.materials.store');
             
+        Route::post('certifications/{certification}/materials/reorder', [LearningMaterialController::class, 'reorder'])
+            ->name('certifications.materials.reorder');
+            
         Route::delete('certifications/{certification}/materials/{material}', [LearningMaterialController::class, 'destroy'])
             ->name('certifications.materials.destroy');
 
-        Route::post('lessons', [LessonController::class, 'store'])
-            ->name('lessons.store');
+        Route::post('certifications/{certification}/exam-questions', [CertificationController::class, 'storeExamQuestions'])
+            ->name('certifications.exam-questions.store');
 
-        Route::post('modules', [ModuleController::class, 'store'])
-            ->name('modules.store');
-
-        Route::post('modules/{module}/content', [ModuleContentController::class, 'store'])
-            ->name('modules.content.store');
-
-        Route::post('modules/{module}/questions', [QuestionController::class, 'store'])
-            ->name('modules.questions.store');
+        Route::post('certifications/{certification}/quiz-questions', [CertificationController::class, 'storeQuizQuestions'])
+            ->name('certifications.quiz-questions.store');
     });
 
 /*

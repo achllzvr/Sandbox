@@ -14,6 +14,35 @@ export default function Create({ auth }) {
         tags: []
     });
 
+    const getCalculatedDate = (hoursStr) => {
+        const hours = parseFloat(hoursStr);
+        if (isNaN(hours) || hours <= 0) return '';
+        const date = new Date();
+        date.setHours(date.getHours() + hours);
+        
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        
+        return `${day}/${month}/${year}`;
+    };
+
+    const getDurationBreakdown = (hoursStr) => {
+        const totalHours = parseInt(hoursStr, 10);
+        if (isNaN(totalHours) || totalHours <= 0) return '= 0 months, 0 weeks, 0 days';
+        
+        let hours = totalHours;
+        const months = Math.floor(hours / 720);
+        hours %= 720;
+        
+        const weeks = Math.floor(hours / 168);
+        hours %= 168;
+        
+        const days = Math.floor(hours / 24);
+        
+        return `= ${months} months, ${weeks} weeks, ${days} days`;
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
         post(route('creator.certifications.store'));
@@ -91,14 +120,41 @@ export default function Create({ auth }) {
                                 </div>
                                 
                                 {/* Estimated Duration */}
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Estimated Duration (e.g. "4 weeks", "10 hours")</label>
-                                    <input 
-                                        type="text" 
-                                        value={data.estimated_duration} 
-                                        onChange={e => setData('estimated_duration', e.target.value)} 
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                    />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700">
+                                            Estimated Time{data.estimated_duration ? ` - ${data.estimated_duration}hrs` : ''}
+                                        </label>
+                                        <div className="relative mt-1 rounded-md shadow-sm">
+                                            <input 
+                                                type="number" 
+                                                min="0"
+                                                placeholder="e.g. 48"
+                                                value={data.estimated_duration} 
+                                                onChange={e => setData('estimated_duration', e.target.value)} 
+                                                className="block w-full rounded-md border-gray-300 pr-12 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                            />
+                                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                                                <span className="text-gray-400 sm:text-sm font-medium">hrs</span>
+                                            </div>
+                                        </div>
+                                        {errors.estimated_duration && <div className="text-red-500 text-sm mt-1">{errors.estimated_duration}</div>}
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700">Time Conversion</label>
+                                        <div className="mt-1 flex items-center h-[38px] px-3 rounded-md border border-gray-300 bg-gray-50 text-gray-900 text-sm shadow-sm">
+                                            <svg className="w-5 h-5 mr-2 text-gray-400 flex-shrink-0" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            <span className="truncate">
+                                                {data.estimated_duration && getDurationBreakdown(data.estimated_duration) ? (
+                                                    <span className="text-indigo-600 font-semibold">{getDurationBreakdown(data.estimated_duration)}</span>
+                                                ) : (
+                                                    <span className="text-gray-400 italic">Enter hours to calculate conversion</span>
+                                                )}
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
                                 
                                 {/* Learning Objectives */}

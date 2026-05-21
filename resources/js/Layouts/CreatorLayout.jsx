@@ -146,7 +146,7 @@ export default function CreatorLayout({ children, pageTitle }) {
                 </div>
 
                 {/* Page content */}
-                <main className="flex-1 px-6 pb-8">
+                <main className="flex-1 px-6 pb-8 flex flex-col">
                     {children}
                 </main>
             </div>
