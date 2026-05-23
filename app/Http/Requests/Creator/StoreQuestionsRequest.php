@@ -16,9 +16,9 @@ class StoreQuestionsRequest extends FormRequest
     {
         return [
             'questions' => ['required', 'array', 'min:5'],
-            'questions.*.text' => ['required', 'string'],
+            'questions.*.question_text' => ['required', 'string'],
             'questions.*.answers' => ['required', 'array', 'size:4'],
-            'questions.*.answers.*.text' => ['required', 'string'],
+            'questions.*.answers.*.answer_text' => ['required', 'string'],
             'questions.*.answers.*.is_correct' => ['required', 'boolean'],
         ];
     }

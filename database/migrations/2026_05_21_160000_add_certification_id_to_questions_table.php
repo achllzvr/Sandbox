@@ -12,13 +12,6 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('questions', function (Blueprint $table) {
-            if (Schema::hasColumn('questions', 'module_id')) {
-                try {
-                    $table->unsignedInteger('module_id')->nullable()->change();
-                } catch (\Exception $e) {
-                    // ignore if change fails due to DB configuration
-                }
-            }
 
             if (!Schema::hasColumn('questions', 'certification_id')) {
                 $table->foreignId('certification_id')->nullable()->after('module_id')->constrained()->cascadeOnDelete();

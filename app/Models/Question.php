@@ -9,6 +9,7 @@ class Question extends Model
     protected $fillable = [
         'module_id',
         'certification_id',
+        'learning_material_id',
         'created_by_user_id',
         'question_text',
         'question_type',
@@ -29,6 +30,11 @@ class Question extends Model
     public function certification()
     {
         return $this->belongsTo(Certification::class);
+    }
+
+    public function learningMaterial()
+    {
+        return $this->belongsTo(LearningMaterial::class);
     }
 
     public function answers()

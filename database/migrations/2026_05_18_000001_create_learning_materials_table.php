@@ -11,17 +11,19 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('learning_materials', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('certification_id')->constrained('certifications')->onDelete('cascade');
-            $table->string('title');
-            $table->enum('type', ['ppt', 'document', 'youtube_video']);
-            $table->string('file_path')->nullable();
-            $table->string('youtube_embed_url')->nullable();
-            $table->text('description')->nullable();
-            $table->integer('order_number')->default(0);
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('learning_materials')) {
+            Schema::create('learning_materials', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('certification_id')->constrained('certifications')->onDelete('cascade');
+                $table->string('title');
+                $table->enum('type', ['ppt', 'document', 'youtube_video']);
+                $table->string('file_path')->nullable();
+                $table->string('youtube_embed_url')->nullable();
+                $table->text('description')->nullable();
+                $table->integer('order_number')->default(0);
+                $table->timestamps();
+            });
+        }
     }
 
     /**

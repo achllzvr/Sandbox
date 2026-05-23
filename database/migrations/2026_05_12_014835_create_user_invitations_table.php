@@ -13,13 +13,15 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('admin_invitations', function (Blueprint $table) {
-            $table->id();
-            $table->string('email')->unique();
-            $table->string('role');
-            $table->string('token')->unique();
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('admin_invitations')) {
+            Schema::create('admin_invitations', function (Blueprint $table) {
+                $table->id();
+                $table->string('email')->unique();
+                $table->string('role');
+                $table->string('token')->unique();
+                $table->timestamps();
+            });
+        }
     }
 
     /**

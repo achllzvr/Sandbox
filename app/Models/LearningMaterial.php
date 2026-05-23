@@ -20,4 +20,9 @@ class LearningMaterial extends Model
     {
         return $this->belongsTo(Certification::class);
     }
+
+    public function quizQuestions()
+    {
+        return $this->hasMany(Question::class, 'learning_material_id')->where('question_type', 'module_quiz');
+    }
 }

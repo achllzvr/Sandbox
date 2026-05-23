@@ -13,7 +13,10 @@ class Module extends Model
         'content_type',
         'file_path',
         'uploaded_by_content_creator_id',
+        'uploaded_by_user_id',
         'duration_weeks',
+        'strict_completion',
+        'sequence',
     ];
 
     public function lesson()
@@ -23,11 +26,11 @@ class Module extends Model
 
     public function contents()
     {
-        return $this->hasMany(ModuleContent::class);
+        return $this->hasMany(ModuleContent::class)->orderBy('order_index');
     }
 
     public function questions()
     {
-        return $this->hasMany(Question::class);
+        return $this->hasMany(Question::class)->where('question_type', 'module_quiz');
     }
 }

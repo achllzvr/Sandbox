@@ -61,4 +61,35 @@ class LearningMaterialController extends Controller
 
         return redirect()->back()->with('success', 'Learning material removed!');
     }
+
+    public function storeQuizQuestions(\Illuminate\Http\Request $request, Certification $certification, LearningMaterial $material)
+    {
+        if ($certification->created_by_user_id !== auth()->id() || $material->certification_id !== $certification->id) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'questions' => ['required', 'array', 'min:5'],
+            'questions.*.question_text' => ['required', 'string'],
+            'questions.*.answers' => ['required', 'array', 'size:4'],
+            'questions.*.answers.*.answer_text' => ['required', 'string'],
+            'questions.*.answers.*.is_correct' => ['required', 'boolean'],
+        ]);
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $material) {
+            $material->quizQuestions()->delete();
+            foreach ($validated['questions'] as $qData) {
+                $question = $material->quizQuestions()->create([
+                    'question_text' => $qData['question_text'],
+                    'question_type' => 'module_quiz',
+                    'created_by_user_id' => auth()->id(),
+                ]);
+                foreach ($qData['answers'] as $aData) {
+                    $question->answers()->create($aData);
+                }
+            }
+        });
+
+        return redirect()->back()->with('success', 'Practice Quiz saved successfully!');
+    }
 }
