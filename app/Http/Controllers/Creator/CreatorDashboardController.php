@@ -20,13 +20,15 @@ class CreatorDashboardController extends Controller
         $certificationIds = Certification::where('created_by_user_id', $userId)->pluck('id');
         $totalCertifications = $certificationIds->count();
 
-        $lessonIds = Lesson::whereIn('certification_id', $certificationIds)->pluck('id');
-        $totalLessons = $lessonIds->count();
+        $totalLearningMaterials = \App\Models\LearningMaterial::whereIn('certification_id', $certificationIds)->count();
 
-        $moduleIds = Module::whereIn('lesson_id', $lessonIds)->pluck('id');
-        $totalModules = $moduleIds->count();
+        $totalQuizQuestions = Question::whereIn('learning_material_id', \App\Models\LearningMaterial::whereIn('certification_id', $certificationIds)->pluck('id'))
+            ->where('question_type', 'module_quiz')
+            ->count();
 
-        $totalQuestions = Question::whereIn('certification_id', $certificationIds)->count();
+        $totalExamQuestions = Question::whereIn('certification_id', $certificationIds)
+            ->where('question_type', 'final_exam')
+            ->count();
 
         // ── Status breakdown ─────────────────────────────────────
         $draft     = Certification::where('created_by_user_id', $userId)->where('status', 'draft')->count();
@@ -44,46 +46,48 @@ class CreatorDashboardController extends Controller
             $dayEnd   = $day->copy()->endOfDay();
 
             $weeklyActivity[] = [
-                'day'     => $dayLabel,
-                'shells'  => Certification::where('created_by_user_id', $userId)
+                'day'       => $dayLabel,
+                'shells'    => Certification::where('created_by_user_id', $userId)
                     ->whereBetween('created_at', [$dayStart, $dayEnd])->count(),
-                'lessons' => Lesson::whereIn('certification_id', $certificationIds)
+                'materials' => \App\Models\LearningMaterial::whereIn('certification_id', $certificationIds)
                     ->whereBetween('created_at', [$dayStart, $dayEnd])->count(),
-                'modules' => Module::whereIn('lesson_id', $lessonIds)
+                'questions' => Question::where(function($query) use ($certificationIds) {
+                        $query->whereIn('certification_id', $certificationIds)
+                            ->orWhereIn('learning_material_id', \App\Models\LearningMaterial::whereIn('certification_id', $certificationIds)->pluck('id'));
+                    })
                     ->whereBetween('created_at', [$dayStart, $dayEnd])->count(),
             ];
         }
 
-        // ── Content health: modules needing questions ────────────
-        $modulesNeedingQuestions = Module::whereIn('lesson_id', $lessonIds)
-            ->withCount('questions')
-            ->having('questions_count', '<', 5)
-            ->with('lesson:id,title')
+        // ── Content health: materials needing questions ──────────
+        $materialsNeedingQuestions = \App\Models\LearningMaterial::whereIn('certification_id', $certificationIds)
+            ->withCount('quizQuestions')
+            ->having('quiz_questions_count', '>', 0)
+            ->having('quiz_questions_count', '<', 5)
             ->latest()
             ->take(5)
-            ->get(['id', 'title', 'lesson_id', 'created_at']);
+            ->get(['id', 'title', 'certification_id', 'created_at']);
 
         // ── Recent certifications ────────────────────────────────
         $recentCertifications = Certification::where('created_by_user_id', $userId)
-            ->withCount(['lessons'])
+            ->withCount(['learningMaterials'])
             ->latest()
             ->take(5)
             ->get(['id', 'title', 'status', 'price', 'created_at']);
 
-        // ── Recent lessons ───────────────────────────────────────
-        $recentLessons = Lesson::whereIn('certification_id', $certificationIds)
+        // ── Recent materials ─────────────────────────────────────
+        $recentMaterials = \App\Models\LearningMaterial::whereIn('certification_id', $certificationIds)
             ->with('certification:id,title')
-            ->withCount('modules')
             ->latest()
             ->take(5)
             ->get(['id', 'title', 'certification_id', 'created_at']);
 
         // ── Completion percentage ────────────────────────────────
-        // Shells with at least one lesson that has at least one module with ≥ 1 question
         $completedShells = 0;
         if ($totalCertifications > 0) {
             $completedShells = Certification::where('created_by_user_id', $userId)
-                ->whereHas('lessons.modules.questions')
+                ->has('learningMaterials')
+                ->whereHas('examQuestions', null, '>=', 5)
                 ->count();
         }
         $completionPct = $totalCertifications > 0
@@ -92,20 +96,20 @@ class CreatorDashboardController extends Controller
 
         return Inertia::render('Creator/Dashboard', [
             'metrics' => [
-                'total_certifications' => $totalCertifications,
-                'total_lessons'        => $totalLessons,
-                'total_modules'        => $totalModules,
-                'total_questions'      => $totalQuestions,
-                'draft'                => $draft,
-                'pending'              => $pending,
-                'published'            => $published,
-                'declined'             => $declined,
-                'completion_pct'       => $completionPct,
+                'total_certifications'     => $totalCertifications,
+                'total_learning_materials' => $totalLearningMaterials,
+                'total_quiz_questions'     => $totalQuizQuestions,
+                'total_exam_questions'     => $totalExamQuestions,
+                'draft'                    => $draft,
+                'pending'                  => $pending,
+                'published'                => $published,
+                'declined'                 => $declined,
+                'completion_pct'           => $completionPct,
             ],
-            'weekly_activity'            => $weeklyActivity,
-            'modules_needing_questions'  => $modulesNeedingQuestions,
-            'recent_certifications'      => $recentCertifications,
-            'recent_lessons'             => $recentLessons,
+            'weekly_activity'              => $weeklyActivity,
+            'materials_needing_questions'  => $materialsNeedingQuestions,
+            'recent_certifications'        => $recentCertifications,
+            'recent_materials'             => $recentMaterials,
         ]);
     }
 }

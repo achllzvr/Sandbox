@@ -9,7 +9,14 @@ class ModuleContent extends Model
     protected $table = 'module_content';
 
     protected $fillable = [
-        'module_id', 'content_url', 'content_type', 'uploaded_by'
+        'module_id', 
+        'uploaded_by_user_id', 
+        'uploaded_by', 
+        'content_type', 
+        'title', 
+        'file_url', 
+        'content_url', 
+        'order_index'
     ];
 
     public function module() {
@@ -17,6 +24,6 @@ class ModuleContent extends Model
     }
 
     public function uploader() {
-        return $this->belongsTo(User::class, 'uploaded_by');
+        return $this->belongsTo(User::class, 'uploaded_by_user_id');
     }
 }

@@ -4,37 +4,73 @@ namespace App\Http\Controllers\Creator;
 
 use App\Http\Controllers\Controller;
 use App\Models\Module;
-use App\Http\Requests\Creator\StoreModuleRequest;
+use App\Models\Certification;
+use Illuminate\Http\Request;
 
 class ModuleController extends Controller {
-    public function store(StoreModuleRequest $request) {
-        Module::create(array_merge($request->validated(), [
-            'uploaded_by_content_creator_id' => auth()->id()
+    public function store(Request $request, Certification $certification) {
+        if ($certification->created_by_user_id !== auth()->id()) abort(403);
+        
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+        ]);
+        
+        $lesson = $certification->lessons()->firstOrCreate([
+            'title' => 'Course Modules',
+        ], [
+            'created_by_user_id' => auth()->id(),
+            'description' => 'Default lesson containing all modules',
+        ]);
+        
+        $orderIndex = $lesson->modules()->count() + 1;
+        
+        $lesson->modules()->create(array_merge($validated, [
+            'uploaded_by_user_id' => auth()->id(),
+            'uploaded_by_content_creator_id' => auth()->id(),
+            'order_index' => $orderIndex,
+            'sequence' => $orderIndex,
         ]));
-        return redirect()->back()->with('success', 'Module created');
+        
+        return redirect()->back()->with('success', 'Sandbox created successfully!');
     }
 
-    public function reorder(\Illuminate\Http\Request $request, \App\Models\Lesson $lesson) {
-        if ($lesson->certification->created_by_user_id !== auth()->id()) abort(403);
+    public function update(Request $request, Module $module) {
+        if ($module->lesson->certification->created_by_user_id !== auth()->id()) abort(403);
+        
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'strict_completion' => ['required', 'boolean'],
+        ]);
+        
+        $module->update($validated);
+        
+        return redirect()->back()->with('success', 'Sandbox updated successfully!');
+    }
+
+    public function reorder(Request $request, Certification $certification) {
+        if ($certification->created_by_user_id !== auth()->id()) abort(403);
+        
         $request->validate([
-            'modules' => 'required|array',
-            'modules.*.id' => 'required|exists:modules,id',
-            'modules.*.sequence' => 'required|integer',
+            'modules' => ['required', 'array'],
+            'modules.*.id' => ['required', 'exists:modules,id'],
+            'modules.*.order_index' => ['required', 'integer'],
         ]);
 
         foreach ($request->input('modules') as $modData) {
-            $lesson->modules()
-                ->where('id', $modData['id'])
-                ->update(['sequence' => $modData['sequence']]);
+            Module::where('id', $modData['id'])->update([
+                'order_index' => $modData['order_index'],
+                'sequence' => $modData['order_index']
+            ]);
         }
 
-        return redirect()->back()->with('success', 'Modules reordered successfully!');
+        return redirect()->back()->with('success', 'Sandboxes reordered successfully!');
     }
 
     public function destroy(Module $module) {
         if ($module->lesson->certification->created_by_user_id !== auth()->id()) abort(403);
         $module->delete();
-        return redirect()->back()->with('success', 'Module deleted');
+        return redirect()->back()->with('success', 'Sandbox deleted successfully!');
     }
 }
-

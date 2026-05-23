@@ -12,16 +12,33 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('certifications', function (Blueprint $table) {
-            $table->string('category')->nullable()->after('description');
-            $table->string('difficulty')->nullable()->after('category');
-            $table->string('estimated_duration')->nullable()->after('difficulty');
-            $table->string('thumbnail')->nullable()->after('estimated_duration');
-            $table->text('learning_objectives')->nullable()->after('thumbnail');
-            $table->text('prerequisites')->nullable()->after('learning_objectives');
-            $table->json('tags')->nullable()->after('prerequisites');
-            $table->text('remarks')->nullable()->after('status');
-            $table->timestamp('submitted_at')->nullable()->after('remarks');
-            // Using existing decline_reason as rejection_reason, no need to add rejection_reason
+            if (!Schema::hasColumn('certifications', 'category')) {
+                $table->string('category')->nullable()->after('description');
+            }
+            if (!Schema::hasColumn('certifications', 'difficulty')) {
+                $table->string('difficulty')->nullable()->after('category');
+            }
+            if (!Schema::hasColumn('certifications', 'estimated_duration')) {
+                $table->string('estimated_duration')->nullable()->after('difficulty');
+            }
+            if (!Schema::hasColumn('certifications', 'thumbnail')) {
+                $table->string('thumbnail')->nullable()->after('estimated_duration');
+            }
+            if (!Schema::hasColumn('certifications', 'learning_objectives')) {
+                $table->text('learning_objectives')->nullable()->after('thumbnail');
+            }
+            if (!Schema::hasColumn('certifications', 'prerequisites')) {
+                $table->text('prerequisites')->nullable()->after('learning_objectives');
+            }
+            if (!Schema::hasColumn('certifications', 'tags')) {
+                $table->json('tags')->nullable()->after('prerequisites');
+            }
+            if (!Schema::hasColumn('certifications', 'remarks')) {
+                $table->text('remarks')->nullable()->after('status');
+            }
+            if (!Schema::hasColumn('certifications', 'submitted_at')) {
+                $table->timestamp('submitted_at')->nullable()->after('remarks');
+            }
         });
     }
 

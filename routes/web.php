@@ -101,8 +101,30 @@ Route::middleware(['auth', 'otp.verified', 'role:content_creator'])
         Route::post('certifications/{certification}/exam-questions', [CertificationController::class, 'storeExamQuestions'])
             ->name('certifications.exam-questions.store');
 
-        Route::post('certifications/{certification}/quiz-questions', [CertificationController::class, 'storeQuizQuestions'])
-            ->name('certifications.quiz-questions.store');
+        Route::post('certifications/{certification}/materials/{material}/quiz-questions', [LearningMaterialController::class, 'storeQuizQuestions'])
+            ->name('certifications.materials.quiz-questions.store');
+
+        // Sandbox (Module) management routes
+        Route::post('certifications/{certification}/modules', [ModuleController::class, 'store'])
+            ->name('modules.store');
+        Route::post('certifications/{certification}/modules/reorder', [ModuleController::class, 'reorder'])
+            ->name('modules.reorder');
+        Route::put('modules/{module}', [ModuleController::class, 'update'])
+            ->name('modules.update');
+        Route::delete('modules/{module}', [ModuleController::class, 'destroy'])
+            ->name('modules.destroy');
+
+        // Sandbox component (ModuleContent) management routes
+        Route::post('modules/{module}/contents', [ModuleContentController::class, 'store'])
+            ->name('modules.contents.store');
+        Route::post('modules/{module}/contents/reorder', [ModuleContentController::class, 'reorder'])
+            ->name('modules.contents.reorder');
+        Route::delete('modules/{module}/contents/{content}', [ModuleContentController::class, 'destroy'])
+            ->name('modules.contents.destroy');
+
+        // Sandbox practice quiz (Short Test) route
+        Route::post('modules/{module}/questions', [QuestionController::class, 'store'])
+            ->name('modules.questions.store');
     });
 
 /*

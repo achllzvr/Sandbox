@@ -1,0 +1,365 @@
+=== TABLE: admin_invitations ===
+id | bigint(20) unsigned | NO | PRI |  | auto_increment
+email | varchar(255) | NO | UNI |  | 
+role | varchar(255) | NO |  |  | 
+token | varchar(255) | NO | UNI |  | 
+created_at | timestamp | YES |  |  | 
+updated_at | timestamp | YES |  |  | 
+
+=== TABLE: answers ===
+id | bigint(20) unsigned | NO | PRI |  | auto_increment
+question_id | bigint(20) unsigned | NO | MUL |  | 
+answer_text | text | NO |  |  | 
+is_correct | tinyint(1) | NO |  | 0 | 
+created_at | timestamp | YES |  | current_timestamp() | 
+updated_at | timestamp | YES |  | current_timestamp() | on update current_timestamp()
+
+=== TABLE: audit_logs ===
+id | bigint(20) unsigned | NO | PRI |  | auto_increment
+user_id | bigint(20) unsigned | YES | MUL |  | 
+action | varchar(255) | NO |  |  | 
+details | longtext | YES |  |  | 
+created_at | timestamp | YES |  | current_timestamp() | 
+updated_at | timestamp | YES |  | current_timestamp() | on update current_timestamp()
+
+=== TABLE: certificates ===
+id | bigint(20) unsigned | NO | PRI |  | auto_increment
+user_id | bigint(20) unsigned | NO | MUL |  | 
+certification_id | bigint(20) unsigned | NO | MUL |  | 
+exam_attempt_id | bigint(20) unsigned | NO | MUL |  | 
+certificate_code | varchar(100) | NO | UNI |  | 
+status | enum('valid','revoked') | NO |  | valid | 
+issued_at | timestamp | YES |  | current_timestamp() | 
+created_at | timestamp | YES |  | current_timestamp() | 
+updated_at | timestamp | YES |  | current_timestamp() | on update current_timestamp()
+
+=== TABLE: certifications ===
+id | bigint(20) unsigned | NO | PRI |  | auto_increment
+title | varchar(255) | NO |  |  | 
+description | text | YES |  |  | 
+category | varchar(255) | YES |  |  | 
+difficulty | varchar(255) | YES |  |  | 
+estimated_duration | varchar(255) | YES |  |  | 
+thumbnail | varchar(255) | YES |  |  | 
+learning_objectives | text | YES |  |  | 
+prerequisites | text | YES |  |  | 
+tags | longtext | YES |  |  | 
+price | decimal(10,2) | NO |  | 0.00 | 
+pass_threshold | int(11) | NO |  | 75 | 
+status | enum('draft','pending_approval','pending_review','revision_required','approved','published','declined','denied') | NO | MUL | draft | 
+remarks | text | YES |  |  | 
+submitted_at | timestamp | YES |  |  | 
+created_by_user_id | bigint(20) unsigned | NO | MUL |  | 
+approved_by | bigint(20) unsigned | YES | MUL |  | 
+approved_at | timestamp | YES |  |  | 
+decline_reason | text | YES |  |  | 
+created_at | timestamp | YES |  | current_timestamp() | 
+updated_at | timestamp | YES |  | current_timestamp() | on update current_timestamp()
+
+=== TABLE: cohort_students ===
+id | bigint(20) unsigned | NO | PRI |  | auto_increment
+cohort_id | bigint(20) unsigned | NO | MUL |  | 
+user_id | bigint(20) unsigned | NO | MUL |  | 
+voucher_id | bigint(20) unsigned | YES | MUL |  | 
+joined_at | timestamp | YES |  | current_timestamp() | 
+
+=== TABLE: cohorts ===
+id | bigint(20) unsigned | NO | PRI |  | auto_increment
+teacher_id | bigint(20) unsigned | NO | MUL |  | 
+certification_id | bigint(20) unsigned | YES | MUL |  | 
+cohort_name | varchar(255) | NO |  |  | 
+created_at | timestamp | YES |  | current_timestamp() | 
+updated_at | timestamp | YES |  | current_timestamp() | on update current_timestamp()
+
+=== TABLE: cosmetic_items ===
+id | varchar(100) | NO | PRI |  | 
+name | varchar(150) | NO |  |  | 
+type | enum('hat','shell','background','accessory') | NO | MUL |  | 
+price | int(11) | NO |  | 0 | 
+image_url | varchar(500) | YES |  |  | 
+is_active | tinyint(1) | NO | MUL | 1 | 
+created_at | timestamp | YES |  | current_timestamp() | 
+updated_at | timestamp | YES |  | current_timestamp() | on update current_timestamp()
+
+=== TABLE: creator_earnings ===
+id | bigint(20) unsigned | NO | PRI |  | auto_increment
+creator_id | bigint(20) unsigned | NO | MUL |  | 
+certification_id | bigint(20) unsigned | NO | MUL |  | 
+payment_id | bigint(20) unsigned | NO | MUL |  | 
+amount | decimal(10,2) | NO |  |  | 
+status | enum('pending','available','withdrawn','cancelled') | NO | MUL | pending | 
+created_at | timestamp | YES |  | current_timestamp() | 
+updated_at | timestamp | YES |  | current_timestamp() | on update current_timestamp()
+
+=== TABLE: email_verifications ===
+id | bigint(20) unsigned | NO | PRI |  | auto_increment
+user_id | bigint(20) unsigned | NO | MUL |  | 
+otp | varchar(255) | NO |  |  | 
+expires_at | timestamp | NO |  | current_timestamp() | on update current_timestamp()
+attempts | tinyint(3) unsigned | NO |  | 0 | 
+resend_count | tinyint(3) unsigned | NO |  | 0 | 
+created_at | timestamp | YES |  |  | 
+updated_at | timestamp | YES |  |  | 
+
+=== TABLE: enrollment_requests ===
+id | bigint(20) unsigned | NO | PRI |  | auto_increment
+user_id | bigint(20) unsigned | NO | MUL |  | 
+certification_id | bigint(20) unsigned | NO | MUL |  | 
+request_type | enum('direct_purchase','teacher_bulk') | NO |  | direct_purchase | 
+quantity | int(11) | NO |  | 1 | 
+amount | decimal(10,2) | NO |  | 0.00 | 
+status | enum('pending','paid','approved','rejected','failed','cancelled') | NO | MUL | pending | 
+payment_proof_url | varchar(500) | YES |  |  | 
+payment_reference | varchar(255) | YES |  |  | 
+payment_method | varchar(100) | YES |  |  | 
+requested_at | timestamp | YES |  | current_timestamp() | 
+reviewed_at | timestamp | YES |  |  | 
+reviewed_by | bigint(20) unsigned | YES | MUL |  | 
+created_at | timestamp | YES |  | current_timestamp() | 
+updated_at | timestamp | YES |  | current_timestamp() | on update current_timestamp()
+
+=== TABLE: enrollments ===
+id | bigint(20) unsigned | NO | PRI |  | auto_increment
+user_id | bigint(20) unsigned | NO | MUL |  | 
+certification_id | bigint(20) unsigned | NO | MUL |  | 
+enrollment_request_id | bigint(20) unsigned | YES | MUL |  | 
+voucher_id | bigint(20) unsigned | YES | MUL |  | 
+access_type | enum('direct_purchase','voucher','admin_grant') | NO |  | direct_purchase | 
+status | enum('active','completed','revoked') | NO | MUL | active | 
+enrolled_at | timestamp | YES |  | current_timestamp() | 
+completed_at | timestamp | YES |  |  | 
+created_at | timestamp | YES |  | current_timestamp() | 
+updated_at | timestamp | YES |  | current_timestamp() | on update current_timestamp()
+
+=== TABLE: equipped_cosmetics ===
+id | bigint(20) unsigned | NO | PRI |  | auto_increment
+user_id | bigint(20) unsigned | NO | UNI |  | 
+equipped_hat | varchar(100) | YES | MUL |  | 
+equipped_shell | varchar(100) | YES | MUL |  | 
+equipped_background | varchar(100) | YES | MUL |  | 
+equipped_accessory | varchar(100) | YES | MUL |  | 
+created_at | timestamp | YES |  | current_timestamp() | 
+updated_at | timestamp | YES |  | current_timestamp() | on update current_timestamp()
+
+=== TABLE: exam_attempt_answers ===
+id | bigint(20) unsigned | NO | PRI |  | auto_increment
+attempt_id | bigint(20) unsigned | NO | MUL |  | 
+question_id | bigint(20) unsigned | NO | MUL |  | 
+selected_answer_id | bigint(20) unsigned | YES | MUL |  | 
+is_correct | tinyint(1) | NO |  | 0 | 
+created_at | timestamp | YES |  | current_timestamp() | 
+updated_at | timestamp | YES |  | current_timestamp() | on update current_timestamp()
+
+=== TABLE: exam_attempts ===
+id | bigint(20) unsigned | NO | PRI |  | auto_increment
+user_id | bigint(20) unsigned | NO | MUL |  | 
+certification_id | bigint(20) unsigned | NO | MUL |  | 
+score | int(11) | NO |  | 0 | 
+total_questions | int(11) | NO |  | 0 | 
+passed | tinyint(1) | NO | MUL | 0 | 
+attempted_at | timestamp | YES |  | current_timestamp() | 
+created_at | timestamp | YES |  | current_timestamp() | 
+updated_at | timestamp | YES |  | current_timestamp() | on update current_timestamp()
+
+=== TABLE: failed_jobs ===
+id | bigint(20) unsigned | NO | PRI |  | auto_increment
+uuid | varchar(255) | NO | UNI |  | 
+connection | text | NO |  |  | 
+queue | text | NO |  |  | 
+payload | longtext | NO |  |  | 
+exception | longtext | NO |  |  | 
+failed_at | timestamp | NO |  | current_timestamp() | 
+
+=== TABLE: jobs ===
+id | bigint(20) unsigned | NO | PRI |  | auto_increment
+queue | varchar(255) | NO | MUL |  | 
+payload | longtext | NO |  |  | 
+attempts | tinyint(3) unsigned | NO |  |  | 
+reserved_at | int(10) unsigned | YES |  |  | 
+available_at | int(10) unsigned | NO |  |  | 
+created_at | int(10) unsigned | NO |  |  | 
+
+=== TABLE: learning_materials ===
+id | bigint(20) unsigned | NO | PRI |  | auto_increment
+certification_id | bigint(20) unsigned | NO | MUL |  | 
+title | varchar(255) | NO |  |  | 
+type | enum('ppt','document','youtube_video') | NO |  |  | 
+file_path | varchar(255) | YES |  |  | 
+youtube_embed_url | varchar(255) | YES |  |  | 
+description | text | YES |  |  | 
+order_number | int(11) | NO |  | 0 | 
+created_at | timestamp | YES |  |  | 
+updated_at | timestamp | YES |  |  | 
+
+=== TABLE: lessons ===
+id | bigint(20) unsigned | NO | PRI |  | auto_increment
+certification_id | bigint(20) unsigned | NO | MUL |  | 
+created_by_user_id | bigint(20) unsigned | NO | MUL |  | 
+title | varchar(255) | NO |  |  | 
+description | text | YES |  |  | 
+order_index | int(11) | NO |  | 1 | 
+created_at | timestamp | YES |  | current_timestamp() | 
+updated_at | timestamp | YES |  | current_timestamp() | on update current_timestamp()
+
+=== TABLE: migrations ===
+id | int(10) unsigned | NO | PRI |  | auto_increment
+migration | varchar(255) | NO |  |  | 
+batch | int(11) | NO |  |  | 
+
+=== TABLE: module_content ===
+id | bigint(20) unsigned | NO | PRI |  | auto_increment
+module_id | bigint(20) unsigned | NO | MUL |  | 
+uploaded_by_user_id | bigint(20) unsigned | NO | MUL |  | 
+content_type | enum('video','presentation','document','youtube_embed','other') | NO |  |  | 
+title | varchar(150) | NO |  |  | 
+file_url | varchar(500) | NO |  |  | 
+order_index | int(11) | NO |  | 1 | 
+created_at | timestamp | YES |  | current_timestamp() | 
+updated_at | timestamp | YES |  | current_timestamp() | on update current_timestamp()
+
+=== TABLE: modules ===
+id | bigint(20) unsigned | NO | PRI |  | auto_increment
+lesson_id | bigint(20) unsigned | NO | MUL |  | 
+uploaded_by_user_id | bigint(20) unsigned | NO | MUL |  | 
+title | varchar(255) | NO |  |  | 
+description | text | YES |  |  | 
+strict_completion | tinyint(1) | NO |  | 0 | 
+order_index | int(11) | NO |  | 1 | 
+start_date | date | YES |  |  | 
+end_date | date | YES |  |  | 
+duration_days | int(11) | YES |  |  | 
+created_at | timestamp | YES |  | current_timestamp() | 
+updated_at | timestamp | YES |  | current_timestamp() | on update current_timestamp()
+
+=== TABLE: password_resets ===
+email | varchar(255) | NO | PRI |  | 
+token | varchar(255) | NO |  |  | 
+created_at | timestamp | YES |  |  | 
+
+=== TABLE: payments ===
+id | bigint(20) unsigned | NO | PRI |  | auto_increment
+enrollment_request_id | bigint(20) unsigned | NO | MUL |  | 
+processed_by | bigint(20) unsigned | YES | MUL |  | 
+provider | varchar(50) | NO |  | xendit | 
+provider_invoice_id | varchar(255) | YES | UNI |  | 
+provider_reference | varchar(255) | YES |  |  | 
+amount | decimal(10,2) | NO |  |  | 
+status | enum('pending','paid','failed','expired','cancelled','refunded') | NO | MUL | pending | 
+method | varchar(100) | YES |  |  | 
+paid_at | timestamp | YES |  |  | 
+raw_payload | longtext | YES |  |  | 
+created_at | timestamp | YES |  | current_timestamp() | 
+updated_at | timestamp | YES |  | current_timestamp() | on update current_timestamp()
+
+=== TABLE: personal_access_tokens ===
+id | bigint(20) unsigned | NO | PRI |  | auto_increment
+tokenable_type | varchar(255) | NO | MUL |  | 
+tokenable_id | bigint(20) unsigned | NO |  |  | 
+name | varchar(255) | NO |  |  | 
+token | varchar(64) | NO | UNI |  | 
+abilities | text | YES |  |  | 
+last_used_at | timestamp | YES |  |  | 
+expires_at | timestamp | YES |  |  | 
+created_at | timestamp | YES |  |  | 
+updated_at | timestamp | YES |  |  | 
+
+=== TABLE: questions ===
+id | bigint(20) unsigned | NO | PRI |  | auto_increment
+module_id | bigint(20) unsigned | YES | MUL |  | 
+certification_id | bigint(20) unsigned | YES | MUL |  | 
+learning_material_id | bigint(20) unsigned | YES | MUL |  | 
+created_by_user_id | bigint(20) unsigned | YES | MUL |  | 
+question_type | enum('diagnostic','module_quiz','final_exam','fast_track') | NO | MUL | module_quiz | 
+question_text | text | NO |  |  | 
+points | int(11) | NO |  | 1 | 
+order_index | int(11) | NO |  | 1 | 
+created_at | timestamp | YES |  | current_timestamp() | 
+updated_at | timestamp | YES |  | current_timestamp() | on update current_timestamp()
+
+=== TABLE: revenue_splits ===
+id | bigint(20) unsigned | NO | PRI |  | auto_increment
+certification_id | bigint(20) unsigned | NO | UNI |  | 
+admin_percentage | decimal(5,2) | NO |  | 30.00 | 
+creator_percentage | decimal(5,2) | NO |  | 70.00 | 
+created_at | timestamp | YES |  | current_timestamp() | 
+updated_at | timestamp | YES |  | current_timestamp() | on update current_timestamp()
+
+=== TABLE: user_cosmetics ===
+id | bigint(20) unsigned | NO | PRI |  | auto_increment
+user_id | bigint(20) unsigned | NO | MUL |  | 
+item_id | varchar(100) | NO | MUL |  | 
+unlocked_at | timestamp | YES |  | current_timestamp() | 
+
+=== TABLE: user_module_progress ===
+id | bigint(20) unsigned | NO | PRI |  | auto_increment
+user_id | bigint(20) unsigned | NO | MUL |  | 
+module_id | bigint(20) unsigned | NO | MUL |  | 
+is_unlocked | tinyint(1) | NO |  | 0 | 
+is_completed | tinyint(1) | NO | MUL | 0 | 
+fast_track_used | tinyint(1) | NO |  | 0 | 
+fast_track_passed | tinyint(1) | NO |  | 0 | 
+content_completed | tinyint(1) | NO |  | 0 | 
+score | int(11) | YES |  |  | 
+started_at | timestamp | YES |  |  | 
+completed_at | timestamp | YES |  |  | 
+created_at | timestamp | YES |  | current_timestamp() | 
+updated_at | timestamp | YES |  | current_timestamp() | on update current_timestamp()
+
+=== TABLE: user_streaks ===
+id | bigint(20) unsigned | NO | PRI |  | auto_increment
+user_id | bigint(20) unsigned | NO | UNI |  | 
+current_streak | int(11) | NO |  | 0 | 
+longest_streak | int(11) | NO | MUL | 0 | 
+last_active_date | date | YES |  |  | 
+created_at | timestamp | YES |  | current_timestamp() | 
+updated_at | timestamp | YES |  | current_timestamp() | on update current_timestamp()
+
+=== TABLE: users ===
+id | bigint(20) unsigned | NO | PRI |  | auto_increment
+first_name | varchar(100) | NO |  |  | 
+last_name | varchar(100) | NO |  |  | 
+email | varchar(255) | NO | UNI |  | 
+password | varchar(255) | NO |  |  | 
+birthday | date | YES |  |  | 
+contact_no | varchar(50) | YES |  |  | 
+affiliation | varchar(255) | YES |  |  | 
+role | enum('admin','content_creator','teacher','user') | NO | MUL | user | 
+is_active | tinyint(1) | NO |  | 1 | 
+status | enum('active','inactive','pending_verification','declined') | NO | MUL | active | 
+institutional_credentials_url | varchar(500) | YES |  |  | 
+verified_by | bigint(20) unsigned | YES | MUL |  | 
+verified_at | timestamp | YES |  |  | 
+sand_dollars | int(11) | NO |  | 0 | 
+email_verified_at | timestamp | YES |  |  | 
+remember_token | varchar(100) | YES |  |  | 
+created_at | timestamp | YES |  | current_timestamp() | 
+updated_at | timestamp | YES |  | current_timestamp() | on update current_timestamp()
+
+=== TABLE: vouchers ===
+id | bigint(20) unsigned | NO | PRI |  | auto_increment
+enrollment_request_id | bigint(20) unsigned | NO | MUL |  | 
+teacher_id | bigint(20) unsigned | YES | MUL |  | 
+cohort_id | bigint(20) unsigned | YES | MUL |  | 
+certification_id | bigint(20) unsigned | NO | MUL |  | 
+code | varchar(50) | NO | UNI |  | 
+is_used | tinyint(1) | NO |  | 0 | 
+used_by | bigint(20) unsigned | YES | MUL |  | 
+issued_at | timestamp | YES |  | current_timestamp() | 
+used_at | timestamp | YES |  |  | 
+expires_at | timestamp | YES |  |  | 
+created_at | timestamp | YES |  | current_timestamp() | 
+updated_at | timestamp | YES |  | current_timestamp() | on update current_timestamp()
+
+=== TABLE: withdrawal_requests ===
+id | bigint(20) unsigned | NO | PRI |  | auto_increment
+creator_id | bigint(20) unsigned | NO | MUL |  | 
+amount | decimal(10,2) | NO |  |  | 
+status | enum('pending','approved','paid','declined') | NO | MUL | pending | 
+requested_at | timestamp | YES |  | current_timestamp() | 
+approved_by | bigint(20) unsigned | YES | MUL |  | 
+approved_at | timestamp | YES |  |  | 
+paid_at | timestamp | YES |  |  | 
+remarks | text | YES |  |  | 
+created_at | timestamp | YES |  | current_timestamp() | 
+updated_at | timestamp | YES |  | current_timestamp() | on update current_timestamp()
+
