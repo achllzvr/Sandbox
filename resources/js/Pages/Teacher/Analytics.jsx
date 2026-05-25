@@ -34,7 +34,7 @@ export default function Analytics({ cohortData }) {
                         <div className="bg-amber-50 border border-amber-100 p-5 rounded-2xl">
                             <h4 className="text-sm font-bold text-amber-800 uppercase tracking-wider mb-1">Needs Attention</h4>
                             <p className="text-3xl font-black text-amber-900">3</p>
-                            <p className="text-amber-700 text-sm mt-1">Students inactive for > 3 days</p>
+                            <p className="text-amber-700 text-sm mt-1">Students inactive for &gt; 3 days</p>
                         </div>
                     </div>
                 </div>

@@ -55,7 +55,7 @@ export default function CertificationsIndex({ certifications }) {
                                     <div>Exam: {c.exam_questions_count} Qs</div>
                                 </td>
                                 <td className="px-6 py-3 text-stone-500 text-center font-semibold">
-                                    {c.learning_materials_count}
+                                    {c.module_count}
                                 </td>
                                 <td className="px-6 py-3">
                                     <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${statusBadge(c.status)}`}>

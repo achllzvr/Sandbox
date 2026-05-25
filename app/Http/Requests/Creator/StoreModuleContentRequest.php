@@ -18,7 +18,8 @@ class StoreModuleContentRequest extends FormRequest
             'title' => ['required', 'string', 'max:150'],
             'type' => ['required', 'in:video,ppt,pdf,youtube_embed'],
             'youtube_url' => ['required_if:type,youtube_embed', 'url', 'nullable'],
-            'file' => ['required_unless:type,youtube_embed', 'file', 'mimes:mp4,ppt,pptx,pdf', 'max:51200', 'nullable'],
+            // Removed strict 'mimes' because PPTX is often mistakenly recognized as a 'zip' file by the server's MIME detector.
+            'file' => ['required_unless:type,youtube_embed', 'file', 'max:51200', 'nullable'],
         ];
     }
 }

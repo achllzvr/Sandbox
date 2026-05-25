@@ -186,6 +186,13 @@ Route::middleware(['auth', 'otp.verified', 'role:user'])
     ->name('student.')
     ->group(function () {
         Route::get('/dashboard', [StudentDashboardController::class, 'index'])->name('dashboard');
+        
+        // Sandbox Enrollment & Voucher Flow
+        Route::post('/enrollments/checkout', [\App\Http\Controllers\Student\EnrollmentController::class, 'checkout'])->name('enrollments.checkout');
+        Route::post('/vouchers/redeem', [\App\Http\Controllers\Student\VoucherController::class, 'redeem'])->name('vouchers.redeem');
+        
+        // View a specific Shell (certification) - student view
+        Route::get('/shells/{id}', [\App\Http\Controllers\Student\MyShellController::class, 'show'])->name('shells.show');
     });
 
 Route::middleware(['auth', 'otp.verified', 'role:user'])

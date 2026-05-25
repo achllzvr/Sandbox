@@ -53,8 +53,7 @@ class Certification extends Model
 
     public function quizQuestions()
     {
-        return $this->hasManyThrough(Question::class, LearningMaterial::class, 'certification_id', 'learning_material_id')
-            ->where('questions.question_type', 'module_quiz');
+        return $this->hasMany(Question::class, 'certification_id')->where('question_type', 'module_quiz');
     }
 
     public function examQuestions()
