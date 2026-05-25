@@ -187,9 +187,9 @@ export default function Dashboard({ gamification, myShells, recommendedShells })
                                                     <p className="text-[10px] text-stone-400 font-bold uppercase tracking-wider mb-0.5">Up Next</p>
                                                     <p className="text-xs font-semibold text-stone-700 line-clamp-1">{shell.next_sandbox}</p>
                                                 </div>
-                                                <button className="flex items-center gap-1.5 bg-stone-900 hover:bg-amber-500 text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors">
+                                                <Link href={route('student.shells.show', shell.id)} className="flex items-center gap-1.5 bg-stone-900 hover:bg-amber-500 text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors">
                                                     <span>▶️</span> Continue
-                                                </button>
+                                                </Link>
                                             </div>
                                         </div>
                                     </div>
@@ -218,9 +218,10 @@ export default function Dashboard({ gamification, myShells, recommendedShells })
 
                         <div className="grid grid-cols-1 gap-4">
                             {recommendedShells.map((cert) => (
-                                <div
+                                <Link
+                                    href={route('marketplace.index')}
                                     key={cert.id}
-                                    className="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow group cursor-pointer"
+                                    className="block bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow group cursor-pointer"
                                 >
                                     <div className="h-24 bg-gradient-to-r from-amber-100 to-cyan-100 relative overflow-hidden">
                                         <div className="absolute top-2 right-2 bg-white/90 text-xs font-bold px-2 py-1 rounded-lg text-amber-600 shadow-sm flex items-center gap-1">
@@ -235,14 +236,14 @@ export default function Dashboard({ gamification, myShells, recommendedShells })
                                         <p className="text-xs text-stone-500 mt-1">by {cert.creator}</p>
                                         <div className="mt-3 flex items-center justify-between">
                                             <span className="font-bold text-stone-800 text-sm">
-                                                {cert.price === 0 ? 'Free' : `₱${cert.price.toFixed(2)}`}
+                                                {cert.price === 0 ? 'Free' : `₱${Number(cert.price).toFixed(2)}`}
                                             </span>
                                             <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-md">
                                                 Preview
                                             </span>
                                         </div>
                                     </div>
-                                </div>
+                                </Link>
                             ))}
                         </div>
 

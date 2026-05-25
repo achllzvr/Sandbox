@@ -16,13 +16,16 @@ class CertificationApprovalController extends Controller
             ->with([
                 'creator:id,first_name,last_name',
                 'approver:id,first_name,last_name',
-                'learningMaterials',
+                'lessons.modules.contents',
                 'quizQuestions',
                 'examQuestions'
             ])
             ->latest()
             ->get()
             ->map(function (Certification $certification) {
+                // Calculate modules and contents
+                $moduleCount = $certification->lessons->sum(function($lesson) { return $lesson->modules->count(); });
+                
                 return [
                     'id' => $certification->id,
                     'title' => $certification->title,
@@ -37,8 +40,7 @@ class CertificationApprovalController extends Controller
                     'approved_at' => $certification->approved_at,
                     'creator' => $certification->creator,
                     'approver' => $certification->approver,
-                    'learning_materials' => $certification->learningMaterials,
-                    'learning_materials_count' => $certification->learningMaterials->count(),
+                    'module_count' => $moduleCount,
                     'quiz_questions_count' => $certification->quizQuestions->count(),
                     'exam_questions_count' => $certification->examQuestions->count(),
                 ];
@@ -53,14 +55,16 @@ class CertificationApprovalController extends Controller
     {
         $certification->load([
             'creator:id,first_name,last_name',
-            'learningMaterials',
+            'lessons.modules.contents',
             'quizQuestions.answers',
             'examQuestions.answers'
         ]);
 
+        $moduleCount = $certification->lessons->sum(function($lesson) { return $lesson->modules->count(); });
+
         return Inertia::render('Admin/Certifications/Show', [
             'certification' => array_merge($certification->toArray(), [
-                'learning_materials_count' => $certification->learningMaterials->count(),
+                'module_count' => $moduleCount,
                 'quiz_questions_count' => $certification->quizQuestions->count(),
                 'exam_questions_count' => $certification->examQuestions->count(),
             ])

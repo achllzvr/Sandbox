@@ -100,10 +100,10 @@ These handle platform integrity, user verification, and automated finance webhoo
    * Action: Aggregates KPIs (total revenue, active users, pending approvals).
    * Associated Screen: Admin Master Dashboard.
    * ROUTE: GET /admin/dashboard → redirects to admin.certifications.pending
-[❌] PUT /admin/users/{id}/verify-teacher
+[✅] PUT /admin/users/{id}/verify-teacher
    * Action: Approves or declines a pending Teacher/Affiliate registration.
    * Associated Screen: User & Role Management.
-   * NOTE: FormRequest exists (Admin/VerifyTeacherRequest) but no route/controller registered.
+   * ROUTE: PUT /admin/users/{user}/verify-teacher → UserManagementController@verifyTeacher / TeacherVerificationController@approve
 [✅] PUT /admin/certifications/{cert_id}/status
    * Action: Updates a Certification's status (published or declined) after reviewing the content creator's submission.
    * Associated Screen: Certification Approval Queue.
@@ -160,19 +160,19 @@ ________________
 
 5. Teacher / Affiliate Endpoints (The Moderator)
 Endpoints for institutional bulk purchasing and tracking.
-[⚠️] POST /teacher/checkout/bulk
+[❌] POST /teacher/checkout/bulk
    * Action: Calculates total price for a selected Shell multiplied by student quantity, creates bulk enrollment_requests, and redirects to Xendit.
    * Fields: certification_id, quantity.
    * Associated Screen: Teacher Master Dashboard & Bulk Checkout.
    * NOTE: Controller exists (Teacher/BulkCheckoutController) + FormRequest but route not registered. Dashboard route exists.
-[⚠️] GET /teacher/vouchers
+[✅] GET /teacher/vouchers
    * Action: Fetches all vouchers generated from the teacher's bulk purchases, showing the code string and whether it is is_used.
    * Associated Screen: Voucher Management & Roster.
-   * NOTE: Controller exists (Teacher/VoucherController) but route not registered.
-[⚠️] GET /teacher/analytics/{cert_id}
+   * ROUTE: GET /teacher/vouchers → TeacherDashboardController@vouchers
+[✅] GET /teacher/analytics/{cert_id}
    * Action: Fetches the specific user_module_progress and exam_attempts strictly for the students who redeemed the teacher's specific vouchers.
    * Associated Screen: Cohort Analytics.
-   * NOTE: Controller exists (Teacher/AnalyticsController) but route not registered.
+   * ROUTE: GET /teacher/analytics → TeacherDashboardController@analytics
 ________________
 Template 1: The Inertia Page Render (GET)
 Use this for endpoints that load a screen (e.g., GET /marketplace, GET /admin/dashboard, GET /shells/{id}/map). Goal: Fetch data using Eloquent and pass it to the React frontend.

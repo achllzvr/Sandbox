@@ -115,7 +115,7 @@ export default function Show({ certification }) {
                 <div className="flex flex-wrap gap-3 mt-5 pt-5 border-t border-stone-100">
                     <StatPill label="Practice Quiz Questions" value={certification.quiz_questions_count} color="blue" />
                     <StatPill label="Final Exam Questions" value={certification.exam_questions_count} color="amber" />
-                    <StatPill label="Learning Materials" value={certification.learning_materials_count} color="rose" />
+                    <StatPill label="Sandboxes (Modules)" value={certification.module_count} color="rose" />
                 </div>
 
                 <div className="mt-8">
@@ -124,63 +124,47 @@ export default function Show({ certification }) {
                 </div>
             </div>
 
-            {/* ── Learning Materials ──────────────────────────────────── */}
+            {/* ── Lessons & Sandboxes ──────────────────────────────────── */}
             <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6 mb-6">
-                <h3 className="text-lg font-bold mb-4">Attached Learning Materials ({certification.learning_materials_count})</h3>
+                <h3 className="text-lg font-bold mb-4">Attached Sandboxes ({certification.module_count})</h3>
                 
-                {certification.learning_materials?.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {certification.learning_materials.map(mat => (
-                            <div key={mat.id} className="border border-stone-200 rounded-xl p-4 flex flex-col justify-between">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <div className="w-10 h-10 bg-blue-50 text-blue-600 flex items-center justify-center rounded-lg font-bold text-xs uppercase">
-                                        {mat.type === 'youtube_video' ? 'YT' : mat.type}
-                                    </div>
+                {certification.lessons?.length > 0 ? (
+                    <div className="space-y-4">
+                        {certification.lessons.map(lesson => (
+                            <div key={lesson.id} className="border border-stone-200 rounded-xl p-4 flex flex-col">
+                                <div className="flex justify-between items-center cursor-pointer" onClick={() => toggleLesson(lesson.id)}>
                                     <div>
-                                        <h4 className="font-bold">{mat.title}</h4>
-                                        <p className="text-xs text-gray-500">{mat.description}</p>
+                                        <h4 className="font-bold text-stone-900">{lesson.title}</h4>
+                                        <p className="text-xs text-stone-500">{lesson.description}</p>
                                     </div>
+                                    <ChevronIcon open={openLessons[lesson.id]} />
                                 </div>
-                                <div className="mt-4 pt-4 border-t border-stone-100 flex flex-col gap-3">
-                                    {/* Preview Box */}
-                                    <div className="bg-stone-50 rounded-lg border border-stone-200 overflow-hidden relative">
-                                        {mat.type === 'youtube_video' ? (
-                                            <iframe src={mat.youtube_embed_url} className="w-full aspect-video" title="Preview" />
-                                        ) : mat.file_path && mat.file_path.endsWith('.pdf') ? (
-                                            <iframe src={`/storage/${mat.file_path}`} className="w-full h-48" title="PDF Preview" />
-                                        ) : mat.file_path && (mat.file_path.endsWith('.jpg') || mat.file_path.endsWith('.png')) ? (
-                                            <img src={`/storage/${mat.file_path}`} className="w-full object-cover max-h-48" alt="Preview" />
+                                {openLessons[lesson.id] && (
+                                    <div className="mt-4 pt-4 border-t border-stone-100 flex flex-col gap-3 pl-4">
+                                        {lesson.modules?.length > 0 ? (
+                                            lesson.modules.map(module => (
+                                                <div key={module.id} className="border border-stone-100 bg-stone-50 p-3 rounded-lg flex flex-col gap-2">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 bg-purple-100 text-purple-600 flex items-center justify-center rounded font-bold text-xs uppercase">
+                                                            {module.title.substring(0, 2)}
+                                                        </div>
+                                                        <div>
+                                                            <h5 className="font-semibold text-sm">{module.title}</h5>
+                                                            <p className="text-xs text-stone-500">{module.description}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))
                                         ) : (
-                                            <div className="w-full h-32 flex items-center justify-center flex-col text-stone-400">
-                                                <span className="text-3xl mb-2">📁</span>
-                                                <span className="text-xs font-semibold">Preview not available for this file type</span>
-                                            </div>
+                                            <p className="text-xs text-stone-400 italic">No sandboxes.</p>
                                         )}
                                     </div>
-                                    
-                                    {/* Action Buttons */}
-                                    <div className="flex gap-2">
-                                        {mat.type === 'youtube_video' ? (
-                                            <a href={mat.youtube_embed_url} target="_blank" rel="noreferrer" className="flex-1 text-center py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-sm font-bold transition-colors">
-                                                Open Video ↗
-                                            </a>
-                                        ) : (
-                                            <>
-                                                <a href={`/storage/${mat.file_path}`} target="_blank" rel="noreferrer" className="flex-1 text-center py-2 bg-stone-100 text-stone-700 hover:bg-stone-200 rounded-lg text-sm font-bold transition-colors">
-                                                    View File ↗
-                                                </a>
-                                                <a href={`/storage/${mat.file_path}`} download className="flex-1 text-center py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-sm font-bold transition-colors">
-                                                    Download ↓
-                                                </a>
-                                            </>
-                                        )}
-                                    </div>
-                                </div>
+                                )}
                             </div>
                         ))}
                     </div>
                 ) : (
-                    <p className="text-gray-500 italic">No materials attached.</p>
+                    <p className="text-gray-500 italic">No sandboxes attached.</p>
                 )}
             </div>
 

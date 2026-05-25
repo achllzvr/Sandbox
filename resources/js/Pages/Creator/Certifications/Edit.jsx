@@ -885,6 +885,7 @@ export default function Edit({ certification }) {
                                         <option value="video">🎬 Local MP4 Video</option>
                                         <option value="youtube_embed">🎥 YouTube Embed URL</option>
                                     </select>
+                                    {addComponentForm.errors.type && <div className="text-red-500 text-xs mt-1 font-semibold">{addComponentForm.errors.type}</div>}
                                 </div>
 
                                 <div>
@@ -897,6 +898,7 @@ export default function Edit({ certification }) {
                                         required
                                         className="w-full text-sm rounded-xl border-slate-200 focus:border-violet-400 focus:ring-violet-400"
                                     />
+                                    {addComponentForm.errors.title && <div className="text-red-500 text-xs mt-1 font-semibold">{addComponentForm.errors.title}</div>}
                                 </div>
 
                                 {addComponentForm.data.type === 'youtube_embed' ? (
@@ -910,6 +912,7 @@ export default function Edit({ certification }) {
                                             required
                                             className="w-full text-sm rounded-xl border-slate-200 focus:border-violet-400 focus:ring-violet-400"
                                         />
+                                        {addComponentForm.errors.youtube_url && <div className="text-red-500 text-xs mt-1 font-semibold">{addComponentForm.errors.youtube_url}</div>}
                                     </div>
                                 ) : (
                                     <div>
@@ -920,6 +923,13 @@ export default function Edit({ certification }) {
                                             required
                                             className="block w-full text-sm text-stone-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-violet-50 file:text-violet-600 hover:file:bg-violet-100"
                                         />
+                                        {addComponentForm.errors.file && <div className="text-red-500 text-xs mt-1 font-semibold">{addComponentForm.errors.file}</div>}
+                                    </div>
+                                )}
+                                
+                                {Object.keys(addComponentForm.errors).length > 0 && (
+                                    <div className="text-red-500 text-xs font-bold border border-red-200 bg-red-50 p-2 rounded-lg">
+                                        Check the form for errors above.
                                     </div>
                                 )}
 

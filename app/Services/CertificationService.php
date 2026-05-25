@@ -25,10 +25,18 @@ class CertificationService {
         if (empty($cert->category)) throw new Exception("Certification category is required.");
         if (empty($cert->difficulty)) throw new Exception("Certification difficulty is required.");
         
-        $cert->load(['learningMaterials.quizQuestions.answers', 'examQuestions.answers']);
+        $cert->load(['lessons.modules.questions.answers', 'examQuestions.answers']);
 
-        if ($cert->learningMaterials->isEmpty()) {
-            throw new Exception("At least one learning material must be attached.");
+        $hasModules = false;
+        foreach ($cert->lessons as $lesson) {
+            if ($lesson->modules->isNotEmpty()) {
+                $hasModules = true;
+                break;
+            }
+        }
+
+        if (!$hasModules) {
+            throw new Exception("At least one Sandbox (Module) must be attached.");
         }
         
         // Validate Final Exam (min 5 questions, each with 4 answers, exactly 1 correct)
@@ -44,18 +52,20 @@ class CertificationService {
             }
         }
 
-        // Validate practice quizzes attached to learning materials
-        foreach ($cert->learningMaterials as $material) {
-            if ($material->quizQuestions->isNotEmpty()) {
-                if ($material->quizQuestions->count() < 5) {
-                    throw new Exception("Practice Quiz for '{$material->title}' must have at least 5 questions if configured.");
-                }
-                foreach ($material->quizQuestions as $question) {
-                    if ($question->answers->count() !== 4) {
-                        throw new Exception("Quiz questions for '{$material->title}' must have exactly 4 answers.");
+        // Validate practice quizzes attached to modules
+        foreach ($cert->lessons as $lesson) {
+            foreach ($lesson->modules as $module) {
+                if ($module->questions->isNotEmpty()) {
+                    if ($module->questions->count() < 5) {
+                        throw new Exception("Practice Quiz for Sandbox '{$module->title}' must have at least 5 questions if configured.");
                     }
-                    if ($question->answers->where('is_correct', true)->count() !== 1) {
-                        throw new Exception("Each quiz question for '{$material->title}' must have exactly 1 correct answer.");
+                    foreach ($module->questions as $question) {
+                        if ($question->answers->count() !== 4) {
+                            throw new Exception("Quiz questions for Sandbox '{$module->title}' must have exactly 4 answers.");
+                        }
+                        if ($question->answers->where('is_correct', true)->count() !== 1) {
+                            throw new Exception("Each quiz question for Sandbox '{$module->title}' must have exactly 1 correct answer.");
+                        }
                     }
                 }
             }
