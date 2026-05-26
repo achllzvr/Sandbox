@@ -193,6 +193,9 @@ Route::middleware(['auth', 'otp.verified', 'role:user'])
         
         // View a specific Shell (certification) - student view
         Route::get('/shells/{id}', [\App\Http\Controllers\Student\MyShellController::class, 'show'])->name('shells.show');
+        
+        // Mark a module as complete
+        Route::post('/shells/modules/{module}/complete', [\App\Http\Controllers\Student\MyShellController::class, 'completeModule'])->name('shells.modules.complete');
     });
 
 Route::middleware(['auth', 'otp.verified', 'role:user'])
