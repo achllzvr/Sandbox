@@ -13,6 +13,7 @@ export default function Show() {
     const [selectedAnswer, setSelectedAnswer] = useState(null);
     const [answerStatus, setAnswerStatus] = useState('unanswered');
     const [score, setScore] = useState(0);
+    const [userAnswers, setUserAnswers] = useState([]);
     
     // Completion Screens State
     const [isViewingSummary, setIsViewingSummary] = useState(false);
@@ -148,11 +149,12 @@ export default function Show() {
 
                 <button
                     onClick={() => {
-                        // Mark as completed and return to map
+                        // Mark as completed and return to map (fallback for non-quiz modules)
                         import('@inertiajs/react').then(({ router }) => {
                             router.post(route('student.shells.modules.complete', viewingModule.id), {}, { preserveScroll: true, onSuccess: () => {
                                 setIsViewingSummary(false);
                                 setViewingModule(null);
+                                setUserAnswers([]);
                             }});
                         });
                     }}
@@ -188,8 +190,45 @@ export default function Show() {
             );
         }
 
+        const submitAnswers = (finalAnswersList) => {
+            import('@inertiajs/react').then(({ router }) => {
+                if (isTakingFinalExam) {
+                    router.post(route('student.certifications.exam.submit', certification.id), {
+                        answers: finalAnswersList
+                    }, {
+                        preserveScroll: true,
+                        onSuccess: () => {
+                            setIsViewingCertificate(true);
+                            setUserAnswers([]);
+                        },
+                        onError: () => {
+                            setIsTakingFinalExam(false);
+                            setUserAnswers([]);
+                            alert("Final Exam Failed! Please review the sandboxes and try again.");
+                        }
+                    });
+                } else {
+                    router.post(route('student.modules.quiz.submit', viewingModule.id), {
+                        answers: finalAnswersList
+                    }, {
+                        preserveScroll: true,
+                        onSuccess: () => {
+                            setIsViewingSummary(true);
+                            setUserAnswers([]);
+                        }
+                    });
+                }
+            });
+        };
+
         const handleCheckAnswer = () => {
             const answer = currentQuestion.answers.find(a => a.id === selectedAnswer);
+            
+            // Only add to userAnswers if we haven't answered this question yet
+            if (userAnswers.length === quizIndex) {
+                setUserAnswers([...userAnswers, { question_id: currentQuestion.id, selected_option: selectedAnswer }]);
+            }
+
             if (answer && answer.is_correct) {
                 setAnswerStatus('correct');
                 setScore(score + 1);
@@ -199,9 +238,16 @@ export default function Show() {
         };
 
         const handleNext = () => {
+            let finalAnswersList = userAnswers;
+            
+            // For final exam, we skip checkAnswer entirely, so we record it now.
+            if (isTakingFinalExam && userAnswers.length === quizIndex) {
+                finalAnswersList = [...userAnswers, { question_id: currentQuestion.id, selected_option: selectedAnswer }];
+                setUserAnswers(finalAnswersList);
+            }
+
             if (isLastQuestion) {
-                if (isTakingFinalExam) setIsViewingCertificate(true);
-                else setIsViewingSummary(true);
+                submitAnswers(finalAnswersList);
             } else {
                 setQuizIndex(quizIndex + 1);
                 setSelectedAnswer(null);
