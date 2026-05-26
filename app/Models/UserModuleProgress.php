@@ -12,6 +12,7 @@ class UserModuleProgress extends Pivot
         'user_id',
         'module_id',
         'completed_at',
+        'is_completed',
     ];
 
     protected $casts = [
