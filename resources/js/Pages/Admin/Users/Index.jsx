@@ -1,238 +1,268 @@
-import { Head, Link, useForm, router } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
 import { useState } from 'react';
+import { Head, Link, router } from '@inertiajs/react';
+import AdminLayout from '@/Layouts/AdminLayout';
+import Modal from '@/Components/Modal'; // Using your existing Inertia Modal component
 
-export default function UsersIndex({ users, filters }) {
-    const [showInvite, setShowInvite] = useState(false);
-    const [reviewUser, setReviewUser] = useState(null);
-    const [search, setSearch] = useState(filters?.search || '');
-    const [roleFilter, setRoleFilter] = useState(filters?.role || '');
+/*
+ * ==============================================================================
+ * BACKEND INTEGRATION NOTES FOR MIKE & AHMAD:
+ * ==============================================================================
+ * Controller: app/Http/Controllers/Admin/UserManagementController.php @ index
+ * Required Props:
+ * 1. users: Array (or paginated object) of { id, name, email, role, status, joined_at }
+ * * Endpoints for Actions:
+ * route('admin.users.suspend', id)
+ * route('admin.users.archive', id)
+ * ==============================================================================
+ */
 
-    const inviteForm = useForm({
-        email: '', role: 'content_creator',
+export default function UserManagement({ auth, users = [] }) {
+    const [searchQuery, setSearchQuery] = useState('');
+    const [roleFilter, setRoleFilter] = useState('All');
+    
+    // Modal States
+    const [suspendModalOpen, setSuspendModalOpen] = useState(false);
+    const [archiveModalOpen, setArchiveModalOpen] = useState(false);
+    const [selectedUser, setSelectedUser] = useState(null);
+    const [isProcessing, setIsProcessing] = useState(false);
+
+    // Filter Logic
+    const filteredUsers = (users.data || users).filter(user => {
+        const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                              user.email.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesRole = roleFilter === 'All' || user.role === roleFilter;
+        return matchesSearch && matchesRole;
     });
 
-    const verifyForm = useForm({
-        action: '',
-    });
+    // Action Handlers
+    const confirmSuspend = (user) => {
+        setSelectedUser(user);
+        setSuspendModalOpen(true);
+    };
 
-    function handleFilter(e) {
-        e?.preventDefault();
-        router.get(route('admin.users.index'), { search, role: roleFilter }, { preserveState: true });
-    }
+    const confirmArchive = (user) => {
+        setSelectedUser(user);
+        setArchiveModalOpen(true);
+    };
 
-    function handleInvite(e) {
-        e.preventDefault();
-        inviteForm.post(route('admin.users.invite'), {
-            onSuccess: () => { setShowInvite(false); inviteForm.reset(); },
+    const executeSuspend = () => {
+        setIsProcessing(true);
+        router.post(route('admin.users.suspend', selectedUser.id), {}, {
+            preserveScroll: true,
+            onFinish: () => {
+                setIsProcessing(false);
+                setSuspendModalOpen(false);
+                setSelectedUser(null);
+            }
         });
-    }
+    };
 
-    function handleVerify(action) {
-        verifyForm.transform((data) => ({ ...data, action }))
-            .put(route('admin.users.verify-teacher', reviewUser.id), {
-                onSuccess: () => setReviewUser(null),
-            });
-    }
+    const executeArchive = () => {
+        setIsProcessing(true);
+        router.post(route('admin.users.archive', selectedUser.id), {}, {
+            preserveScroll: true,
+            onFinish: () => {
+                setIsProcessing(false);
+                setArchiveModalOpen(false);
+                setSelectedUser(null);
+            }
+        });
+    };
 
-    function statusBadge(status) {
-        const map = {
-            active: 'bg-green-100 text-green-700',
-            inactive: 'bg-red-100 text-red-700',
-            pending_verification: 'bg-amber-100 text-amber-700',
-            declined: 'bg-red-100 text-red-700',
-        };
-        return map[status] || 'bg-stone-100 text-stone-600';
-    }
+    const getStatusBadge = (status) => {
+        switch(status?.toLowerCase()) {
+            case 'active': return "bg-emerald-100 text-emerald-700 border-emerald-200";
+            case 'suspended': return "bg-red-100 text-red-700 border-red-200";
+            case 'archived': return "bg-slate-100 text-slate-500 border-slate-200";
+            case 'pending': return "bg-amber-100 text-amber-700 border-amber-200";
+            default: return "bg-slate-100 text-slate-600 border-slate-200";
+        }
+    };
 
-    function roleBadge(role) {
-        const map = {
-            admin: 'bg-red-100 text-red-700',
-            content_creator: 'bg-purple-100 text-purple-700',
-            teacher: 'bg-teal-100 text-teal-700',
-            user: 'bg-blue-100 text-blue-700',
-        };
-        return map[role] || 'bg-stone-100 text-stone-600';
-    }
+    const getRoleBadge = (role) => {
+        switch(role?.toLowerCase()) {
+            case 'admin': return "bg-purple-100 text-purple-700";
+            case 'creator': return "bg-orange-100 text-orange-700";
+            case 'teacher': return "bg-blue-100 text-blue-700";
+            default: return "bg-stone-100 text-stone-600";
+        }
+    };
 
     return (
-        <AdminLayout pageTitle="User Management">
+        <AdminLayout user={auth.user} header={<h2 className="font-black text-2xl text-slate-900 tracking-tighter">User Management</h2>}>
             <Head title="User Management" />
 
-            {/* Toolbar */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-2">
-                <form onSubmit={handleFilter} className="flex items-center gap-3">
-                    <input
-                        type="text"
-                        placeholder="Search users..."
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                        className="border border-stone-300 rounded-xl px-4 py-2 text-sm w-64 focus:outline-none focus:border-amber-500"
-                    />
-                    <select
-                        value={roleFilter}
-                        onChange={e => { setRoleFilter(e.target.value); }}
-                        className="border border-stone-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-amber-500"
-                    >
-                        <option value="">All Roles</option>
-                        <option value="user">Student</option>
-                        <option value="content_creator">content_creator</option>
-                        <option value="teacher">Teacher</option>
-                        <option value="admin">Admin</option>
-                    </select>
-                    <button type="submit" className="bg-stone-200 hover:bg-stone-300 text-stone-700 text-sm font-medium px-4 py-2 rounded-xl transition-colors">
-                        Filter
-                    </button>
-                </form>
-                <button onClick={() => setShowInvite(true)} className="bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors">
-                    + Invite User
-                </button>
-            </div>
+            <div className="py-8 bg-slate-50 min-h-screen selection:bg-slate-800 selection:text-white">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    
+                    {/* Header */}
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 gap-4">
+                        <div>
+                            <p className="text-slate-500 text-lg font-medium">
+                                Manage access, roles, and status for all Sandbox accounts.
+                            </p>
+                        </div>
+                        <button className="bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 px-6 rounded-xl shadow-md transition-colors shrink-0">
+                            + Invite User
+                        </button>
+                    </div>
 
-            {/* Table */}
-            <div className="mt-6 bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
-                <table className="w-full text-sm">
-                    <thead>
-                        <tr className="border-b border-stone-100 bg-stone-50">
-                            <th className="text-left px-6 py-3 font-semibold text-stone-500">Name</th>
-                            <th className="text-left px-6 py-3 font-semibold text-stone-500">Email</th>
-                            <th className="text-left px-6 py-3 font-semibold text-stone-500">Role</th>
-                            <th className="text-left px-6 py-3 font-semibold text-stone-500">Status</th>
-                            <th className="text-left px-6 py-3 font-semibold text-stone-500">Joined</th>
-                            <th className="text-right px-6 py-3 font-semibold text-stone-500">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-stone-100">
-                        {users.data.map(u => (
-                            <tr key={u.id} className="hover:bg-stone-50 transition-colors">
-                                <td className="px-6 py-3 font-medium text-stone-900">{u.first_name} {u.last_name}</td>
-                                <td className="px-6 py-3 text-stone-500">{u.email}</td>
-                                <td className="px-6 py-3">
-                                    <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${roleBadge(u.role)}`}>{u.role}</span>
-                                </td>
-                                <td className="px-6 py-3">
-                                    <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${statusBadge(u.status)}`}>{u.status}</span>
-                                </td>
-                                <td className="px-6 py-3 text-stone-400">{new Date(u.created_at).toLocaleDateString()}</td>
-                                <td className="px-6 py-3 text-right">
-                                    {u.role === 'teacher' && u.status === 'pending_verification' && (
-                                        <button 
-                                            onClick={() => setReviewUser(u)}
-                                            className="text-amber-600 hover:text-amber-800 font-bold text-sm"
-                                        >
-                                            Review
-                                        </button>
-                                    )}
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-                {users.data.length === 0 && (
-                    <p className="text-center py-12 text-stone-400 text-sm">No users found.</p>
-                )}
-            </div>
-
-            {/* Pagination */}
-            {users.last_page > 1 && (
-                <nav className="mt-6 flex justify-center gap-2">
-                    {users.links.map((link, i) => (
-                        <Link key={i} href={link.url || '#'} preserveScroll
-                            className={`px-4 py-2 text-sm rounded-lg transition-colors ${link.active ? 'bg-amber-500 text-white font-bold' : link.url ? 'bg-white text-stone-600 border border-stone-200 hover:bg-stone-50' : 'text-stone-300 cursor-not-allowed'}`}
-                            dangerouslySetInnerHTML={{ __html: link.label }}
-                        />
-                    ))}
-                </nav>
-            )}
-
-            {/* Invite Modal */}
-            {showInvite && (
-                <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowInvite(false)}>
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
-                        <h3 className="text-lg font-bold text-stone-900 mb-4">Invite New User</h3>
-                        <form onSubmit={handleInvite} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-stone-700 mb-1">Email</label>
-                                <input type="email" value={inviteForm.data.email} onChange={e => inviteForm.setData('email', e.target.value)}
-                                    className="w-full border border-stone-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-amber-500" required />
-                                {inviteForm.errors.email && <p className="text-red-500 text-xs mt-1">{inviteForm.errors.email}</p>}
+                    {/* Data Table Card */}
+                    <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
+                        
+                        {/* Controls */}
+                        <div className="p-6 border-b border-slate-200 bg-slate-50/50 flex flex-col md:flex-row gap-4 justify-between items-center">
+                            <div className="w-full md:w-96 relative">
+                                <span className="absolute left-4 top-3 text-slate-400">🔍</span>
+                                <input 
+                                    type="text" 
+                                    placeholder="Search users by name or email..." 
+                                    className="w-full pl-11 pr-4 py-3 rounded-xl border-slate-200 focus:border-slate-800 focus:ring-slate-800 text-sm font-medium"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-stone-700 mb-1">Role</label>
-                                <select value={inviteForm.data.role} onChange={e => inviteForm.setData('role', e.target.value)}
-                                    className="w-full border border-stone-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-amber-500">
-                                    <option value="content_creator">Content Creator (content_creator)</option>
-                                    <option value="teacher">Teacher</option>
+                            <div className="w-full md:w-auto flex gap-3">
+                                <select 
+                                    className="rounded-xl border-slate-200 focus:border-slate-800 focus:ring-slate-800 text-sm font-bold text-slate-600 w-full md:w-auto"
+                                    value={roleFilter}
+                                    onChange={(e) => setRoleFilter(e.target.value)}
+                                >
+                                    <option value="All">All Roles</option>
+                                    <option value="Student">Student</option>
+                                    <option value="Teacher">Teacher</option>
+                                    <option value="Creator">Creator</option>
+                                    <option value="Admin">Admin</option>
                                 </select>
                             </div>
-                            <div className="flex justify-end gap-3 pt-2">
-                                <button type="button" onClick={() => setShowInvite(false)} className="px-4 py-2 text-sm text-stone-600 hover:text-stone-800 transition-colors">Cancel</button>
-                                <button type="submit" disabled={inviteForm.processing}
-                                    className="bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors disabled:opacity-50">
-                                    Send Invite
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {/* Review Credential Modal */}
-            {reviewUser && (
-                <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setReviewUser(null)}>
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
-                        <div className="p-4 border-b border-stone-100 flex justify-between items-center bg-stone-50 shrink-0">
-                            <div>
-                                <h3 className="font-bold text-stone-900">Review Teacher Registration</h3>
-                                <p className="text-xs text-stone-500 mt-0.5">{reviewUser.first_name} {reviewUser.last_name} • {reviewUser.email}</p>
-                            </div>
-                            <button onClick={() => setReviewUser(null)} className="text-stone-400 hover:text-stone-600">
-                                ✕
-                            </button>
-                        </div>
-                        
-                        <div className="p-6 overflow-y-auto flex-1 bg-stone-100 flex justify-center items-center">
-                            {reviewUser.institutional_credentials_url ? (
-                                reviewUser.institutional_credentials_url.endsWith('.pdf') ? (
-                                    <iframe 
-                                        src={`/storage/${reviewUser.institutional_credentials_url}`} 
-                                        className="w-full h-[60vh] rounded shadow-sm bg-white"
-                                        title="Credential Document"
-                                    />
-                                ) : (
-                                    <img 
-                                        src={`/storage/${reviewUser.institutional_credentials_url}`} 
-                                        alt="Credential Document" 
-                                        className="max-w-full max-h-[60vh] object-contain rounded shadow-sm"
-                                    />
-                                )
-                            ) : (
-                                <div className="text-center text-stone-400 py-12">
-                                    <p>No credential file attached.</p>
-                                </div>
-                            )}
                         </div>
 
-                        <div className="p-4 border-t border-stone-100 flex justify-end gap-3 bg-white shrink-0">
-                            <button 
-                                onClick={() => handleVerify('decline')}
-                                disabled={verifyForm.processing}
-                                className="px-5 py-2 text-red-600 hover:bg-red-50 rounded-xl font-medium transition-colors text-sm"
-                            >
-                                Decline
-                            </button>
-                            <button 
-                                onClick={() => handleVerify('approve')}
-                                disabled={verifyForm.processing}
-                                className="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-xl font-bold transition-colors shadow-sm shadow-green-500/20 text-sm"
-                            >
-                                Approve & Activate
-                            </button>
+                        {/* Table */}
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse min-w-[900px]">
+                                <thead>
+                                    <tr className="bg-white border-b border-slate-200 text-xs font-black text-slate-400 uppercase tracking-widest">
+                                        <th className="p-6">User Profile</th>
+                                        <th className="p-6">Role</th>
+                                        <th className="p-6">Status</th>
+                                        <th className="p-6">Joined Date</th>
+                                        <th className="p-6 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {filteredUsers.length > 0 ? filteredUsers.map((u) => (
+                                        <tr key={u.id} className="hover:bg-slate-50/50 transition-colors group">
+                                            <td className="p-6">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-10 h-10 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-lg shrink-0">
+                                                        {u.name.charAt(0)}
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-bold text-slate-900">{u.name}</p>
+                                                        <p className="text-xs font-medium text-slate-500">{u.email}</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="p-6">
+                                                <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-bold ${getRoleBadge(u.role)}`}>
+                                                    {u.role || 'Student'}
+                                                </span>
+                                            </td>
+                                            <td className="p-6">
+                                                <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold border ${getStatusBadge(u.status)}`}>
+                                                    {u.status || 'Active'}
+                                                </span>
+                                            </td>
+                                            <td className="p-6 text-sm font-medium text-slate-600">
+                                                {u.joined_at || 'Oct 24, 2026'}
+                                            </td>
+                                            <td className="p-6 text-right space-x-2">
+                                                {/* Edit Button */}
+                                                <button className="text-slate-400 hover:text-blue-600 font-medium p-2 transition-colors">
+                                                    ✎ Edit
+                                                </button>
+                                                
+                                                {/* Suspend Button (Hide if already suspended) */}
+                                                {u.status?.toLowerCase() !== 'suspended' && (
+                                                    <button onClick={() => confirmSuspend(u)} className="text-slate-400 hover:text-amber-600 font-medium p-2 transition-colors">
+                                                        ⏸ Suspend
+                                                    </button>
+                                                )}
+
+                                                {/* Archive/Delete Button */}
+                                                <button onClick={() => confirmArchive(u)} className="text-slate-400 hover:text-red-600 font-medium p-2 transition-colors">
+                                                    🗑 Archive
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    )) : (
+                                        <tr>
+                                            <td colSpan="5" className="p-12 text-center text-slate-500 font-medium">
+                                                No users match your search or filter.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
-            )}
+            </div>
+
+            {/* MODAL: SUSPEND ACCOUNT */}
+            <Modal show={suspendModalOpen} onClose={() => !isProcessing && setSuspendModalOpen(false)} maxWidth="sm">
+                <div className="p-8 text-center">
+                    <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center text-3xl mx-auto mb-6 shadow-inner">⏸</div>
+                    <h2 className="text-2xl font-black text-slate-900 mb-2">Suspend Account?</h2>
+                    <p className="text-slate-500 font-medium mb-8 text-sm">
+                        Are you sure you want to suspend <strong className="text-slate-900">{selectedUser?.name}</strong>? They will temporarily lose access to Sandbox until the suspension is lifted.
+                    </p>
+                    <div className="flex gap-3">
+                        <button 
+                            onClick={() => setSuspendModalOpen(false)} 
+                            disabled={isProcessing}
+                            className="flex-1 bg-white border-2 border-slate-200 hover:border-slate-300 text-slate-600 font-bold py-3 rounded-xl transition-colors disabled:opacity-50"
+                        >
+                            Cancel
+                        </button>
+                        <button 
+                            onClick={executeSuspend}
+                            disabled={isProcessing}
+                            className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl shadow-md transition-colors disabled:opacity-50"
+                        >
+                            {isProcessing ? 'Processing...' : 'Yes, Suspend'}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* MODAL: ARCHIVE ACCOUNT */}
+            <Modal show={archiveModalOpen} onClose={() => !isProcessing && setArchiveModalOpen(false)} maxWidth="sm">
+                <div className="p-8 text-center">
+                    <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-3xl mx-auto mb-6 shadow-inner">🗑</div>
+                    <h2 className="text-2xl font-black text-slate-900 mb-2">Archive Account?</h2>
+                    <p className="text-slate-500 font-medium mb-8 text-sm">
+                        Are you sure you want to permanently archive <strong className="text-slate-900">{selectedUser?.name}</strong>? This action will disable their account and preserve their data for audit purposes.
+                    </p>
+                    <div className="flex gap-3">
+                        <button 
+                            onClick={() => setArchiveModalOpen(false)} 
+                            disabled={isProcessing}
+                            className="flex-1 bg-white border-2 border-slate-200 hover:border-slate-300 text-slate-600 font-bold py-3 rounded-xl transition-colors disabled:opacity-50"
+                        >
+                            Cancel
+                        </button>
+                        <button 
+                            onClick={executeArchive}
+                            disabled={isProcessing}
+                            className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl shadow-md transition-colors disabled:opacity-50"
+                        >
+                            {isProcessing ? 'Archiving...' : 'Yes, Archive'}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
         </AdminLayout>
     );
 }
-
