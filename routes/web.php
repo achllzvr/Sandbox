@@ -194,8 +194,14 @@ Route::middleware(['auth', 'otp.verified', 'role:user'])
         // View a specific Shell (certification) - student view
         Route::get('/shells/{id}', [\App\Http\Controllers\Student\MyShellController::class, 'show'])->name('shells.show');
         
-        // Mark a module as complete
+        // Mark a module as complete (video/ppt progress)
         Route::post('/shells/modules/{module}/complete', [\App\Http\Controllers\Student\MyShellController::class, 'completeModule'])->name('shells.modules.complete');
+        
+        // Quiz Submission
+        Route::post('/modules/{module}/quiz/submit', [\App\Http\Controllers\Student\QuizController::class, 'submit'])->name('modules.quiz.submit');
+        
+        // Exam Submission
+        Route::post('/certifications/{certification}/exam/submit', [\App\Http\Controllers\Student\ExamController::class, 'submit'])->name('certifications.exam.submit');
     });
 
 Route::middleware(['auth', 'otp.verified', 'role:user'])

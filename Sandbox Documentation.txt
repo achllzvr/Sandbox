@@ -47,36 +47,36 @@ These endpoints handle the marketplace, e-commerce, and gamified learning loops.
    * Action: Submits answers for the free 5-question pre-assessment and returns a pass/fail suggestion to hook the buyer.
    * Associated Screen: Diagnostic Preview Modal.
    * NOTE: Controller exists (Student/MarketplaceController) but no diagnostic route yet.
-[❌] POST /enrollments/checkout
+[✅] POST /enrollments/checkout
    * Action: Creates an enrollment_requests record and redirects the user to the Xendit payment gateway.
    * Fields: certification_id, payment_method.
    * Associated Screen: Modal: Enrollment & Payment Checkout.
-   * NOTE: Controller exists (Student/EnrollmentController) but route not registered in web.php.
-[❌] POST /vouchers/redeem
+   * NOTE: Controller exists (Student/EnrollmentController) and route is registered.
+[✅] POST /vouchers/redeem
    * Action: Validates a vouchers.code, marks it as is_used, and grants the user access to the associated Shell.
    * Fields: code.
    * Associated Screen: Dashboard / My Shells (Redeem Widget).
-   * NOTE: Controller exists (Student/VoucherController) but route not registered.
-[❌] GET /shells/{cert_id}/map
+   * NOTE: Controller exists (Student/VoucherController) and route is registered.
+[✅] GET /shells/{cert_id} (formerly /map)
    * Action: Fetches the sequence of modules (Sandboxes) and the user's user_module_progress (locked, current, completed).
    * Associated Screen: Sandbox Map (Module Path).
-   * NOTE: Controller exists (Student/ShellMapController) but route not registered.
+   * NOTE: Merged into MyShellController@show and route is registered.
 [❌] POST /modules/{module_id}/fast-track
    * Action: Submits the one-time "Fast-Track" quiz attempt. If passed, marks module as completed; if failed, locks the feature for that module.
    * Associated Screen: Learning Interfaces (PPT & Video).
    * NOTE: Controller exists (Student/ModuleProgressController) but route not registered.
-[❌] POST /modules/{module_id}/progress
+[✅] POST /shells/modules/{module_id}/complete
    * Action: Logs that a user has finished watching the required video/PPT, unlocking the standard quiz.
-   * NOTE: Controller exists (Student/ModuleProgressController) but route not registered.
-[❌] POST /modules/{module_id}/quiz/submit
+   * NOTE: Route registered to MyShellController@completeModule.
+[✅] POST /modules/{module_id}/quiz/submit
    * Action: Grades the 5-question module assessment. Updates user_module_progress.score, calculates gamification rewards (Sand Dollars/streaks), and returns feedback.
    * Fields: Array of question_id and selected_answer_id.
    * Associated Screen: Assessment Interface (Quiz).
-   * NOTE: Controller exists (Student/QuizController) + QuizService but route not registered.
-[❌] POST /certifications/{cert_id}/exam/submit
+   * NOTE: Controller implemented (Student/QuizController) + QuizService and route registered.
+[✅] POST /certifications/{cert_id}/exam/submit
    * Action: Grades the final "Sandcastle" exam, creates exam_attempts and exam_attempt_answers records, and unlocks the certificate if pass_threshold is met.
    * Associated Screen: Shell Sandbox - Final Exam.
-   * NOTE: Controller exists (Student/ExamController) + ExamService but route not registered.
+   * NOTE: Controller implemented (Student/ExamController) + ExamService and route registered.
 [❌] GET /shop
    * Action: Fetches available cosmetics_inventory and the user's current sand_dollars.
    * Associated Screen: Hermit Shop / Customization Screen.
