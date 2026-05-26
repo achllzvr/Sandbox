@@ -1,0 +1,330 @@
+Backend Endpoints List (Organized respective to Roles):
+1. Authentication & Onboarding (Shared)
+These endpoints handle the initial gatekeeping and user creation.
+[✅] POST /register
+   * Action: Registers a standard User/Student.
+   * Fields: full_name, email, password, birthday, contact_no, affiliation.
+   * Associated Screen: Sign Up Flow (Steps 1-3).
+   * ROUTE: POST /register → RegisteredUserController@store
+[✅] POST /register/teacher
+   * Action: Registers a Teacher/Affiliate and flags their account status as "Pending Verification".
+   * Fields: Standard user fields + institutional_credentials (file upload).
+   * Associated Screen: Teacher / Affiliate Sign-Up Flow.
+   * ROUTE: POST /register → RegisteredUserController@store (role=teacher now supported)
+   * DB: users.role has 'teacher' enum, users.institutional_credentials_url, users.status='pending_verification'
+[✅] POST /login
+   * Action: Authenticates user via Laravel Sanctum and redirects to their role-specific dashboard.
+   * Fields: email, password.
+   * Associated Screen: Log In Page.
+   * ROUTE: POST /login → AuthenticatedSessionController@store
+[✅] POST /forgot-password & POST /reset-password
+   * Action: Triggers password recovery email and processes the new password.
+   * Fields: email, password, password_confirmation.
+   * Associated Screen: Forgot Password / Password Reset Flow.
+   * ROUTE: POST /forgot-password → PasswordResetLinkController@store
+   * ROUTE: POST /reset-password → NewPasswordController@store
+[✅] POST /logout
+   * Action: Destroys the Laravel Sanctum session and redirects the user to the Landing Page.
+   * ROUTE: POST /logout → AuthenticatedSessionController@destroy
+[✅] GET /email/verify/{id}/{hash}
+   * Action: The destination route for the email verification link clicked by the user. Updates the email_verified_at column.
+   * ROUTE: GET /verify-otp → VerifyOtpController@show (OTP-based approach)
+   * ROUTE: POST /verify-otp → VerifyOtpController@verify
+[✅] POST /email/verification-notification
+   * Action: Resends the verification email if the user lost the initial one.
+   * Associated Screen: Alert: Email Verification Required.
+   * ROUTE: POST /resend-otp → VerifyOtpController@resend
+________________
+
+
+2. User / Student Endpoints (The Learner)
+These endpoints handle the marketplace, e-commerce, and gamified learning loops.
+[✅] GET /marketplace
+   * Action: Fetches all published certifications (Shells) available for purchase.
+   * Associated Screen: Shell Marketplace / Storefront.
+   * ROUTE: GET /marketplace → MarketplaceController@index (Inertia page)
+[❌] POST /marketplace/{cert_id}/diagnostic
+   * Action: Submits answers for the free 5-question pre-assessment and returns a pass/fail suggestion to hook the buyer.
+   * Associated Screen: Diagnostic Preview Modal.
+   * NOTE: Controller exists (Student/MarketplaceController) but no diagnostic route yet.
+[✅] POST /enrollments/checkout
+   * Action: Creates an enrollment_requests record and redirects the user to the Xendit payment gateway.
+   * Fields: certification_id, payment_method.
+   * Associated Screen: Modal: Enrollment & Payment Checkout.
+   * NOTE: Controller exists (Student/EnrollmentController) and route is registered.
+[✅] POST /vouchers/redeem
+   * Action: Validates a vouchers.code, marks it as is_used, and grants the user access to the associated Shell.
+   * Fields: code.
+   * Associated Screen: Dashboard / My Shells (Redeem Widget).
+   * NOTE: Controller exists (Student/VoucherController) and route is registered.
+[✅] GET /shells/{cert_id} (formerly /map)
+   * Action: Fetches the sequence of modules (Sandboxes) and the user's user_module_progress (locked, current, completed).
+   * Associated Screen: Sandbox Map (Module Path).
+   * NOTE: Merged into MyShellController@show and route is registered.
+[❌] POST /modules/{module_id}/fast-track
+   * Action: Submits the one-time "Fast-Track" quiz attempt. If passed, marks module as completed; if failed, locks the feature for that module.
+   * Associated Screen: Learning Interfaces (PPT & Video).
+   * NOTE: Controller exists (Student/ModuleProgressController) but route not registered.
+[✅] POST /shells/modules/{module_id}/complete
+   * Action: Logs that a user has finished watching the required video/PPT, unlocking the standard quiz.
+   * NOTE: Route registered to MyShellController@completeModule.
+[✅] POST /modules/{module_id}/quiz/submit
+   * Action: Grades the 5-question module assessment. Updates user_module_progress.score, calculates gamification rewards (Sand Dollars/streaks), and returns feedback.
+   * Fields: Array of question_id and selected_answer_id.
+   * Associated Screen: Assessment Interface (Quiz).
+   * NOTE: Controller implemented (Student/QuizController) + QuizService and route registered.
+[✅] POST /certifications/{cert_id}/exam/submit
+   * Action: Grades the final "Sandcastle" exam, creates exam_attempts and exam_attempt_answers records, and unlocks the certificate if pass_threshold is met.
+   * Associated Screen: Shell Sandbox - Final Exam.
+   * NOTE: Controller implemented (Student/ExamController) + ExamService and route registered.
+[❌] GET /shop
+   * Action: Fetches available cosmetics_inventory and the user's current sand_dollars.
+   * Associated Screen: Hermit Shop / Customization Screen.
+   * NOTE: Controller exists (Student/ShopController) but route not registered.
+[❌] POST /shop/buy/{item_id}
+   * Action: Deducts sand_dollars and adds the item to the user's unlocked inventory.
+   * NOTE: Controller exists (Student/ShopController) but route not registered.
+[❌] PUT /profile/hermy/equip
+   * Action: Updates the equipped_cosmetics table to display the user's chosen avatar items.
+   * NOTE: Controller exists (Student/HermyController) but route not registered.
+[❌] GET /leaderboard
+   * Action: Fetches the top users ordered by user_streaks.longest_streak or total completed sandboxes.
+   * Associated Screen: Leaderboard Page.
+   * NOTE: Controller exists (Student/LeaderboardController) but route not registered.
+________________
+
+
+3. Admin Endpoints (The Overseer)
+These handle platform integrity, user verification, and automated finance webhooks.
+[✅] GET /admin/dashboard
+   * Action: Aggregates KPIs (total revenue, active users, pending approvals).
+   * Associated Screen: Admin Master Dashboard.
+   * ROUTE: GET /admin/dashboard → redirects to admin.certifications.pending
+[✅] PUT /admin/users/{id}/verify-teacher
+   * Action: Approves or declines a pending Teacher/Affiliate registration.
+   * Associated Screen: User & Role Management.
+   * ROUTE: PUT /admin/users/{user}/verify-teacher → UserManagementController@verifyTeacher / TeacherVerificationController@approve
+[✅] PUT /admin/certifications/{cert_id}/status
+   * Action: Updates a Certification's status (published or declined) after reviewing the content creator's submission.
+   * Associated Screen: Certification Approval Queue.
+   * ROUTE: PUT /admin/certifications/{certification}/status → CertificationApprovalController@update
+   * REACT: Pages/Admin/Certifications/Pending.jsx
+[❌] POST /webhooks/xendit (CRITICAL - No UI)
+   * Action: The automated Xendit listener. Verifies the callback signature, updates enrollment_requests.status to paid, creates a payments record, and automatically generates/issues vouchers.
+   * NOTE: PaymentService exists but no webhook route registered.
+[❌] POST /admin/finances/withdrawals/{id}/approve
+   * Action: Approves a Content Creator's payout request and logs the disbursement.
+   * Associated Screen: Financial Ledger & Revenue Split.
+   * NOTE: FormRequest exists (Admin/ApproveWithdrawalRequest) but no route registered.
+________________
+
+
+4. Content Creator Endpoints (Staff / The Architect)
+CRUD operations for course building and analytics.
+[✅] POST /creator/certifications & [✅] PUT /creator/certifications/{id}
+   * Action: Drafts or updates a Shell.
+   * Fields: title, description, price, pass_threshold.
+   * Associated Screen: Shell (Certification) Builder.
+   * ROUTE: resource('certifications', CertificationController) — create, store, edit, update
+   * REACT: Pages/Creator/Certifications/Create.jsx, Edit.jsx, Index.jsx
+[✅] POST /creator/modules
+   * Action: Creates a Sandbox within a Shell.
+   * Fields: lesson_id, title, order_index.
+   * Associated Screen: Sandbox (Module) Editor.
+   * ROUTE: POST /creator/modules → ModuleController@store
+[✅] POST /creator/modules/{module_id}/content
+   * Action: Uploads the PPT/Video file to the storage disk (e.g., Hostinger/S3) and creates the module_content database record.
+   * Fields: file (multipart/form-data), content_type.
+   * ROUTE: POST /creator/modules/{module}/content → ModuleContentController@store
+[✅] POST /creator/modules/{module_id}/questions
+   * Action: Batch saves the 5 questions and their respective 4 multiple-choice answers (flagging is_correct) for the module quiz.
+   * Associated Screen: Sandbox (Module) Editor.
+   * ROUTE: POST /creator/modules/{module}/questions → QuestionController@store
+[❌] GET /creator/analytics/{cert_id}
+   * Action: Fetches aggregate user_module_progress data to identify where users are dropping off or failing.
+   * Associated Screen: Student Progress Auditor.
+   * NOTE: No controller or route exists.
+[❌] POST /creator/withdrawals
+   * Action: Submits a request to the Admin to withdraw their accumulated revenue split.
+   * Associated Screen: Wallet & Withdrawals.
+   * NOTE: Controller exists (Creator/WithdrawalController) but route not registered.
+[❌] DELETE /creator/certifications/{id}
+   * Action: Soft-deletes a drafted Shell before it is published.
+   * NOTE: Route::resource excludes 'destroy' explicitly.
+[❌] DELETE /creator/modules/{module_id}
+   * Action: Removes a Sandbox module and reorganizes the order_index of the remaining modules.
+[❌] DELETE /creator/modules/content/{content_id}
+   * Action: Removes an uploaded PPT or Video file from the storage disk and database.
+________________
+
+
+5. Teacher / Affiliate Endpoints (The Moderator)
+Endpoints for institutional bulk purchasing and tracking.
+[❌] POST /teacher/checkout/bulk
+   * Action: Calculates total price for a selected Shell multiplied by student quantity, creates bulk enrollment_requests, and redirects to Xendit.
+   * Fields: certification_id, quantity.
+   * Associated Screen: Teacher Master Dashboard & Bulk Checkout.
+   * NOTE: Controller exists (Teacher/BulkCheckoutController) + FormRequest but route not registered. Dashboard route exists.
+[✅] GET /teacher/vouchers
+   * Action: Fetches all vouchers generated from the teacher's bulk purchases, showing the code string and whether it is is_used.
+   * Associated Screen: Voucher Management & Roster.
+   * ROUTE: GET /teacher/vouchers → TeacherDashboardController@vouchers
+[✅] GET /teacher/analytics/{cert_id}
+   * Action: Fetches the specific user_module_progress and exam_attempts strictly for the students who redeemed the teacher's specific vouchers.
+   * Associated Screen: Cohort Analytics.
+   * ROUTE: GET /teacher/analytics → TeacherDashboardController@analytics
+________________
+Template 1: The Inertia Page Render (GET)
+Use this for endpoints that load a screen (e.g., GET /marketplace, GET /admin/dashboard, GET /shells/{id}/map). Goal: Fetch data using Eloquent and pass it to the React frontend.
+PHP
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use App\Models\Certification;
+
+class MarketplaceController extends Controller
+{
+   public function index()
+   {
+       // 1. Fetch data from the database (using Eager Loading to prevent N+1 issues)
+       $shells = Certification::with('creator')->where('status', 'published')->get();
+
+       // 2. Render the React component and pass the data as 'props'
+       return Inertia::render('Student/Marketplace/Index', [
+           'shells' => $shells,
+           // Pass any other needed data, like current user's sand dollars
+           'sand_dollars' => auth()->user()->sand_dollars, 
+       ]);
+   }
+}
+	
+
+________________
+Template 2: The Form Submission / Action (POST/PUT)
+Use this for user actions (e.g., POST /register, POST /modules/{id}/quiz/submit, POST /shop/buy). Goal: Validate input, perform database logic, and redirect back to the frontend with a success/error message. Never return raw JSON for Inertia web routes.
+PHP
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\Module;
+use App\Models\UserModuleProgress;
+
+class QuizController extends Controller
+{
+   public function submit(Request $request, $moduleId)
+   {
+       // 1. Always validate incoming request data first
+       $validated = $request->validate([
+           'answers' => 'required|array',
+           'answers.*.question_id' => 'required|exists:questions,id',
+           'answers.*.selected_option' => 'required|string',
+       ]);
+
+       // 2. Perform Business Logic (e.g., Grade the quiz)
+       $module = Module::findOrFail($moduleId);
+       $score = $this->calculateScore($module, $validated['answers']);
+
+       // 3. Database Updates
+       UserModuleProgress::updateOrCreate(
+           ['user_id' => auth()->id(), 'module_id' => $moduleId],
+           ['score' => $score, 'status' => $score >= 80 ? 'completed' : 'failed']
+       );
+
+       // 4. Redirect back to the React frontend with flash session data
+       // Inertia will catch this and show a toast/alert without reloading the page!
+       if ($score >= 80) {
+           return redirect()->route('shells.map', $module->certification_id)
+                            ->with('success', 'Sandbox Passed! +50 Sand Dollars');
+       }
+
+       return redirect()->back()->withErrors(['quiz' => 'Score too low, try again.']);
+   }
+}
+	________________
+Template 3: The File Upload (POST)
+Use this for Content Creators uploading PPTs/Videos or users uploading verification IDs. Goal: Securely handle multipart/form-data, push to storage (like AWS S3), and save the URL to the database.
+PHP
+<?php
+
+namespace App\Http\Controllers\Creator;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use App\Models\ModuleContent;
+
+class ModuleContentController extends Controller
+{
+   public function store(Request $request, $moduleId)
+   {
+       // 1. Validate file size and type (CRITICAL for videos)
+       $request->validate([
+           'file' => 'required|file|mimes:mp4,pdf,pptx|max:500000', // 500MB max
+           'content_type' => 'required|string'
+       ]);
+
+       // 2. Store the file on the specified disk (e.g., 's3' or 'public')
+       $path = $request->file('file')->store('module-contents', 's3');
+
+       // 3. Save the resulting file path/URL to the database
+       ModuleContent::create([
+           'module_id' => $moduleId,
+           'content_type' => $request->content_type,
+           'file_url' => $path,
+       ]);
+
+       // 4. Redirect back to the creator's sandbox editor
+       return redirect()->back()->with('success', 'Media uploaded successfully!');
+   }
+}
+	Template 4: The Stateless Webhook Listener (API POST)
+Use this ONLY for Xendit webhooks. Goal: Receive a background POST request from an external server, verify security, process data, and return a standard 200 OK JSON response. (Do not use Inertia here, as there is no user browser to redirect).
+PHP
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use App\Models\EnrollmentRequest;
+use Illuminate\Support\Facades\Log;
+
+class XenditWebhookController extends Controller
+{
+   public function handle(Request $request)
+   {
+       // 1. Verify the Xendit Callback Token (Security)
+       if ($request->header('x-callback-token') !== env('XENDIT_WEBHOOK_TOKEN')) {
+           return response()->json(['error' => 'Unauthorized'], 401);
+       }
+
+       // 2. Find the pending enrollment
+       $enrollment = EnrollmentRequest::where('external_id', $request->external_id)->first();
+
+       if (!$enrollment) {
+           return response()->json(['error' => 'Enrollment not found'], 404);
+       }
+
+       // 3. Idempotency Check (Did we already process this?)
+       if ($enrollment->status === 'PAID') {
+           return response()->json(['status' => 'Already processed'], 200);
+       }
+
+       // 4. Process Payment & Generate Voucher
+       if ($request->status === 'PAID') {
+           $enrollment->update(['status' => 'PAID']);
+           
+           // Generate voucher logic here...
+           // $this->generateVoucher($enrollment);
+       }
+
+       // 5. MUST return a 200 OK so Xendit knows you received it and stops retrying
+       return response()->json(['status' => 'success'], 200);
+   }
+}
+	A Note for the Backend Devs:
+utilize Laravel FormRequests for validation instead of writing validation rules directly in the controllers. It keeps the controllers clean and makes the React error-handling seamless. When a validation fails in Laravel, Inertia automatically passes those errors to React as an errors prop, allowing you to easily display red text under your form inputs in Figma/React!
