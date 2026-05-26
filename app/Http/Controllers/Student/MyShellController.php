@@ -23,9 +23,14 @@ class MyShellController extends Controller
             abort(403, 'You are not enrolled in this Shell.');
         }
 
-        // Load the certification with its nested lessons and modules
-        $certification = Certification::with(['lessons.modules', 'creator'])
-            ->findOrFail($id);
+        // Load the certification with its nested lessons and modules (and their contents/questions/answers)
+        // Also load final exam questions (certifications level)
+        $certification = Certification::with([
+            'lessons.modules.contents', 
+            'lessons.modules.questions.answers',
+            'examQuestions.answers',
+            'creator'
+        ])->findOrFail($id);
 
         // Get the IDs of all modules the user has completed
         $completedModuleIds = $user->completedModules()->pluck('modules.id')->toArray();
