@@ -56,6 +56,7 @@ class CertificationApprovalController extends Controller
         $certification->load([
             'creator:id,first_name,last_name',
             'lessons.modules.contents',
+            'lessons.modules.questions.answers',
             'quizQuestions.answers',
             'examQuestions.answers'
         ]);

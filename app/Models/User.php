@@ -72,6 +72,15 @@ class User extends Authenticatable
         return $this->hasMany(AuditLog::class, 'user_id');
     }
 
+    public function completedModules()
+    {
+        return $this->belongsToMany(Module::class, 'user_module_progress')
+            ->using(UserModuleProgress::class)
+            ->wherePivot('is_completed', 1)
+            ->withPivot('completed_at', 'is_completed')
+            ->withTimestamps();
+    }
+
     public function verifiedTeachers()
     {
         return $this->hasMany(User::class, 'verified_by');
