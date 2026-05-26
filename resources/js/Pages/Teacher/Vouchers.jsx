@@ -1,122 +1,165 @@
 import { useState } from 'react';
-import { Head } from '@inertiajs/react';
-import TeacherLayout from '@/Layouts/TeacherLayout';
+import { Head, Link } from '@inertiajs/react';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 
-export default function Vouchers({ vouchers }) {
-    const [searchTerm, setSearchTerm] = useState('');
+/*
+ * ==============================================================================
+ * BACKEND INTEGRATION NOTES FOR MIKE & AHMAD:
+ * ==============================================================================
+ * Controller: app/Http/Controllers/Teacher/VoucherController.php (or similar)
+ * Required Props:
+ * 1. vouchers: Array of { id, code, batch_name, shell_title, status: 'Claimed' | 'Unclaimed', claimed_by: string | null, claimed_at: date | null }
+ * ==============================================================================
+ */
 
-    const filteredVouchers = vouchers.filter(v => 
-        v.code.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        v.shell.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (v.student && v.student.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+export default function TeacherVouchers({ auth, vouchers = [] }) {
+    const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState('All');
+
+    // Frontend Filtering logic
+    const filteredVouchers = vouchers.filter(v => {
+        const matchesSearch = v.code.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                              v.batch_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                              (v.claimed_by && v.claimed_by.toLowerCase().includes(searchQuery.toLowerCase()));
+        const matchesStatus = statusFilter === 'All' || v.status === statusFilter;
+        return matchesSearch && matchesStatus;
+    });
+
+    const copyToClipboard = (code) => {
+        navigator.clipboard.writeText(code);
+        // In a real app, you might trigger a small toast notification here
+        alert(`Voucher ${code} copied to clipboard!`);
+    };
 
     return (
-        <TeacherLayout>
-            <Head title="Voucher Tracking - Teacher Dashboard" />
+        <AuthenticatedLayout user={auth.user} header={<h2 className="font-black text-2xl text-stone-900 tracking-tighter">Voucher Management</h2>}>
+            <Head title="Vouchers" />
 
-            <div className="bg-white rounded-2xl p-8 shadow-sm border border-stone-200">
-                <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                        <h2 className="text-2xl font-bold text-stone-900">Voucher Tracking</h2>
-                        <p className="text-stone-500 mt-1">View your purchased voucher codes and monitor redemption status.</p>
-                    </div>
+            <div className="py-8 bg-[#FDFCFB] min-h-screen selection:bg-blue-500 selection:text-white">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     
-                    <div className="flex items-center gap-3">
-                        <div className="relative">
-                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-stone-400">
-                                🔍
-                            </span>
-                            <input 
-                                type="text" 
-                                placeholder="Search codes or students..." 
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10 pr-4 py-2 border border-stone-200 rounded-xl focus:ring-amber-500 focus:border-amber-500 shadow-sm text-sm w-full md:w-64"
-                            />
+                    {/* Header */}
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 gap-4">
+                        <div>
+                            <p className="text-stone-500 text-lg font-medium">
+                                Manage and distribute your purchased enrollment codes to your students.
+                            </p>
                         </div>
-                        <button className="bg-stone-100 hover:bg-stone-200 text-stone-700 px-4 py-2 rounded-xl text-sm font-bold transition-colors border border-stone-200">
-                            Export CSV
-                        </button>
+                        <Link href={route('teacher.marketplace.index')} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-xl shadow-md transition-colors shrink-0">
+                            + Buy More Vouchers
+                        </Link>
                     </div>
-                </div>
 
-                <div className="overflow-x-auto rounded-xl border border-stone-200">
-                    <table className="min-w-full divide-y divide-stone-200">
-                        <thead className="bg-stone-50">
-                            <tr>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-stone-500 uppercase tracking-wider">
-                                    Voucher Code
-                                </th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-stone-500 uppercase tracking-wider">
-                                    Shell (Course)
-                                </th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-stone-500 uppercase tracking-wider">
-                                    Status
-                                </th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-stone-500 uppercase tracking-wider">
-                                    Student / Redeemed At
-                                </th>
-                                <th scope="col" className="px-6 py-3 text-right text-xs font-bold text-stone-500 uppercase tracking-wider">
-                                    Action
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-stone-200">
-                            {filteredVouchers.map((voucher) => (
-                                <tr key={voucher.id} className="hover:bg-stone-50 transition-colors">
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-mono font-bold text-stone-900 bg-stone-100 px-2 py-1 rounded-md text-sm border border-stone-200">
-                                                {voucher.code}
-                                            </span>
-                                            <button 
-                                                onClick={() => navigator.clipboard.writeText(voucher.code)}
-                                                className="text-stone-400 hover:text-amber-600 transition-colors"
-                                                title="Copy Code"
-                                            >
-                                                📋
-                                            </button>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className="text-sm font-medium text-stone-900">{voucher.shell}</span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                            voucher.status === 'claimed' 
-                                            ? 'bg-green-100 text-green-800' 
-                                            : 'bg-amber-100 text-amber-800'
-                                        }`}>
-                                            {voucher.status === 'claimed' ? 'Claimed' : 'Unclaimed'}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        {voucher.status === 'claimed' ? (
-                                            <div className="flex flex-col">
-                                                <span className="text-sm font-bold text-stone-900">{voucher.student}</span>
-                                                <span className="text-xs text-stone-500">{voucher.redeemed_at}</span>
-                                            </div>
-                                        ) : (
-                                            <span className="text-sm text-stone-400 italic">Waiting for redemption...</span>
-                                        )}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <button className="text-amber-600 hover:text-amber-900 font-bold">
-                                            Details
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                    {filteredVouchers.length === 0 && (
-                        <div className="p-8 text-center text-stone-500">
-                            No vouchers found matching your search.
+                    {/* Data Table Card */}
+                    <div className="bg-white rounded-[2rem] border border-stone-200 shadow-sm overflow-hidden">
+                        
+                        {/* Table Controls */}
+                        <div className="p-6 border-b border-stone-200 bg-stone-50 flex flex-col md:flex-row gap-4 justify-between items-center">
+                            <div className="w-full md:w-96 relative">
+                                <span className="absolute left-4 top-3 text-stone-400">🔍</span>
+                                <input 
+                                    type="text" 
+                                    placeholder="Search by code, batch, or student..." 
+                                    className="w-full pl-11 pr-4 py-3 rounded-xl border-stone-200 focus:border-blue-500 focus:ring-blue-500 text-sm font-medium"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                            </div>
+                            <div className="w-full md:w-auto flex gap-3">
+                                <select 
+                                    className="rounded-xl border-stone-200 focus:border-blue-500 focus:ring-blue-500 text-sm font-bold text-stone-600 w-full md:w-auto"
+                                    value={statusFilter}
+                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                >
+                                    <option value="All">All Statuses</option>
+                                    <option value="Unclaimed">Unclaimed (Ready)</option>
+                                    <option value="Claimed">Claimed (Active)</option>
+                                </select>
+                                <button className="bg-white border-2 border-stone-200 hover:border-stone-300 text-stone-600 font-bold px-4 py-2.5 rounded-xl transition-colors shrink-0">
+                                    Export to CSV
+                                </button>
+                            </div>
                         </div>
-                    )}
+
+                        {/* The Table */}
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse min-w-[800px]">
+                                <thead>
+                                    <tr className="bg-stone-50/50 border-b border-stone-200 text-xs font-black text-stone-400 uppercase tracking-widest">
+                                        <th className="p-6 w-1/4">Voucher Code</th>
+                                        <th className="p-6">Batch & Shell</th>
+                                        <th className="p-6 text-center">Status</th>
+                                        <th className="p-6">Assigned Student</th>
+                                        <th className="p-6 text-right">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-stone-100">
+                                    {filteredVouchers.length > 0 ? filteredVouchers.map((voucher, idx) => {
+                                        const isClaimed = voucher.status === 'Claimed';
+                                        
+                                        return (
+                                            <tr key={voucher.id || idx} className="hover:bg-stone-50/50 transition-colors">
+                                                {/* Code Column */}
+                                                <td className="p-6">
+                                                    <div className="inline-flex items-center gap-2 bg-stone-100 px-3 py-1.5 rounded-lg border border-stone-200">
+                                                        <span className={`font-mono font-black tracking-widest text-lg ${isClaimed ? 'text-stone-400 line-through' : 'text-stone-900'}`}>
+                                                            {voucher.code}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                
+                                                {/* Batch Column */}
+                                                <td className="p-6">
+                                                    <p className="font-bold text-stone-900">{voucher.batch_name}</p>
+                                                    <p className="text-xs font-medium text-stone-500">{voucher.shell_title}</p>
+                                                </td>
+                                                
+                                                {/* Status Column */}
+                                                <td className="p-6 text-center">
+                                                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold border ${isClaimed ? 'bg-stone-100 text-stone-500 border-stone-200' : 'bg-green-100 text-green-700 border-green-200'}`}>
+                                                        {voucher.status}
+                                                    </span>
+                                                </td>
+                                                
+                                                {/* Assigned Student Column */}
+                                                <td className="p-6">
+                                                    {isClaimed ? (
+                                                        <div>
+                                                            <p className="font-bold text-stone-900">{voucher.claimed_by}</p>
+                                                            <p className="text-xs font-medium text-stone-500">Claimed: {voucher.claimed_at}</p>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-stone-400 italic text-sm font-medium">Awaiting Claim...</span>
+                                                    )}
+                                                </td>
+                                                
+                                                {/* Action Column */}
+                                                <td className="p-6 text-right">
+                                                    <button 
+                                                        onClick={() => copyToClipboard(voucher.code)}
+                                                        disabled={isClaimed}
+                                                        className={`font-bold px-4 py-2 rounded-xl border-2 transition-all ${isClaimed ? 'border-stone-100 text-stone-300 cursor-not-allowed' : 'border-blue-100 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white hover:border-blue-600'}`}
+                                                    >
+                                                        Copy Code
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    }) : (
+                                        <tr>
+                                            <td colSpan="5" className="p-12 text-center text-stone-500 font-medium">
+                                                <div className="text-4xl mb-3">🎫</div>
+                                                No vouchers match your filter criteria.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                    </div>
                 </div>
             </div>
-        </TeacherLayout>
+        </AuthenticatedLayout>
     );
 }
