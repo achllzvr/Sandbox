@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Teacher;
 
 use App\Http\Controllers\Controller;
+use App\Models\Certification;
+use App\Models\Voucher;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -10,41 +12,48 @@ class TeacherDashboardController extends Controller
 {
     public function index()
     {
+        $teacherId = auth()->id();
+        
+        // 1. Calculate live database metrics
+        $totalVouchers = Voucher::where('teacher_id', $teacherId)->count();
+        $claimedVouchers = Voucher::where('teacher_id', $teacherId)->where('is_used', 1)->count();
+        $activeCohorts = \App\Models\Cohort::where('teacher_id', $teacherId)->count();
+        
+        // 2. Fetch the top 5 recent claimed vouchers for this teacher's vouchers
+        $claimLogs = Voucher::with(['certification', 'user'])
+            ->where('teacher_id', $teacherId)
+            ->where('is_used', 1)
+            ->whereNotNull('used_at')
+            ->orderBy('used_at', 'desc')
+            ->take(5)
+            ->get()
+            ->map(function ($v) {
+                return [
+                    'id' => $v->id,
+                    'name' => $v->user ? ($v->user->first_name . ' ' . $v->user->last_name) : 'N/A',
+                    'email' => $v->user->email ?? 'N/A',
+                    'shell' => $v->certification->title ?? 'N/A',
+                    'timestamp' => $v->used_at ? $v->used_at->format('M d, Y; g:ia') : 'N/A',
+                ];
+            });
+
         return Inertia::render('Teacher/Dashboard', [
             'metrics' => [
-                'total_vouchers' => 150,
-                'claimed_vouchers' => 124,
-                'active_cohorts' => 3,
+                'total_vouchers' => $totalVouchers,
+                'claimed_vouchers' => $claimedVouchers,
+                'unclaimed_vouchers' => $totalVouchers - $claimedVouchers,
+                'active_cohorts' => $activeCohorts,
                 'avg_cohort_score' => 88
-            ]
+            ],
+            'claimLogs' => $claimLogs
         ]);
     }
 
     public function purchasing()
     {
-        $shells = [
-            [
-                'id' => 1,
-                'title' => 'Web Development Fundamentals',
-                'description' => 'Comprehensive HTML, CSS, and JS path for beginners.',
-                'price' => 49.99,
-                'thumbnail' => 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=400&q=80',
-            ],
-            [
-                'id' => 2,
-                'title' => 'Advanced Backend Architecture',
-                'description' => 'Master Laravel, microservices, and databases.',
-                'price' => 99.99,
-                'thumbnail' => 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=400&q=80',
-            ],
-            [
-                'id' => 3,
-                'title' => 'Cybersecurity Analyst Shell',
-                'description' => 'Practical networking, ethical hacking, and defense.',
-                'price' => 79.99,
-                'thumbnail' => 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=400&q=80',
-            ],
-        ];
+        $shells = Certification::published()
+            ->orderBy('title', 'asc')
+            ->get();
 
         return Inertia::render('Teacher/Purchasing', [
             'shells' => $shells
@@ -53,13 +62,20 @@ class TeacherDashboardController extends Controller
 
     public function vouchers()
     {
-        $vouchers = [
-            ['id' => 1, 'code' => 'WEB-2026-A1B2', 'shell' => 'Web Development Fundamentals', 'status' => 'claimed', 'student' => 'Alice Johnson', 'redeemed_at' => '2026-05-10'],
-            ['id' => 2, 'code' => 'WEB-2026-C3D4', 'shell' => 'Web Development Fundamentals', 'status' => 'unclaimed', 'student' => null, 'redeemed_at' => null],
-            ['id' => 3, 'code' => 'WEB-2026-E5F6', 'shell' => 'Web Development Fundamentals', 'status' => 'claimed', 'student' => 'Bob Smith', 'redeemed_at' => '2026-05-11'],
-            ['id' => 4, 'code' => 'SEC-2026-G7H8', 'shell' => 'Cybersecurity Analyst Shell', 'status' => 'claimed', 'student' => 'Charlie Brown', 'redeemed_at' => '2026-05-09'],
-            ['id' => 5, 'code' => 'SEC-2026-I9J0', 'shell' => 'Cybersecurity Analyst Shell', 'status' => 'unclaimed', 'student' => null, 'redeemed_at' => null],
-        ];
+        $vouchers = Voucher::with(['certification', 'user'])
+            ->where('teacher_id', auth()->id())
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($v) {
+                return [
+                    'id' => $v->id,
+                    'code' => $v->code,
+                    'shell' => $v->certification->title ?? 'N/A',
+                    'status' => $v->is_used ? 'claimed' : 'unclaimed',
+                    'student' => ($v->is_used && $v->user) ? $v->user->full_name : null,
+                    'redeemed_at' => ($v->is_used && $v->used_at) ? $v->used_at->format('Y-m-d') : null,
+                ];
+            });
 
         return Inertia::render('Teacher/Vouchers', [
             'vouchers' => $vouchers

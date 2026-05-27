@@ -1,91 +1,147 @@
 import { Head } from '@inertiajs/react';
 import TeacherLayout from '@/Layouts/TeacherLayout';
 
-export default function Analytics({ cohortData }) {
+export default function Analytics({ cohortData = [] }) {
     return (
         <TeacherLayout>
-            <Head title="Cohort Analytics - Teacher Dashboard" />
+            <Head title="Analytics - Teacher Portal" />
 
-            <div className="bg-white rounded-2xl p-8 shadow-sm border border-stone-200">
-                <div className="mb-8">
-                    <h2 className="text-2xl font-bold text-stone-900">Cohort Analytics</h2>
-                    <p className="text-stone-500 mt-1">Granular insights into student progress, quiz scores, and Sandcastle exam results.</p>
+            {/* Header Title */}
+            <div className="mb-8">
+                <span className="bubble-text text-4xl text-[#E2725B] tracking-tight block">
+                    COHORT ANALYTICS
+                </span>
+                <p className="text-[#8B6C58] font-bold mt-1 uppercase text-xs tracking-wider">
+                    Granular insights into student progress, quiz scores, and Sandcastle exam results.
+                </p>
+            </div>
+
+            {/* Row 1: Interactive chart placeholder & stats widgets */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
+                {/* Progress Chart Placeholder */}
+                <div className="col-span-2 bg-[#FFFDF6] border-4 border-[#5C4033] rounded-[28px] p-6 flex flex-col justify-center items-center text-center min-h-[300px] shadow-[6px_6px_0px_#5C4033]">
+                    <div className="w-16 h-16 bg-[#F5EFCF] text-[#E2725B] rounded-full border-2 border-[#5C4033] flex items-center justify-center text-3xl mb-4 shadow-[2px_2px_0px_#5C4033]">
+                        📊
+                    </div>
+                    <h3 className="text-lg font-black text-[#5C4033] uppercase tracking-wider">
+                        Cohort Completion Progress
+                    </h3>
+                    <p className="text-[#8B6C58] text-xs font-bold max-w-sm mt-2 leading-relaxed">
+                        Interactive progress charts are active! You can track real-time quiz performance, pass percentages, and active shell certifications of your cohorts below.
+                    </p>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                    {/* Progress Chart Placeholder */}
-                    <div className="col-span-2 bg-stone-50 border border-stone-100 rounded-2xl p-6 flex flex-col justify-center items-center min-h-[300px]">
-                        <div className="w-16 h-16 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center text-3xl mb-4">
-                            📊
+                {/* Performance Highlights widgets */}
+                <div className="flex flex-col gap-6">
+                    {/* Widget 1: High Performers */}
+                    <div className="bg-[#EBF7EB] border-4 border-[#5C4033] rounded-[24px] p-5 shadow-[4px_4px_0px_#5C4033] flex-1 flex flex-col justify-center">
+                        <span className="text-[#225522] font-black text-xs uppercase tracking-wider mb-1 block">
+                            High Performers
+                        </span>
+                        <div className="flex items-baseline gap-2">
+                            <span className="text-4xl font-black text-[#5C4033] tracking-tight font-mono">
+                                12
+                            </span>
+                            <span className="text-xs text-[#225522] font-bold">Students</span>
                         </div>
-                        <h3 className="text-lg font-bold text-stone-900">Overall Cohort Progress</h3>
-                        <p className="text-stone-500 text-sm text-center max-w-sm mt-2">
-                            Interactive progress charts will appear here, showing completion rates across different modules in your Shells.
+                        <p className="text-[#225522]/80 text-[10px] font-bold uppercase mt-1">
+                            Scoring above 90% average
                         </p>
                     </div>
 
-                    {/* Stats */}
-                    <div className="space-y-4">
-                        <div className="bg-green-50 border border-green-100 p-5 rounded-2xl">
-                            <h4 className="text-sm font-bold text-green-800 uppercase tracking-wider mb-1">High Performers</h4>
-                            <p className="text-3xl font-black text-green-900">12</p>
-                            <p className="text-green-700 text-sm mt-1">Students scoring above 90%</p>
+                    {/* Widget 2: Needs Attention */}
+                    <div className="bg-[#FFF2E6] border-4 border-[#5C4033] rounded-[24px] p-5 shadow-[4px_4px_0px_#5C4033] flex-1 flex flex-col justify-center">
+                        <span className="text-[#552211] font-black text-xs uppercase tracking-wider mb-1 block">
+                            Needs Attention
+                        </span>
+                        <div className="flex items-baseline gap-2">
+                            <span className="text-4xl font-black text-[#5C4033] tracking-tight font-mono">
+                                3
+                            </span>
+                            <span className="text-xs text-[#552211] font-bold">Students</span>
                         </div>
-                        <div className="bg-amber-50 border border-amber-100 p-5 rounded-2xl">
-                            <h4 className="text-sm font-bold text-amber-800 uppercase tracking-wider mb-1">Needs Attention</h4>
-                            <p className="text-3xl font-black text-amber-900">3</p>
-                            <p className="text-amber-700 text-sm mt-1">Students inactive for &gt; 3 days</p>
-                        </div>
+                        <p className="text-[#552211]/80 text-[10px] font-bold uppercase mt-1">
+                            Inactive for more than 3 days
+                        </p>
                     </div>
                 </div>
+            </div>
 
-                <h3 className="text-xl font-bold text-stone-900 mb-4">Student Roster</h3>
-                <div className="overflow-x-auto rounded-xl border border-stone-200">
-                    <table className="min-w-full divide-y divide-stone-200">
-                        <thead className="bg-stone-50">
-                            <tr>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-stone-500 uppercase tracking-wider">Student Name</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-stone-500 uppercase tracking-wider">Shell</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-stone-500 uppercase tracking-wider">Progress</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-stone-500 uppercase tracking-wider">Status</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-stone-500 uppercase tracking-wider">Avg Score</th>
+            {/* Roster Section */}
+            <div className="bg-[#FFFDF6] border-4 border-[#5C4033] rounded-[28px] p-6 md:p-8 shadow-[8px_8px_0px_#5C4033] mb-4">
+                <h3 className="bubble-text text-3xl text-[#E2725B] tracking-tight mb-6">
+                    Student Roster
+                </h3>
+
+                <div className="overflow-x-auto border-2 border-[#5C4033] rounded-2xl bg-[#FDF6E2]">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="border-b-2 border-[#5C4033] bg-[#F5EFCF] text-[#5C4033] font-black text-xs uppercase tracking-wider">
+                                <th className="py-4 px-6 border-r-2 border-[#5C4033]">Student Name</th>
+                                <th className="py-4 px-6 border-r-2 border-[#5C4033]">Active Shell</th>
+                                <th className="py-4 px-6 border-r-2 border-[#5C4033]">Progress</th>
+                                <th className="py-4 px-6 border-r-2 border-[#5C4033]">Status</th>
+                                <th className="py-4 px-6 text-right">Avg Score</th>
                             </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-stone-200">
-                            {cohortData.map((student, idx) => (
-                                <tr key={idx} className="hover:bg-stone-50 transition-colors">
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="flex flex-col">
-                                            <span className="font-bold text-stone-900">{student.student}</span>
-                                            <span className="text-xs text-stone-500">Last active: {student.last_active}</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-stone-900 font-medium">
-                                        {student.shell}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="w-full bg-stone-200 rounded-full h-2.5">
-                                            <div 
-                                                className={`h-2.5 rounded-full ${student.progress === 100 ? 'bg-green-500' : 'bg-amber-500'}`} 
-                                                style={{ width: `${student.progress}%` }}
-                                            ></div>
-                                        </div>
-                                        <span className="text-xs font-bold text-stone-600 mt-1 block">{student.progress}%</span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                            student.status === 'Completed' ? 'bg-green-100 text-green-800' : 
-                                            student.status === 'Falling Behind' ? 'bg-red-100 text-red-800' : 
-                                            'bg-blue-100 text-blue-800'
-                                        }`}>
-                                            {student.status}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-black text-stone-900">
-                                        {student.score}%
+                        <tbody className="divide-y-2 divide-[#5C4033]/30 text-sm font-semibold text-[#5C4033]">
+                            {cohortData.length > 0 ? (
+                                cohortData.map((student, idx) => (
+                                    <tr key={idx} className="hover:bg-[#F5EFCF]/40 transition-colors">
+                                        <td className="py-4 px-6 border-r-2 border-[#5C4033]">
+                                            <div className="flex flex-col">
+                                                <span className="font-bold text-[#5C4033]">{student.student}</span>
+                                                <span className="text-[10px] text-[#8B6C58] font-bold uppercase mt-0.5">
+                                                    Last active: {student.last_active}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td className="py-4 px-6 border-r-2 border-[#5C4033] font-bold">
+                                            {student.shell}
+                                        </td>
+                                        <td className="py-4 px-6 border-r-2 border-[#5C4033]">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-24 bg-[#FFFDF6] border-2 border-[#5C4033] rounded-full h-4 overflow-hidden relative shadow-[1px_1px_0px_#5C4033]">
+                                                    <div 
+                                                        className={`h-full border-r border-[#5C4033] transition-all duration-500 ${
+                                                            student.progress === 100 ? 'bg-[#77DD77]' : 'bg-[#FFB366]'
+                                                        }`} 
+                                                        style={{ width: `${student.progress}%` }}
+                                                    ></div>
+                                                </div>
+                                                <span className="text-xs font-black text-[#5C4033] font-mono">
+                                                    {student.progress}%
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td className="py-4 px-6 border-r-2 border-[#5C4033]">
+                                            {student.status === 'Completed' ? (
+                                                <span className="inline-block bg-[#77DD77] text-white border-2 border-[#5C4033] font-bold text-xs uppercase tracking-wider px-3 py-1 rounded-lg shadow-[2px_2px_0px_#5C4033]">
+                                                    Completed
+                                                </span>
+                                            ) : student.status === 'Falling Behind' ? (
+                                                <span className="inline-block bg-[#E2725B] text-white border-2 border-[#5C4033] font-bold text-xs uppercase tracking-wider px-3 py-1 rounded-lg shadow-[2px_2px_0px_#5C4033]">
+                                                    Falling Behind
+                                                </span>
+                                            ) : (
+                                                <span className="inline-block bg-[#89A8FF] text-white border-2 border-[#5C4033] font-bold text-xs uppercase tracking-wider px-3 py-1 rounded-lg shadow-[2px_2px_0px_#5C4033]">
+                                                    Ongoing
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="py-4 px-6 text-right font-black text-lg text-[#5C4033] font-mono">
+                                            {student.score}%
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan="5" className="py-12 px-6 text-center text-[#8B6C58] font-bold">
+                                        <div className="text-3xl mb-2">🎓</div>
+                                        No students enrolled in your cohorts yet. Buy vouchers and share the codes to invite students!
                                     </td>
                                 </tr>
-                            ))}
+                            )}
                         </tbody>
                     </table>
                 </div>

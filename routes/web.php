@@ -220,6 +220,7 @@ Route::middleware(['auth', 'otp.verified', 'role:teacher'])
     ->group(function () {
         Route::get('/dashboard', [\App\Http\Controllers\Teacher\TeacherDashboardController::class, 'index'])->name('dashboard');
         Route::get('/purchasing', [\App\Http\Controllers\Teacher\TeacherDashboardController::class, 'purchasing'])->name('purchasing');
+        Route::post('/checkout/bulk', [\App\Http\Controllers\Teacher\VoucherCheckoutController::class, 'store'])->name('checkout.bulk');
         Route::get('/vouchers', [\App\Http\Controllers\Teacher\TeacherDashboardController::class, 'vouchers'])->name('vouchers');
         Route::get('/analytics', [\App\Http\Controllers\Teacher\TeacherDashboardController::class, 'analytics'])->name('analytics');
     });
