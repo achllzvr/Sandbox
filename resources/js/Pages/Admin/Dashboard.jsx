@@ -1,143 +1,110 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 
-/*
- * ==============================================================================
- * BACKEND INTEGRATION NOTES FOR MIKE & AHMAD:
- * ==============================================================================
- * Controller: app/Http/Controllers/Admin/AdminDashboardController.php @ index
- * Required Props:
- * 1. stats: { total_users: int, active_shells: int, total_revenue: string/float, pending_approvals: int }
- * 2. recent_activity: Array of { id, user_name, action, created_at, icon }
- * 3. pending_teachers: Array of { id, name, institution, applied_at }
- * ==============================================================================
- */
+const METRIC_CARDS = [
+    { key: 'total_users',              label: 'Students',               icon: '👤', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+    { key: 'total_content_creator',              label: 'Content Creators',       icon: '✏️', color: 'bg-purple-50 text-purple-700 border-purple-200' },
+    { key: 'total_teachers',           label: 'Teachers',               icon: '🎓', color: 'bg-teal-50 text-teal-700 border-teal-200' },
+    { key: 'pending_teachers',         label: 'Pending Teachers',       icon: '⏳', color: 'bg-amber-50 text-amber-700 border-amber-200' },
+    { key: 'total_certifications',     label: 'Total Shells',           icon: '🐚', color: 'bg-stone-50 text-stone-700 border-stone-200' },
+    { key: 'pending_certifications',   label: 'Pending Approval',       icon: '📝', color: 'bg-orange-50 text-orange-700 border-orange-200' },
+    { key: 'published_certifications', label: 'Published',              icon: '✅', color: 'bg-green-50 text-green-700 border-green-200' },
+    { key: 'declined_certifications',  label: 'Declined',               icon: '❌', color: 'bg-red-50 text-red-700 border-red-200' },
+];
 
-export default function AdminDashboard({ auth, stats, recent_activity = [], pending_teachers = [] }) {
+export default function Dashboard({ metrics, recent_certifications, recent_users }) {
+
+    function formatDate(d) {
+        return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function statusBadge(status) {
+        const map = {
+            active:               'bg-green-100 text-green-700',
+            inactive:             'bg-red-100 text-red-700',
+            pending_verification: 'bg-amber-100 text-amber-700',
+            pending_review:       'bg-amber-100 text-amber-700',
+            published:            'bg-green-100 text-green-700',
+            denied:               'bg-red-100 text-red-700',
+            draft:                'bg-stone-100 text-stone-600',
+        };
+        return map[status] || 'bg-stone-100 text-stone-600';
+    }
+
     return (
-        <AdminLayout user={auth.user} header={<h2 className="font-black text-2xl text-slate-900 tracking-tighter">System Overview</h2>}>
+        <AdminLayout pageTitle="Dashboard">
             <Head title="Admin Dashboard" />
 
-            <div className="py-8 bg-slate-50 min-h-screen selection:bg-slate-800 selection:text-white">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    
-                    {/* Welcome Header */}
-                    <div className="mb-8">
-                        <h1 className="text-3xl font-black text-slate-900 mb-2 tracking-tight">
-                            Platform Command Center
-                        </h1>
-                        <p className="text-slate-500 font-medium text-lg">
-                            Monitor user activity, approve teacher applications, and manage platform health.
-                        </p>
+            {/* ── Metric Cards ──────────────────── */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-2">
+                {METRIC_CARDS.map((card) => (
+                    <div key={card.key} className={`rounded-2xl border p-5 ${card.color}`}>
+                        <div className="flex items-center justify-between">
+                            <span className="text-2xl">{card.icon}</span>
+                            <span className="text-2xl font-bold">{metrics[card.key] ?? 0}</span>
+                        </div>
+                        <p className="text-sm font-medium mt-2 opacity-80">{card.label}</p>
                     </div>
+                ))}
+            </div>
 
-                    {/* KPI Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-                        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
-                            <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center text-2xl font-black mb-4">👥</div>
-                            <div>
-                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Users</p>
-                                <p className="text-3xl font-black text-slate-900">{stats?.total_users || '0'}</p>
-                            </div>
-                        </div>
-                        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
-                            <div className="w-12 h-12 bg-orange-100 text-orange-500 rounded-xl flex items-center justify-center text-2xl font-black mb-4">🐚</div>
-                            <div>
-                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Active Shells</p>
-                                <p className="text-3xl font-black text-slate-900">{stats?.active_shells || '0'}</p>
-                            </div>
-                        </div>
-                        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
-                            <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center text-2xl font-black mb-4">💳</div>
-                            <div>
-                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Platform Revenue</p>
-                                <p className="text-3xl font-black text-slate-900">₱ {stats?.total_revenue || '0.00'}</p>
-                            </div>
-                        </div>
-                        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow relative overflow-hidden">
-                            {/* Alert state if there are pending approvals */}
-                            {(stats?.pending_approvals > 0) && <div className="absolute top-0 right-0 w-2 h-full bg-red-500"></div>}
-                            <div className="w-12 h-12 bg-red-100 text-red-600 rounded-xl flex items-center justify-center text-2xl font-black mb-4">📋</div>
-                            <div>
-                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Pending Approvals</p>
-                                <p className="text-3xl font-black text-slate-900">{stats?.pending_approvals || '0'}</p>
-                            </div>
-                        </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+                {/* ── Recent Users ───────────────── */}
+                <div className="bg-white rounded-2xl border border-stone-200 shadow-sm">
+                    <div className="px-6 py-4 border-b border-stone-100">
+                        <h3 className="font-bold text-stone-900">Recent Users</h3>
                     </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        {/* LEFT COLUMN: Pending Actions */}
-                        <div className="lg:col-span-2 space-y-8">
-                            
-                            {/* Pending Teachers Section */}
-                            <div>
-                                <div className="flex justify-between items-center mb-4">
-                                    <h3 className="text-xl font-black text-slate-900">Pending Teacher Applications</h3>
-                                    <Link href={route('admin.teachers.index')} className="text-sm font-bold text-blue-600 hover:text-blue-800 transition-colors">View All &rarr;</Link>
-                                </div>
-                                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-                                    {pending_teachers.length > 0 ? (
-                                        <ul className="divide-y divide-slate-100">
-                                            {pending_teachers.map(teacher => (
-                                                <li key={teacher.id} className="p-5 hover:bg-slate-50 transition-colors flex items-center justify-between gap-4">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="w-10 h-10 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center font-bold">
-                                                            {teacher.name.charAt(0)}
-                                                        </div>
-                                                        <div>
-                                                            <h4 className="font-bold text-slate-900">{teacher.name}</h4>
-                                                            <p className="text-sm font-medium text-slate-500">{teacher.institution}</p>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <Link href={route('admin.teachers.index')} className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors">
-                                                            Review
-                                                        </Link>
-                                                    </div>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    ) : (
-                                        <div className="p-10 text-center text-slate-500">
-                                            <div className="text-3xl mb-2">✅</div>
-                                            <p className="font-bold">All caught up! No pending applications.</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                        </div>
-
-                        {/* RIGHT COLUMN: System Activity */}
-                        <div className="lg:col-span-1">
-                            <h3 className="text-xl font-black text-slate-900 mb-4">System Activity</h3>
-                            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
-                                {recent_activity.length > 0 ? (
-                                    <div className="space-y-6">
-                                        {recent_activity.map((activity, idx) => (
-                                            <div key={idx} className="flex gap-4">
-                                                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0 mt-0.5">
-                                                    {activity.icon || '🔔'}
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm text-slate-900 font-medium leading-tight">
-                                                        <span className="font-bold">{activity.user_name}</span> {activity.action}
-                                                    </p>
-                                                    <p className="text-xs text-slate-400 font-bold mt-1">{activity.created_at}</p>
-                                                </div>
-                                            </div>
-                                        ))}
+                    <div className="divide-y divide-stone-100">
+                        {recent_users.length === 0 ? (
+                            <p className="px-6 py-8 text-sm text-stone-400 text-center">No users yet.</p>
+                        ) : (
+                            recent_users.map((u) => (
+                                <div key={u.id} className="px-6 py-3 flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm font-medium text-stone-900">
+                                            {u.first_name} {u.last_name}
+                                        </p>
+                                        <p className="text-xs text-stone-400">{u.email}</p>
                                     </div>
-                                ) : (
-                                    <p className="text-slate-500 text-center font-medium py-8">No recent activity.</p>
-                                )}
-                                <Link href={route('admin.audit-logs.index')} className="block w-full text-center mt-6 pt-4 border-t border-slate-100 text-sm font-bold text-slate-400 hover:text-slate-900 transition-colors">
-                                    View Full Audit Log
-                                </Link>
-                            </div>
-                        </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusBadge(u.status)}`}>
+                                            {u.status}
+                                        </span>
+                                        <span className="text-xs text-stone-400 bg-stone-100 px-2 py-0.5 rounded-full">
+                                            {u.role}
+                                        </span>
+                                    </div>
+                                </div>
+                            ))
+                        )}
                     </div>
+                </div>
 
+                {/* ── Recent Certifications ──────── */}
+                <div className="bg-white rounded-2xl border border-stone-200 shadow-sm">
+                    <div className="px-6 py-4 border-b border-stone-100">
+                        <h3 className="font-bold text-stone-900">Recent Shells</h3>
+                    </div>
+                    <div className="divide-y divide-stone-100">
+                        {recent_certifications.length === 0 ? (
+                            <p className="px-6 py-8 text-sm text-stone-400 text-center">No certifications yet.</p>
+                        ) : (
+                            recent_certifications.map((c) => (
+                                <div key={c.id} className="px-6 py-3 flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm font-medium text-stone-900">{c.title}</p>
+                                        <p className="text-xs text-stone-400">
+                                            by {c.creator ? `${c.creator.first_name} ${c.creator.last_name}` : 'Unknown'}
+                                            {' · '}{formatDate(c.created_at)}
+                                        </p>
+                                    </div>
+                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusBadge(c.status)}`}>
+                                        {c.status}
+                                    </span>
+                                </div>
+                            ))
+                        )}
+                    </div>
                 </div>
             </div>
         </AdminLayout>
