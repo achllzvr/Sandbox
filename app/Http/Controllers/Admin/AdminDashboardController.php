@@ -7,6 +7,8 @@ use App\Models\Certification;
 use App\Models\User;
 use Inertia\Inertia;
 
+// TODO[backend]: Add chart/analytics endpoints for enrollment trend, role split, and weekly revenue (Dashboard charts use mock data).
+
 class AdminDashboardController extends Controller
 {
     public function index()

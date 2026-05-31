@@ -1,11 +1,21 @@
+/**
+ * Admin Certifications (Shells) Index
+ *
+ * WIRED (backend + database):
+ * - Certification list + search/status filters → CertificationApprovalController@index
+ * - Accept (publish) / Decline → update status endpoint → certifications table
+ * - View certification path → show page with lessons/modules/exam
+ *
+ * TODO (backend + database):
+ * - Archive / Restore buttons → no dedicated endpoints (placeholder modal)
+ * - Approvals tab filters pending_review client-side from full list (consider server-side tab)
+ * - See finances link → finance index without certification_id filter
+ */
 import { Head, router, useForm } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import AdminModal from '@/Components/Admin/AdminModal';
 import AdminCertificationCard from '@/Components/Admin/AdminCertificationCard';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-
-// TODO: Wire archive and restore certification actions to dedicated backend endpoints.
-// TODO: Pass certification filter to finance page when viewing finances per shell.
 
 const STATUS_OPTIONS = [
     { value: '', label: 'All statuses' },
@@ -26,6 +36,7 @@ export default function CertificationsIndex({ certifications, filters }) {
 
     const declineForm = useForm({ status: 'denied', decline_reason: '' });
 
+    // TODO[backend]: Approvals tab uses client-side filter; consider server tab=approvals query
     const approvalCerts = useMemo(
         () => certifications.filter((c) => c.status === 'pending_review'),
         [certifications]
@@ -138,6 +149,7 @@ export default function CertificationsIndex({ certifications, filters }) {
                 )}
             </div>
 
+            {/* Certification panel — list wired; archive/restore actions TODO[backend] */}
             <div className="admin-cert-panel admin-card admin-card--chunky">
                 <div className="admin-cert-panel__header">
                     <span>Name</span>
@@ -171,6 +183,7 @@ export default function CertificationsIndex({ certifications, filters }) {
                 </div>
             </div>
 
+            {/* Decline modal — wired to admin.certifications.status.update */}
             <AdminModal
                 show={!!declineTarget}
                 onClose={() => setDeclineTarget(null)}
@@ -214,6 +227,7 @@ export default function CertificationsIndex({ certifications, filters }) {
                 </form>
             </AdminModal>
 
+            {/* TODO[backend]: Archive / restore certification — placeholder modal only */}
             <AdminModal
                 show={!!actionModal}
                 onClose={() => setActionModal(null)}

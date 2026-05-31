@@ -1,3 +1,17 @@
+/**
+ * Admin Dashboard
+ *
+ * WIRED (backend + database):
+ * - User/shell metric counts → AdminDashboardController
+ * - Recent users list → users table
+ * - Recent shells list → certifications table
+ *
+ * TODO (backend + database):
+ * - Shell metric card links → add status query params to certifications index filter
+ * - Enrollment trend chart → analytics API + enrollments table
+ * - Users by role chart → analytics API
+ * - Weekly revenue chart → finance/payments API
+ */
 import { Head, Link } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import AdminBadge from '@/Components/Admin/AdminBadge';
@@ -40,24 +54,25 @@ const SHELL_METRICS = [
         label: 'Total shells',
         accent: '#cf7860',
         href: () => route('admin.certifications.index'),
+        // TODO[backend]: no filter applied — should link with ?status= or dedicated counts
     },
     {
         key: 'pending_certifications',
         label: 'Pending approval',
         accent: '#e0b078',
-        href: () => route('admin.certifications.index'),
+        href: () => route('admin.certifications.index', { status: 'pending_review' }),
     },
     {
         key: 'published_certifications',
         label: 'Published',
         accent: '#8ecf9f',
-        href: () => route('admin.certifications.index'),
+        href: () => route('admin.certifications.index', { status: 'published' }),
     },
     {
         key: 'declined_certifications',
         label: 'Declined',
         accent: '#e09890',
-        href: () => route('admin.certifications.index'),
+        href: () => route('admin.certifications.index', { status: 'denied' }),
     },
 ];
 
@@ -92,6 +107,7 @@ export default function Dashboard({ metrics, recent_certifications, recent_users
         <AdminLayout pageTitle="Dashboard">
             <Head title="Admin Dashboard" />
 
+            {/* TODO[backend]: Metric groups — counts wired; chart sections below use mock data only */}
             <div className="admin-metric-groups">
                 <AdminMetricGroup
                     title="Users"
@@ -134,6 +150,7 @@ export default function Dashboard({ metrics, recent_certifications, recent_users
                 />
             </div>
 
+            {/* TODO[backend]: Recent users — wired via AdminDashboardController → users table */}
             <div className="admin-grid-2">
                 <div className="admin-card admin-card--chunky">
                     <div className="admin-card__header">
@@ -166,6 +183,7 @@ export default function Dashboard({ metrics, recent_certifications, recent_users
                     </div>
                 </div>
 
+                {/* TODO[backend]: Recent shells — wired via AdminDashboardController → certifications table */}
                 <div className="admin-card admin-card--chunky">
                     <div className="admin-card__header">
                         <h3>Recent shells</h3>

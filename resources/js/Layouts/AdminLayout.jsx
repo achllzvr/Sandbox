@@ -2,6 +2,8 @@ import { Link, usePage } from '@inertiajs/react';
 import AdminNavIcon from '@/Components/Admin/AdminNavIcon';
 import { assetUrl } from '@/utils/assetUrl';
 
+// Sidebar profile block → profile.edit (wired). Sign out → logout (wired).
+
 const NAV_ITEMS = [
     { label: 'Dashboard', icon: 'dashboard', routeName: 'admin.dashboard' },
     { label: 'Users', icon: 'users', routeName: 'admin.users.index' },
@@ -64,7 +66,7 @@ export default function AdminLayout({ children, pageTitle, topbarEnd }) {
                 </nav>
 
                 <div className="admin-sidebar__footer">
-                    <div className="admin-sidebar__user">
+                    <Link href={route('profile.edit')} className="admin-sidebar__user admin-sidebar__user-link">
                         <span className="admin-sidebar__avatar">
                             {user.first_name?.charAt(0)}
                             {user.last_name?.charAt(0)}
@@ -75,7 +77,7 @@ export default function AdminLayout({ children, pageTitle, topbarEnd }) {
                             </p>
                             <p className="admin-sidebar__user-email">{user.email}</p>
                         </div>
-                    </div>
+                    </Link>
                     <Link
                         href={route('logout')}
                         method="post"

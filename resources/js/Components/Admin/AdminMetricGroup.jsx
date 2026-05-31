@@ -1,6 +1,8 @@
 import { Link } from '@inertiajs/react';
 import AdminStatLink from '@/Components/Admin/AdminStatLink';
 
+// Dashboard metric group — counts wired via metricsData prop from AdminDashboardController.
+
 export default function AdminMetricGroup({ title, linkHref, linkLabel = 'View all', metrics, metricsData }) {
     return (
         <section className="admin-metric-group admin-card admin-card--chunky">

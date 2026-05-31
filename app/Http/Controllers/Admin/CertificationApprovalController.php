@@ -10,6 +10,8 @@ use Inertia\Inertia;
 
 class CertificationApprovalController extends Controller
 {
+    // TODO[backend]: Add archive() and restore() endpoints for certification management card actions.
+
     public function index(Request $request)
     {
         $query = Certification::query()

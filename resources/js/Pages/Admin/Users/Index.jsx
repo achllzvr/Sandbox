@@ -1,11 +1,23 @@
+/**
+ * Admin User Management
+ *
+ * WIRED (backend + database):
+ * - User list + pagination → UserManagementController@index → users table
+ * - Search, role filter, approvals tab filters → query params on index
+ * - Teacher approve/decline → verifyTeacher → users table
+ * - Creator invite → invite → user_invitations + email
+ *
+ * TODO (backend + database):
+ * - Suspend / View / Archive buttons → no endpoints yet (placeholder modal)
+ * - Admin role invite → CreateUserFlow UI-only success
+ * - Affiliation dropdown → hardcoded list, needs institutions table/API
+ */
 import { Head, Link, useForm, router } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import AdminModal from '@/Components/Admin/AdminModal';
 import AdminUserCard from '@/Components/Admin/AdminUserCard';
 import CreateUserFlow from '@/Components/Admin/CreateUserFlow';
 import { useCallback, useEffect, useState } from 'react';
-
-// TODO: Wire suspend, view, and archive user actions to backend endpoints.
 
 const APPROVAL_STATUS_OPTIONS = [
     { value: '', label: 'All approval statuses' },
@@ -119,6 +131,7 @@ export default function UsersIndex({ users, filters, pending_approvals_count = 0
         <AdminLayout pageTitle="User Management" topbarEnd={topbarTabs}>
             <Head title="User Management" />
 
+            {/* Sub-toolbar: search wired to backend; Add user opens invite flow */}
             <div className="admin-subtoolbar">
                 <input
                     type="search"
@@ -170,6 +183,7 @@ export default function UsersIndex({ users, filters, pending_approvals_count = 0
                 )}
             </div>
 
+            {/* User list cards — suspend/view/archive actions TODO[backend] */}
             <div className="admin-user-list">
                 {users.data.length === 0 ? (
                     <div className="admin-card admin-card--chunky">
@@ -212,8 +226,10 @@ export default function UsersIndex({ users, filters, pending_approvals_count = 0
                 </nav>
             )}
 
+            {/* Create user flow — creator invite wired; admin invite TODO[backend] */}
             <CreateUserFlow show={showCreateFlow} onClose={() => setShowCreateFlow(false)} />
 
+            {/* Teacher review modal — approve/decline wired; credential preview uses storage path */}
             <AdminModal
                 show={!!reviewUser}
                 onClose={() => setReviewUser(null)}
@@ -282,6 +298,7 @@ export default function UsersIndex({ users, filters, pending_approvals_count = 0
                 </div>
             </AdminModal>
 
+            {/* TODO[backend]: Suspend / archive / view user — placeholder modal only */}
             <AdminModal
                 show={!!actionModal}
                 onClose={() => setActionModal(null)}

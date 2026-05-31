@@ -1,6 +1,6 @@
 import AdminBadge from '@/Components/Admin/AdminBadge';
 
-// TODO: Wire Suspend, View, and Archive buttons to backend user management actions.
+// TODO[backend]: Suspend, View, Archive — onAction opens placeholder modal (UserManagementController has no endpoints).
 
 function IconPause() {
     return (
@@ -101,6 +101,7 @@ export default function AdminUserCard({ user, onReview, onAction, mode = 'manage
                 )}
                 {!approvalsMode && (
                     <>
+                        {/* TODO[backend]: suspend user */}
                         <button
                             type="button"
                             className="admin-action-btn admin-action-btn--warning"
@@ -109,6 +110,7 @@ export default function AdminUserCard({ user, onReview, onAction, mode = 'manage
                             <IconPause />
                             <span>Suspend</span>
                         </button>
+                        {/* TODO[backend]: view user detail page */}
                         <button
                             type="button"
                             className="admin-action-btn admin-action-btn--info"
@@ -117,6 +119,7 @@ export default function AdminUserCard({ user, onReview, onAction, mode = 'manage
                             <IconEye />
                             <span>View</span>
                         </button>
+                        {/* TODO[backend]: archive user (soft delete) */}
                         <button
                             type="button"
                             className="admin-action-btn admin-action-btn--danger"

@@ -1,3 +1,14 @@
+/**
+ * Admin Certification Review (detail)
+ *
+ * WIRED (backend + database):
+ * - Certification detail, lessons, modules, contents, exam questions → CertificationApprovalController@show
+ * - Approve & publish / Deny / Request revision → status update + request_revision endpoints
+ *
+ * TODO (backend + database):
+ * - Content preview for some file types may fail without storage:link or CDN URLs
+ * - Office presentation embed depends on public URL reachability
+ */
 import { Head, router, useForm, Link } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import AdminBadge from '@/Components/Admin/AdminBadge';
@@ -96,6 +107,7 @@ export default function Show({ certification }) {
                             </div>
                         </div>
 
+                        {/* Approval actions — wired to backend */}
                         {certification.status === 'pending_review' && (
                             <div className="admin-btn-group">
                                 <button

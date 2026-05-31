@@ -12,6 +12,8 @@ use App\Http\Requests\Admin\VerifyTeacherRequest;
 
 class UserManagementController extends Controller
 {
+    // TODO[backend]: Add suspend(), archive(), show() endpoints for user management card actions.
+
     public function index(Request $request)
     {
         $query = User::query();
@@ -55,6 +57,8 @@ class UserManagementController extends Controller
 
     public function invite(InviteUserRequest $request)
     {
+        // TODO[backend]: Add admin role invite path — InviteUserRequest excludes admin; CreateUserFlow fakes success for admin.
+
         // Check if user already exists
         if (\App\Models\User::where('email', $request->email)->exists()) {
             return redirect()->back()->withErrors(['email' => 'User already exists.']);

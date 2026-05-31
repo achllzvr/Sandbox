@@ -16,12 +16,14 @@ class ProfileController extends Controller
         ]);
     }
 
+    // TODO[backend]: Persist profile name/email to users table (split name into first_name/last_name/full_name).
     public function update(Request $request)
     {
         // Add actual profile update logic here
         return Redirect::route('profile.edit');
     }
 
+    // TODO[backend]: Implement account deletion with password confirmation (non-admin users only in UI).
     public function destroy(Request $request)
     {
         // Add actual profile delete logic here
