@@ -9,6 +9,7 @@ import { useForm } from '@inertiajs/react';
 
 export default function DeleteUserForm({ className, variant = 'default' }) {
     const isAdmin = variant === 'admin';
+    const isStudent = variant === 'student';
     const [confirmingUserDeletion, setConfirmingUserDeletion] = useState(false);
     const passwordInput = useRef();
 
@@ -47,17 +48,23 @@ export default function DeleteUserForm({ className, variant = 'default' }) {
     return (
         <section className={`space-y-6 ${className}`}>
             <header>
-                <h2 className={isAdmin ? 'admin-profile-card__title' : 'text-lg font-medium text-gray-900'}>
+                <h2 className={isAdmin ? 'admin-profile-card__title' : isStudent ? 'student-profile-form__title' : 'text-lg font-medium text-gray-900'}>
                     Delete account
                 </h2>
 
-                <p className={isAdmin ? 'admin-profile-card__subtitle' : 'mt-1 text-sm text-gray-600'}>
+                <p className={isAdmin ? 'admin-profile-card__subtitle' : isStudent ? 'student-profile-form__subtitle' : 'mt-1 text-sm text-gray-600'}>
                     Once your account is deleted, all of its resources and data will be permanently deleted. Before
                     deleting your account, please download any data or information that you wish to retain.
                 </p>
             </header>
 
-            <DangerButton onClick={confirmUserDeletion}>Delete account</DangerButton>
+            {isStudent ? (
+                <button type="button" onClick={confirmUserDeletion} className="student-profile-form__danger">
+                    Delete account
+                </button>
+            ) : (
+                <DangerButton onClick={confirmUserDeletion}>Delete account</DangerButton>
+            )}
 
             <Modal show={confirmingUserDeletion} onClose={closeModal}>
                 <form onSubmit={deleteUser} className="p-6">

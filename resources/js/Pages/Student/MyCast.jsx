@@ -3,7 +3,7 @@ import StudentLayout from '@/Layouts/StudentLayout';
 
 export default function MyCast({ cast = [] }) {
     return (
-        <StudentLayout activeNav="cast" pageTitle="My Cast">
+        <StudentLayout activeNav="cast" layoutMode="select">
             <Head title="My Cast" />
 
             <h2 className="student-page-title">

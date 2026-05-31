@@ -1,22 +1,11 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
+import StudentShellMap from '@/Components/Student/StudentShellMap';
 import StudentLayout from '@/Layouts/StudentLayout';
 import { assetUrl } from '@/utils/assetUrl';
 
-function moduleVisual(module, index, { completed, unlocked }) {
-    if (!unlocked) {
-        return assetUrl('images/shells/shell_var2.png');
-    }
-    const hasQuiz = module.questions?.length > 0;
-    const hasVideo = module.contents?.some((c) => c.content_type === 'video' || c.content_type === 'youtube_embed');
-    if (hasQuiz && !hasVideo) {
-        return assetUrl('images/shells/shovel_quiz.png');
-    }
-    return assetUrl(`images/shells/shell_var${(index % 4) + 1}.png`);
-}
-
 export default function Show() {
-    const { certification, progress, auth } = usePage().props;
+    const { certification, progress, shellMeta: shellMetaProp, auth } = usePage().props;
     const [viewingModule, setViewingModule] = useState(null);
     const [contentIndex, setContentIndex] = useState(0);
     const [isViewingQuiz, setIsViewingQuiz] = useState(false);
@@ -477,101 +466,39 @@ export default function Show() {
         );
     }
 
+    const githubVerified = certification.title?.toLowerCase().includes('java');
+    const shellMeta = shellMetaProp ?? {
+        badge_type: githubVerified ? 'github' : 'pro',
+        badge_label: githubVerified ? 'GITHUB VERIFIED CERTIFICATE' : 'Professional Certificate',
+        github_verified: githubVerified,
+        progress: progress.percentage,
+        completed_modules: progress.completed_modules,
+        total_modules: progress.total_modules,
+        theme: 'pink',
+    };
+
     return (
-        <StudentLayout activeNav="shells" pageTitle={certification.title}>
+        <StudentLayout activeNav="shells" layoutMode="shell">
             <Head title={`${certification.title} — Shell Map`} />
 
-            <div className="student-shell-map">
-                <div className="student-shell-map__header">
-                    <Link href={route('student.dashboard')} className="student-shell-map__back" title="Back to My Shells">
-                        ←
-                    </Link>
-                    <div className="student-shell-map__title-wrap">
-                        <h2 className="student-shell-map__title">{certification.title}</h2>
-                        <span className="student-shell-map__verified">✓ GitHub verified certificate</span>
-                    </div>
-                </div>
-
-                <div className="student-shell-map__path">
-                    <div className="student-shell-map__line" aria-hidden="true" />
-                    <img
-                        className="student-shell-map__mascot"
-                        src={assetUrl('images/Hermy.png')}
-                        alt=""
-                    />
-
-                    {allModules.map((module, index) => {
-                        const completed = isCompleted(module.id);
-                        const unlocked = isUnlocked(index);
-                        const active = unlocked && !completed;
-
-                        return (
-                            <div key={module.id} className="student-shell-map__node">
-                                <div
-                                    className={`student-shell-map__bubble ${completed ? 'student-shell-map__bubble--done' : active ? 'student-shell-map__bubble--active' : ''}`}
-                                >
-                                    <h3 className="student-shell-map__bubble-title">{module.title}</h3>
-                                    <p className="student-shell-map__bubble-sub">
-                                        Lesson {index + 1} of {allModules.length}
-                                    </p>
-                                    {completed ? (
-                                        <span className="student-shell-map__locked">✓ Completed</span>
-                                    ) : unlocked ? (
-                                        <button
-                                            type="button"
-                                            className="student-shell-map__play-btn"
-                                            onClick={() => {
-                                                setViewingModule(module);
-                                                setContentIndex(0);
-                                                setContentFinished(false);
-                                            }}
-                                        >
-                                            Play this sandbox
-                                        </button>
-                                    ) : (
-                                        <span className="student-shell-map__locked">Play previous sandbox first</span>
-                                    )}
-                                </div>
-                                <div className="student-shell-map__visual">
-                                    <img src={moduleVisual(module, index, { completed, unlocked })} alt="" />
-                                </div>
-                            </div>
-                        );
-                    })}
-
-                    <div className="student-shell-map__section-divider">
-                        <span>Final exam</span>
-                    </div>
-
-                    <div className="student-shell-map__node">
-                        <div className={`student-shell-map__bubble ${isAllCompleted ? 'student-shell-map__bubble--active' : ''}`}>
-                            <h3 className="student-shell-map__bubble-title">Final exam</h3>
-                            <p className="student-shell-map__bubble-sub">An exam covering all previous sandboxes</p>
-                            {isAllCompleted ? (
-                                <button
-                                    type="button"
-                                    className="student-shell-map__play-btn"
-                                    style={{ background: '#f59e0b', boxShadow: '0 3px 0 0 #d97706' }}
-                                    onClick={() => {
-                                        setIsTakingFinalExam(true);
-                                        setQuizIndex(0);
-                                        setSelectedAnswer(null);
-                                        setAnswerStatus('unanswered');
-                                        setScore(0);
-                                    }}
-                                >
-                                    Take sandcastle exam
-                                </button>
-                            ) : (
-                                <span className="student-shell-map__locked">Finish all sandboxes first</span>
-                            )}
-                        </div>
-                        <div className="student-shell-map__visual">
-                            <img src={assetUrl('images/shells/castle_final_exam.png')} alt="" />
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <StudentShellMap
+                certification={certification}
+                progress={progress}
+                shellMeta={shellMeta}
+                selectHref={route('student.dashboard', { select: 1 })}
+                onPlayModule={(module) => {
+                    setViewingModule(module);
+                    setContentIndex(0);
+                    setContentFinished(false);
+                }}
+                onTakeFinalExam={() => {
+                    setIsTakingFinalExam(true);
+                    setQuizIndex(0);
+                    setSelectedAnswer(null);
+                    setAnswerStatus('unanswered');
+                    setScore(0);
+                }}
+            />
         </StudentLayout>
     );
 }

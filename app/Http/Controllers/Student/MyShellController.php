@@ -47,9 +47,28 @@ class MyShellController extends Controller
             'percentage' => $totalModules > 0 ? (count($completedModuleIds) / $totalModules) * 100 : 0,
         ];
 
+        $enrollmentIndex = Enrollment::where('user_id', $user->id)
+            ->orderBy('id')
+            ->pluck('certification_id')
+            ->search((int) $id);
+
+        $shellMeta = [
+            'id' => (int) $id,
+            'title' => strtoupper($certification->title),
+            'badge_type' => stripos($certification->title, 'java') !== false ? 'github' : 'pro',
+            'badge_label' => stripos($certification->title, 'java') !== false ? 'GITHUB VERIFIED CERTIFICATE' : 'Professional Certificate',
+            'github_verified' => stripos($certification->title, 'java') !== false,
+            'progress' => $progress['percentage'],
+            'completed_modules' => $progress['completed_modules'],
+            'total_modules' => $progress['total_modules'],
+            'cover_image' => $certification->thumbnail ? asset('storage/'.$certification->thumbnail) : null,
+            'theme' => ['pink', 'blue', 'green'][($enrollmentIndex !== false ? $enrollmentIndex : 0) % 3],
+        ];
+
         return Inertia::render('Student/Shells/Show', [
             'certification' => $certification,
             'progress' => $progress,
+            'shellMeta' => $shellMeta,
         ]);
     }
 

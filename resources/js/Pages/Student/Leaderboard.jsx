@@ -3,7 +3,7 @@ import StudentLayout from '@/Layouts/StudentLayout';
 
 export default function Leaderboard({ entries = [] }) {
     return (
-        <StudentLayout activeNav="leaderboard" pageTitle="Leaderboard">
+        <StudentLayout activeNav="leaderboard" layoutMode="select">
             <Head title="Leaderboard" />
 
             <h2 className="student-page-title">

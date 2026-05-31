@@ -10,6 +10,7 @@ import { Transition } from '@headlessui/react';
 export default function UpdateProfileInformation({ mustVerifyEmail, status, className, variant = 'default' }) {
     const user = usePage().props.auth.user;
     const isAdmin = variant === 'admin';
+    const isStudent = variant === 'student';
     const displayName =
         user.full_name ||
         `${user.first_name || ''} ${user.last_name || ''}`.trim() ||
@@ -29,10 +30,10 @@ export default function UpdateProfileInformation({ mustVerifyEmail, status, clas
     return (
         <section className={className}>
             <header>
-                <h2 className={isAdmin ? 'admin-profile-card__title' : 'text-lg font-medium text-gray-900'}>
+                <h2 className={isAdmin ? 'admin-profile-card__title' : isStudent ? 'student-profile-form__title' : 'text-lg font-medium text-gray-900'}>
                     Profile information
                 </h2>
-                <p className={isAdmin ? 'admin-profile-card__subtitle' : 'mt-1 text-sm text-gray-600'}>
+                <p className={isAdmin ? 'admin-profile-card__subtitle' : isStudent ? 'student-profile-form__subtitle' : 'mt-1 text-sm text-gray-600'}>
                     Update your account profile information and email address.
                     {isAdmin && (
                         <>
@@ -40,6 +41,12 @@ export default function UpdateProfileInformation({ mustVerifyEmail, status, clas
                             <span className="admin-todo-badge admin-todo-badge--inline">
                                 TODO: profile.update save
                             </span>
+                        </>
+                    )}
+                    {isStudent && (
+                        <>
+                            {' '}
+                            <span className="student-todo-badge">TODO</span>
                         </>
                     )}
                 </p>
@@ -50,7 +57,7 @@ export default function UpdateProfileInformation({ mustVerifyEmail, status, clas
                     <InputLabel htmlFor="name" value="Name" />
                     <TextInput
                         id="name"
-                        className={isAdmin ? 'input-field mt-1 block w-full' : 'mt-1 block w-full'}
+                        className={isAdmin || isStudent ? 'input-field mt-1 block w-full' : 'mt-1 block w-full'}
                         value={data.name}
                         onChange={(e) => setData('name', e.target.value)}
                         required
@@ -65,7 +72,7 @@ export default function UpdateProfileInformation({ mustVerifyEmail, status, clas
                     <TextInput
                         id="email"
                         type="email"
-                        className={isAdmin ? 'input-field mt-1 block w-full' : 'mt-1 block w-full'}
+                        className={isAdmin || isStudent ? 'input-field mt-1 block w-full' : 'mt-1 block w-full'}
                         value={data.email}
                         onChange={(e) => setData('email', e.target.value)}
                         required
@@ -104,6 +111,10 @@ export default function UpdateProfileInformation({ mustVerifyEmail, status, clas
                         <button type="submit" disabled={processing} className="admin-btn admin-btn--primary">
                             Save
                         </button>
+                    ) : isStudent ? (
+                        <button type="submit" disabled={processing} className="student-profile-form__save">
+                            Save
+                        </button>
                     ) : (
                         <PrimaryButton disabled={processing}>Save</PrimaryButton>
                     )}
@@ -113,7 +124,7 @@ export default function UpdateProfileInformation({ mustVerifyEmail, status, clas
                         leaveTo="opacity-0"
                         className="transition ease-in-out"
                     >
-                        <p className={isAdmin ? 'admin-profile-card__subtitle' : 'text-sm text-gray-600'}>
+                        <p className={isAdmin ? 'admin-profile-card__subtitle' : isStudent ? 'student-profile-form__subtitle' : 'text-sm text-gray-600'}>
                             Saved.
                         </p>
                     </Transition>

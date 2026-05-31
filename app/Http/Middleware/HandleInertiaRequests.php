@@ -47,8 +47,15 @@ class HandleInertiaRequests extends Middleware
                     'progress_to_next_rank' => 75,
                     'hermy_name' => $user->first_name,
                     'hermy_avatar' => asset('images/Hermy.png'),
+                    'badges' => [
+                        ['id' => 1, 'label' => 'First Sandbox', 'icon' => '🐚'],
+                        ['id' => 2, 'label' => '7-Day Streak', 'icon' => '🔥'],
+                        ['id' => 3, 'label' => 'Quiz Ace', 'icon' => '⭐'],
+                    ],
                 ];
             },
+            'mustVerifyEmail' => fn () => $request->user() && $request->user()->email_verified_at === null,
+            'status' => fn () => $request->session()->get('status'),
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error'   => fn () => $request->session()->get('error'),

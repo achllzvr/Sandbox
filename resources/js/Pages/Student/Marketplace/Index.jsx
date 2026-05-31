@@ -104,7 +104,7 @@ export default function Index({ certifications }) {
     }
 
     return (
-        <StudentLayout activeNav="shop" pageTitle="Shop">
+        <StudentLayout activeNav="shop" layoutMode="select">
             <Head title="Shop — Available Shells" />
 
             <h2 className="student-page-title">Available Shells</h2>
