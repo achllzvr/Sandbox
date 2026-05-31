@@ -42,7 +42,8 @@ export default function AuthLayout({
             {showBack && (
                 <button
                     type="button"
-                    className="back-btn auth-back-btn"
+                    className="back-btn auth-back-btn fade-in-up"
+                    style={{ '--delay': '40ms' }}
                     onClick={handleBack}
                     aria-label="Go back"
                 >
@@ -51,12 +52,26 @@ export default function AuthLayout({
             )}
 
             <div className={`auth-page-wrap ${centered ? 'auth-page-wrap--centered' : ''}`}>
-                <div className="auth-container">
+                <div className="auth-container fade-in-up" style={{ '--delay': '60ms' }}>
                     <div className="auth-card">
-                        {title && <h1 className="page-title">{title}</h1>}
-                        {subtitle && <p className="auth-subtitle">{subtitle}</p>}
-                        {children}
-                        {showFooter && <AuthFooter />}
+                        {title && (
+                            <h1 className="page-title fade-in-up" style={{ '--delay': '120ms' }}>
+                                {title}
+                            </h1>
+                        )}
+                        {subtitle && (
+                            <p className="auth-subtitle fade-in-up" style={{ '--delay': '180ms' }}>
+                                {subtitle}
+                            </p>
+                        )}
+                        <div className="auth-card__body fade-in-up" style={{ '--delay': '240ms' }}>
+                            {children}
+                        </div>
+                        {showFooter && (
+                            <div className="fade-in-up" style={{ '--delay': '320ms' }}>
+                                <AuthFooter />
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

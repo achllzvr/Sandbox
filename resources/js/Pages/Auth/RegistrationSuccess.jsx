@@ -29,8 +29,10 @@ export default function RegistrationSuccess({ title, message, isAffiliate = fals
 
                 <section className="success-screen">
                     <div className="success-content">
-                        <h1 className="success-heading">{heading}</h1>
-                        <div className="success-mascot">
+                        <h1 className="success-heading fade-in-up" style={{ '--delay': '100ms' }}>
+                            {heading}
+                        </h1>
+                        <div className="success-mascot fade-in-up" style={{ '--delay': '220ms' }}>
                             <img
                                 src={assetUrl('images/HermyLanding.png')}
                                 alt="Hermit mascot"
