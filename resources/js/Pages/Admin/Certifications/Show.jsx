@@ -428,7 +428,12 @@ export default function Show({ certification }) {
                         </div>
                     ) : (
                         <div className="admin-empty">
-                            <div className="admin-empty__icon">📁</div>
+                            <div className="admin-empty__icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden="true">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16v10H4V7z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 11h8" />
+                                </svg>
+                            </div>
                             <p>Preview not available for this file type</p>
                         </div>
                     )}

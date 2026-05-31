@@ -1,17 +1,17 @@
 import { Link, usePage } from '@inertiajs/react';
-import Dropdown from '@/Components/Dropdown';
+import AdminNavIcon from '@/Components/Admin/AdminNavIcon';
 import { assetUrl } from '@/utils/assetUrl';
 
 const NAV_ITEMS = [
-    { label: 'Dashboard', icon: '📊', routeName: 'admin.dashboard' },
-    { label: 'Users', icon: '👥', routeName: 'admin.users.index' },
-    { label: 'Certifications', icon: '📜', routeName: 'admin.certifications.index' },
-    { label: 'Teachers', icon: '🎓', routeName: 'admin.teachers.index' },
-    { label: 'Audit Logs', icon: '📋', routeName: 'admin.audit-logs.index' },
-    { label: 'Finance', icon: '💰', routeName: 'admin.finance.index' },
+    { label: 'Dashboard', icon: 'dashboard', routeName: 'admin.dashboard' },
+    { label: 'Users', icon: 'users', routeName: 'admin.users.index' },
+    { label: 'Certifications', icon: 'certifications', routeName: 'admin.certifications.index' },
+    { label: 'Teachers', icon: 'teachers', routeName: 'admin.teachers.index' },
+    { label: 'Audit Logs', icon: 'audit', routeName: 'admin.audit-logs.index' },
+    { label: 'Finance', icon: 'finance', routeName: 'admin.finance.index' },
 ];
 
-export default function AdminLayout({ children, pageTitle }) {
+export default function AdminLayout({ children, pageTitle, topbarEnd }) {
     const { auth, flash } = usePage().props;
     const user = auth.user;
 
@@ -30,19 +30,19 @@ export default function AdminLayout({ children, pageTitle }) {
                     <Link href={route('admin.dashboard')} className="admin-sidebar__brand-link">
                         <img
                             src={assetUrl('images/Hermy.png')}
-                            alt="Sandbox mascot"
+                            alt=""
                             className="admin-sidebar__logo-img"
-                            width={40}
-                            height={40}
+                            width={36}
+                            height={36}
                         />
                         <div>
-                            <span className="admin-sidebar__logo-text">SANDBOX</span>
-                            <span className="admin-sidebar__badge">Admin</span>
+                            <span className="admin-sidebar__logo-text">Sandbox</span>
+                            <span className="admin-sidebar__badge">Administration</span>
                         </div>
                     </Link>
                 </div>
 
-                <nav className="admin-sidebar__nav">
+                <nav className="admin-sidebar__nav" aria-label="Admin navigation">
                     {NAV_ITEMS.map((item) => {
                         const active = isActive(item.routeName);
                         let href;
@@ -57,7 +57,7 @@ export default function AdminLayout({ children, pageTitle }) {
                                 href={href}
                                 className={`admin-nav-link ${active ? 'admin-nav-link--active' : ''}`}
                             >
-                                <span className="admin-nav-link__icon">{item.icon}</span>
+                                <AdminNavIcon name={item.icon} />
                                 {item.label}
                             </Link>
                         );
@@ -65,45 +65,36 @@ export default function AdminLayout({ children, pageTitle }) {
                 </nav>
 
                 <div className="admin-sidebar__footer">
-                    <p className="admin-sidebar__user-name">
-                        {user.first_name} {user.last_name}
-                    </p>
-                    <p className="admin-sidebar__user-email">{user.email}</p>
+                    <div className="admin-sidebar__user">
+                        <span className="admin-sidebar__avatar">
+                            {user.first_name?.charAt(0)}
+                            {user.last_name?.charAt(0)}
+                        </span>
+                        <div className="admin-sidebar__user-meta">
+                            <p className="admin-sidebar__user-name">
+                                {user.first_name} {user.last_name}
+                            </p>
+                            <p className="admin-sidebar__user-email">{user.email}</p>
+                        </div>
+                    </div>
                     <Link
                         href={route('logout')}
                         method="post"
                         as="button"
                         className="admin-sidebar__logout"
                     >
-                        Log Out
+                        Sign out
                     </Link>
                 </div>
             </aside>
 
             <div className="admin-main">
                 <header className="admin-topbar">
-                    <h1 className="admin-page-title">{pageTitle || 'Admin'}</h1>
-
-                    <Dropdown>
-                        <Dropdown.Trigger>
-                            <button type="button" className="admin-topbar__user-btn">
-                                {user.first_name} {user.last_name}
-                                <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
-                                    <path
-                                        fillRule="evenodd"
-                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                        clipRule="evenodd"
-                                    />
-                                </svg>
-                            </button>
-                        </Dropdown.Trigger>
-                        <Dropdown.Content contentClasses="admin-dropdown-panel py-1">
-                            <Dropdown.Link href={route('profile.edit')}>Profile</Dropdown.Link>
-                            <Dropdown.Link href={route('logout')} method="post" as="button">
-                                Log Out
-                            </Dropdown.Link>
-                        </Dropdown.Content>
-                    </Dropdown>
+                    <div className="admin-topbar__heading">
+                        <p className="admin-topbar__eyebrow">Admin console</p>
+                        <h1 className="admin-page-title">{pageTitle || 'Admin'}</h1>
+                    </div>
+                    {topbarEnd && <div className="admin-topbar__end">{topbarEnd}</div>}
                 </header>
 
                 {(flash?.success || flash?.error) && (

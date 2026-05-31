@@ -1,37 +1,56 @@
 import { Head, Link, useForm, router } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
-import AdminBadge from '@/Components/Admin/AdminBadge';
 import AdminModal from '@/Components/Admin/AdminModal';
-import { useState } from 'react';
+import AdminUserCard from '@/Components/Admin/AdminUserCard';
+import CreateUserFlow from '@/Components/Admin/CreateUserFlow';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+
+// TODO: Wire suspend, view, and archive user actions to backend endpoints.
 
 export default function UsersIndex({ users, filters }) {
-    const [showInvite, setShowInvite] = useState(false);
+    const [activeTab, setActiveTab] = useState('management');
+    const [showCreateFlow, setShowCreateFlow] = useState(false);
     const [reviewUser, setReviewUser] = useState(null);
+    const [actionModal, setActionModal] = useState(null);
     const [search, setSearch] = useState(filters?.search || '');
     const [roleFilter, setRoleFilter] = useState(filters?.role || '');
 
-    const inviteForm = useForm({
-        email: '',
-        role: 'content_creator',
-    });
+    const verifyForm = useForm({ action: '' });
 
-    const verifyForm = useForm({
-        action: '',
-    });
+    const approvalUsers = useMemo(
+        () =>
+            users.data.filter(
+                (u) => u.status === 'pending_verification' || u.status === 'pending'
+            ),
+        [users.data]
+    );
 
-    function handleFilter(e) {
-        e?.preventDefault();
-        router.get(route('admin.users.index'), { search, role: roleFilter }, { preserveState: true });
-    }
+    const displayedUsers = activeTab === 'approvals' ? approvalUsers : users.data;
 
-    function handleInvite(e) {
-        e.preventDefault();
-        inviteForm.post(route('admin.users.invite'), {
-            onSuccess: () => {
-                setShowInvite(false);
-                inviteForm.reset();
-            },
-        });
+    const applyFilters = useCallback(
+        (nextSearch, nextRole) => {
+            router.get(
+                route('admin.users.index'),
+                { search: nextSearch || undefined, role: nextRole || undefined },
+                { preserveState: true, replace: true }
+            );
+        },
+        []
+    );
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (search !== (filters?.search || '')) {
+                applyFilters(search, roleFilter);
+            }
+        }, 400);
+        return () => clearTimeout(timer);
+    }, [search, filters?.search, roleFilter, applyFilters]);
+
+    function handleRoleChange(e) {
+        const value = e.target.value;
+        setRoleFilter(value);
+        applyFilters(search, value);
     }
 
     function handleVerify(action) {
@@ -42,97 +61,89 @@ export default function UsersIndex({ users, filters }) {
             });
     }
 
+    // TODO: Replace placeholder modal with real suspend/view/archive API calls.
+    function handleUserAction(type, user) {
+        setActionModal({ type, user });
+    }
+
+    const topbarTabs = (
+        <div className="admin-page-tabs admin-page-tabs--topbar">
+            <button
+                type="button"
+                className={`admin-page-tabs__btn ${activeTab === 'management' ? 'admin-page-tabs__btn--active' : ''}`}
+                onClick={() => setActiveTab('management')}
+            >
+                User management
+            </button>
+            <button
+                type="button"
+                className={`admin-page-tabs__btn ${activeTab === 'approvals' ? 'admin-page-tabs__btn--active' : ''}`}
+                onClick={() => setActiveTab('approvals')}
+            >
+                Approvals
+                {approvalUsers.length > 0 && (
+                    <span className="admin-page-tabs__count">{approvalUsers.length}</span>
+                )}
+            </button>
+        </div>
+    );
+
     return (
-        <AdminLayout pageTitle="User Management">
+        <AdminLayout pageTitle="User Management" topbarEnd={topbarTabs}>
             <Head title="User Management" />
 
-            <div className="admin-toolbar">
-                <form onSubmit={handleFilter} className="admin-toolbar__filters">
-                    <input
-                        type="text"
-                        placeholder="Search users..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="input-field"
-                    />
-                    <select
-                        value={roleFilter}
-                        onChange={(e) => setRoleFilter(e.target.value)}
-                        className="input-field"
-                    >
-                        <option value="">All Roles</option>
-                        <option value="user">Student</option>
-                        <option value="content_creator">Content Creator</option>
-                        <option value="teacher">Teacher</option>
-                        <option value="admin">Admin</option>
-                    </select>
-                    <button type="submit" className="admin-btn admin-btn--secondary">
-                        Filter
-                    </button>
-                </form>
+            <div className="admin-subtoolbar">
+                <input
+                    type="search"
+                    placeholder="Search users..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="input-field admin-subtoolbar__search"
+                    aria-label="Search users"
+                />
+                <select
+                    value={roleFilter}
+                    onChange={handleRoleChange}
+                    className="input-field admin-subtoolbar__role"
+                    aria-label="Filter by role"
+                >
+                    <option value="">All roles</option>
+                    <option value="user">Student</option>
+                    <option value="content_creator">Content creator</option>
+                    <option value="teacher">Teacher</option>
+                    <option value="admin">Admin</option>
+                </select>
                 <button
                     type="button"
-                    onClick={() => setShowInvite(true)}
-                    className="admin-btn admin-btn--primary"
+                    onClick={() => setShowCreateFlow(true)}
+                    className="admin-btn admin-btn--primary admin-subtoolbar__add"
                 >
-                    + Invite User
+                    + Add new user
                 </button>
             </div>
 
-            <div className="admin-card admin-card__body--flush">
-                <div className="admin-table-wrap">
-                    <table className="admin-table">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Role</th>
-                                <th>Status</th>
-                                <th>Joined</th>
-                                <th className="admin-table__actions">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {users.data.map((u) => (
-                                <tr key={u.id}>
-                                    <td className="admin-table__name">
-                                        {u.first_name} {u.last_name}
-                                    </td>
-                                    <td className="admin-table__muted">{u.email}</td>
-                                    <td>
-                                        <AdminBadge type="role" value={u.role} />
-                                    </td>
-                                    <td>
-                                        <AdminBadge value={u.status} />
-                                    </td>
-                                    <td className="admin-table__muted">
-                                        {new Date(u.created_at).toLocaleDateString()}
-                                    </td>
-                                    <td className="admin-table__actions">
-                                        {u.role === 'teacher' &&
-                                            u.status === 'pending_verification' && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setReviewUser(u)}
-                                                    className="admin-btn admin-btn--sm admin-btn--secondary"
-                                                >
-                                                    Review
-                                                </button>
-                                            )}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-                {users.data.length === 0 && (
-                    <p className="admin-empty" style={{ padding: '3rem' }}>
-                        No users found.
-                    </p>
+            <div className="admin-user-list">
+                {displayedUsers.length === 0 ? (
+                    <div className="admin-card admin-card--chunky">
+                        <p className="admin-empty" style={{ padding: '3rem' }}>
+                            {activeTab === 'approvals'
+                                ? 'No pending approvals.'
+                                : 'No users found.'}
+                        </p>
+                    </div>
+                ) : (
+                    displayedUsers.map((u) => (
+                        <AdminUserCard
+                            key={u.id}
+                            user={u}
+                            onReview={setReviewUser}
+                            onAction={handleUserAction}
+                        />
+                    ))
                 )}
             </div>
 
-            {users.last_page > 1 && (
+            {activeTab === 'management' && users.last_page > 1 && (
                 <nav className="admin-pagination">
                     {users.links.map((link, i) => (
                         <Link
@@ -152,68 +163,12 @@ export default function UsersIndex({ users, filters }) {
                 </nav>
             )}
 
-            <AdminModal
-                show={showInvite}
-                onClose={() => setShowInvite(false)}
-                title={
-                    <>
-                        Invite <span className="admin-highlight">New</span> User
-                    </>
-                }
-                footer={
-                    <>
-                        <button
-                            type="button"
-                            onClick={() => setShowInvite(false)}
-                            className="admin-btn admin-btn--ghost"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            form="invite-user-form"
-                            disabled={inviteForm.processing}
-                            className="admin-btn admin-btn--primary"
-                        >
-                            Send Invite
-                        </button>
-                    </>
-                }
-            >
-                <form id="invite-user-form" onSubmit={handleInvite}>
-                    <div className="admin-form-group">
-                        <label htmlFor="invite-email">Email</label>
-                        <input
-                            id="invite-email"
-                            type="email"
-                            value={inviteForm.data.email}
-                            onChange={(e) => inviteForm.setData('email', e.target.value)}
-                            className="input-field"
-                            required
-                        />
-                        {inviteForm.errors.email && (
-                            <p className="admin-form-error">{inviteForm.errors.email}</p>
-                        )}
-                    </div>
-                    <div className="admin-form-group">
-                        <label htmlFor="invite-role">Role</label>
-                        <select
-                            id="invite-role"
-                            value={inviteForm.data.role}
-                            onChange={(e) => inviteForm.setData('role', e.target.value)}
-                            className="input-field"
-                        >
-                            <option value="content_creator">Content Creator</option>
-                            <option value="teacher">Teacher</option>
-                        </select>
-                    </div>
-                </form>
-            </AdminModal>
+            <CreateUserFlow show={showCreateFlow} onClose={() => setShowCreateFlow(false)} />
 
             <AdminModal
                 show={!!reviewUser}
                 onClose={() => setReviewUser(null)}
-                title="Review Teacher Registration"
+                title="Review teacher registration"
                 subtitle={
                     reviewUser
                         ? `${reviewUser.first_name} ${reviewUser.last_name} · ${reviewUser.email}`
@@ -236,7 +191,7 @@ export default function UsersIndex({ users, filters }) {
                             disabled={verifyForm.processing}
                             className="admin-btn admin-btn--success admin-btn--sm"
                         >
-                            Approve & Activate
+                            Approve & activate
                         </button>
                     </div>
                 }
@@ -248,12 +203,12 @@ export default function UsersIndex({ users, filters }) {
                                 src={`/storage/${reviewUser.institutional_credentials_url}`}
                                 className="w-full"
                                 style={{ height: '55vh', border: 'none', borderRadius: '12px' }}
-                                title="Credential Document"
+                                title="Credential document"
                             />
                         ) : (
                             <img
                                 src={`/storage/${reviewUser.institutional_credentials_url}`}
-                                alt="Credential Document"
+                                alt="Credential document"
                                 style={{ maxWidth: '100%', maxHeight: '55vh', objectFit: 'contain' }}
                             />
                         )
@@ -261,6 +216,41 @@ export default function UsersIndex({ users, filters }) {
                         <p className="admin-table__muted">No credential file attached.</p>
                     )}
                 </div>
+            </AdminModal>
+
+            <AdminModal
+                show={!!actionModal}
+                onClose={() => setActionModal(null)}
+                title={
+                    actionModal?.type === 'suspend'
+                        ? 'Suspend user'
+                        : actionModal?.type === 'archive'
+                          ? 'Archive user'
+                          : 'View user'
+                }
+                footer={
+                    <button
+                        type="button"
+                        className="admin-btn admin-btn--ghost"
+                        onClick={() => setActionModal(null)}
+                    >
+                        Close
+                    </button>
+                }
+            >
+                <p className="admin-table__muted">
+                    {actionModal?.user && (
+                        <>
+                            {actionModal.user.first_name} {actionModal.user.last_name} (
+                            {actionModal.user.email})
+                        </>
+                    )}
+                </p>
+                <p className="admin-table__muted" style={{ marginTop: '12px' }}>
+                    <span className="admin-todo-badge admin-todo-badge--inline">
+                        TODO: wire {actionModal?.type} action to backend
+                    </span>
+                </p>
             </AdminModal>
         </AdminLayout>
     );
