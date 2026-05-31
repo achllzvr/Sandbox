@@ -6,7 +6,6 @@ const NAV_ITEMS = [
     { label: 'Dashboard', icon: 'dashboard', routeName: 'admin.dashboard' },
     { label: 'Users', icon: 'users', routeName: 'admin.users.index' },
     { label: 'Certifications', icon: 'certifications', routeName: 'admin.certifications.index' },
-    { label: 'Teachers', icon: 'teachers', routeName: 'admin.teachers.index' },
     { label: 'Audit Logs', icon: 'audit', routeName: 'admin.audit-logs.index' },
     { label: 'Finance', icon: 'finance', routeName: 'admin.finance.index' },
 ];

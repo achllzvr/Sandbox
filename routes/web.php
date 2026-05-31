@@ -4,7 +4,6 @@ use App\Http\Controllers\AffiliationController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\CertificationApprovalController;
 use App\Http\Controllers\Admin\UserManagementController;
-use App\Http\Controllers\Admin\TeacherVerificationController;
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\FinanceController;
 use App\Http\Controllers\Creator\CertificationController;
@@ -161,13 +160,7 @@ Route::middleware(['auth', 'otp.verified', 'role:admin'])
         Route::put('/certifications/{certification}/request-revision', [CertificationApprovalController::class, 'requestRevision'])
             ->name('certifications.request_revision');
 
-        // Teacher Verification
-        Route::get('/teachers', [TeacherVerificationController::class, 'index'])
-            ->name('teachers.index');
-        Route::put('/teachers/{user}/approve', [TeacherVerificationController::class, 'approve'])
-            ->name('teachers.approve');
-        Route::put('/teachers/{user}/decline', [TeacherVerificationController::class, 'decline'])
-            ->name('teachers.decline');
+        Route::redirect('/teachers', '/admin/users?tab=approvals')->name('teachers.index');
 
         // Audit Logs
         Route::get('/audit-logs', [AuditLogController::class, 'index'])

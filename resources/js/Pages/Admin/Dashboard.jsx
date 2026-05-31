@@ -29,7 +29,7 @@ const USER_METRICS = [
         key: 'pending_teachers',
         label: 'Pending teachers',
         accent: '#e0b078',
-        href: () => route('admin.teachers.index'),
+        href: () => route('admin.users.index', { tab: 'approvals', approval_status: 'pending' }),
     },
 ];
 

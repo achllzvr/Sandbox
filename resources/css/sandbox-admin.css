@@ -1598,6 +1598,13 @@ a.admin-btn[aria-disabled='true'] {
     white-space: nowrap;
 }
 
+.admin-user-card__affiliation {
+    margin: 0 0 8px;
+    font-size: 0.75rem;
+    color: var(--admin-text);
+    font-weight: 500;
+}
+
 .admin-user-card__badges {
     display: flex;
     flex-wrap: wrap;

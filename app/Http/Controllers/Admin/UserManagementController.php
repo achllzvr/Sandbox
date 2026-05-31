@@ -15,8 +15,20 @@ class UserManagementController extends Controller
     public function index(Request $request)
     {
         $query = User::query();
+        $isApprovalsTab = $request->get('tab') === 'approvals';
 
-        if ($request->filled('role')) {
+        if ($isApprovalsTab) {
+            $query->where('role', 'teacher');
+
+            if ($request->filled('approval_status')) {
+                match ($request->approval_status) {
+                    'pending' => $query->whereIn('status', ['pending_verification', 'pending']),
+                    'approved' => $query->where('status', 'active'),
+                    'declined' => $query->whereIn('status', ['declined', 'inactive']),
+                    default => null,
+                };
+            }
+        } elseif ($request->filled('role')) {
             $query->where('role', $request->role);
         }
 
@@ -25,15 +37,19 @@ class UserManagementController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->where('first_name', 'like', "%{$search}%")
                   ->orWhere('last_name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('affiliation', 'like', "%{$search}%");
             });
         }
 
         $users = $query->latest()->paginate(15)->withQueryString();
 
         return Inertia::render('Admin/Users/Index', [
-            'users'   => $users,
-            'filters' => $request->only(['role', 'search']),
+            'users' => $users,
+            'filters' => $request->only(['role', 'search', 'tab', 'approval_status']),
+            'pending_approvals_count' => User::where('role', 'teacher')
+                ->whereIn('status', ['pending_verification', 'pending'])
+                ->count(),
         ]);
     }
 

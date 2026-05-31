@@ -51,8 +51,19 @@ function IconCheck() {
     );
 }
 
-export default function AdminUserCard({ user, onReview, onAction }) {
+function isPendingTeacher(user) {
+    return (
+        user.role === 'teacher' &&
+        (user.status === 'pending_verification' || user.status === 'pending')
+    );
+}
+
+export default function AdminUserCard({ user, onReview, onAction, mode = 'management' }) {
     const initials = `${user.first_name?.charAt(0) || ''}${user.last_name?.charAt(0) || ''}`;
+    const approvalsMode = mode === 'approvals';
+    const canReview =
+        user.role === 'teacher' &&
+        (isPendingTeacher(user) || user.institutional_credentials_url);
 
     return (
         <article className="admin-user-card admin-card--chunky">
@@ -63,50 +74,59 @@ export default function AdminUserCard({ user, onReview, onAction }) {
                         {user.first_name} {user.last_name}
                     </p>
                     <p className="admin-user-card__email">{user.email}</p>
+                    {approvalsMode && user.affiliation && (
+                        <p className="admin-user-card__affiliation">{user.affiliation}</p>
+                    )}
                     <div className="admin-user-card__badges">
                         <AdminBadge type="role" value={user.role} />
                         <AdminBadge value={user.status} />
                     </div>
                 </div>
                 <p className="admin-user-card__date">
-                    Joined {new Date(user.created_at).toLocaleDateString()}
+                    {user.verified_at
+                        ? `Verified ${new Date(user.verified_at).toLocaleDateString()}`
+                        : `Joined ${new Date(user.created_at).toLocaleDateString()}`}
                 </p>
             </div>
             <div className="admin-user-card__actions">
-                {user.role === 'teacher' && user.status === 'pending_verification' && onReview && (
+                {canReview && onReview && (
                     <button
                         type="button"
                         className="admin-action-btn admin-action-btn--accent"
                         onClick={() => onReview(user)}
                     >
                         <IconCheck />
-                        <span>Review</span>
+                        <span>{isPendingTeacher(user) ? 'Review' : 'View credentials'}</span>
                     </button>
                 )}
-                <button
-                    type="button"
-                    className="admin-action-btn admin-action-btn--warning"
-                    onClick={() => onAction?.('suspend', user)}
-                >
-                    <IconPause />
-                    <span>Suspend</span>
-                </button>
-                <button
-                    type="button"
-                    className="admin-action-btn admin-action-btn--info"
-                    onClick={() => onAction?.('view', user)}
-                >
-                    <IconEye />
-                    <span>View</span>
-                </button>
-                <button
-                    type="button"
-                    className="admin-action-btn admin-action-btn--danger"
-                    onClick={() => onAction?.('archive', user)}
-                >
-                    <IconTrash />
-                    <span>Archive</span>
-                </button>
+                {!approvalsMode && (
+                    <>
+                        <button
+                            type="button"
+                            className="admin-action-btn admin-action-btn--warning"
+                            onClick={() => onAction?.('suspend', user)}
+                        >
+                            <IconPause />
+                            <span>Suspend</span>
+                        </button>
+                        <button
+                            type="button"
+                            className="admin-action-btn admin-action-btn--info"
+                            onClick={() => onAction?.('view', user)}
+                        >
+                            <IconEye />
+                            <span>View</span>
+                        </button>
+                        <button
+                            type="button"
+                            className="admin-action-btn admin-action-btn--danger"
+                            onClick={() => onAction?.('archive', user)}
+                        >
+                            <IconTrash />
+                            <span>Archive</span>
+                        </button>
+                    </>
+                )}
             </div>
         </article>
     );
