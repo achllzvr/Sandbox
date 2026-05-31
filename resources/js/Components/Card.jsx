@@ -13,22 +13,23 @@ export const Card = ({
   variant = 'default',
   centered = false,
   className = '',
+  borderColor = null,
   ...props
 }) => {
   const variants = {
     default: {
-      backgroundColor: colors.bg.light,
-      border: `1px solid ${colors.border.light}`,
-      boxShadow: shadows.sm,
+      backgroundColor: 'white',
+      border: `2px solid ${borderColor || colors.border.light}`,
+      boxShadow: shadows.card,
     },
     elevated: {
-      backgroundColor: colors.bg.light,
-      border: 'none',
-      boxShadow: shadows.lg,
+      backgroundColor: 'white',
+      border: `2px solid ${borderColor || colors.border.light}`,
+      boxShadow: shadows.card,
     },
     outlined: {
       backgroundColor: 'transparent',
-      border: `2px solid ${colors.border.medium}`,
+      border: `2px solid ${borderColor || colors.border.medium}`,
       boxShadow: 'none',
     },
   };
@@ -36,7 +37,7 @@ export const Card = ({
   const style = {
     ...variants[variant] || variants.default,
     borderRadius: borderRadius.lg,
-    padding: '1.5rem',
+    padding: '24px',
     transition: 'all 200ms ease',
   };
 

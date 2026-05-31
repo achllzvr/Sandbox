@@ -1,49 +1,164 @@
 import { Head, Link } from '@inertiajs/react';
+import { Button } from '@/Components';
+import { colors, typography, shadows, borderRadius, spacing } from '@/Styles/theme';
 
 export default function Welcome({ canLogin, canRegister, authUser }) {
     const isLoggedIn = !!authUser;
 
     return (
-        <div className="min-h-screen bg-white">
+        <div style={{ 
+            backgroundColor: colors.bg.primary, 
+            minHeight: '100vh', 
+            color: colors.text.primary,
+            fontFamily: typography.fontFamily.primary,
+        }}>
             <Head title="Welcome to Sandbox" />
+            
+            <style>{`
+                @font-face {
+                    font-family: 'Sparky Stones';
+                    src: url('/fonts/SparkyStones.ttf') format('truetype');
+                    font-weight: normal;
+                    font-style: normal;
+                    font-display: swap;
+                }
+                @font-face {
+                    font-family: 'Montley Forces';
+                    src: url('/fonts/MotleyForces.ttf') format('truetype');
+                    font-weight: normal;
+                    font-style: normal;
+                    font-display: swap;
+                }
+                @font-face {
+                    font-family: 'Roboto';
+                    src: url('/fonts/Roboto.ttf') format('truetype');
+                    font-weight: 400;
+                    font-style: normal;
+                    font-display: swap;
+                }
+                * {
+                    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                }
+                h1, h2, h3, .heading {
+                    font-family: 'Montley Forces', Georgia, serif;
+                }
+            `}</style>
 
-            {/* NAV */}
-            <nav className="sticky top-0 z-50 bg-white border-b border-stone-200">
-                <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-amber-500 rounded flex items-center justify-center text-white font-bold">
-                            S
-                        </div>
-                        <span className="font-bold text-lg text-stone-900 tracking-tight">Sandbox</span>
+            {/* Navigation Bar */}
+            <nav
+                style={{
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 100,
+                    backgroundColor: colors.bg.primary,
+                    borderBottom: `1px solid ${colors.border.light}`,
+                    padding: `${spacing.md} ${spacing.lg}`,
+                    height: '70px',
+                    display: 'flex',
+                    alignItems: 'center',
+                }}
+            >
+                <div
+                    style={{
+                        maxWidth: '1200px',
+                        margin: '0 auto',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        width: '100%',
+                        padding: `0 ${spacing.lg}`,
+                    }}
+                >
+                    {/* Logo */}
+                    <div
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: spacing.sm,
+                            fontSize: '1.75rem',
+                            fontFamily: typography.fontFamily.brand,
+                            fontWeight: 'normal',
+                            color: colors.button.primary,
+                            letterSpacing: '0.02em',
+                        }}
+                    >
+                        🦀 SANDBOX
                     </div>
-                    <div className="flex items-center gap-4">
+
+                    {/* Auth Links */}
+                    <div style={{ display: 'flex', gap: spacing.lg, alignItems: 'center' }}>
                         {isLoggedIn ? (
                             <>
-                                <span className="text-sm text-stone-500">
+                                <span style={{ fontSize: '0.9rem', color: colors.text.primary }}>
                                     Hi, {authUser.first_name}!
                                 </span>
-                                <Link href={route('dashboard')} className="bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-                                    Go to Dashboard
+                                <Link
+                                    href={route('dashboard')}
+                                    style={{
+                                        padding: `${spacing.md} ${spacing.lg}`,
+                                        backgroundColor: colors.button.primary,
+                                        color: 'white',
+                                        borderRadius: borderRadius.lg,
+                                        textDecoration: 'none',
+                                        fontWeight: 700,
+                                        fontSize: '0.875rem',
+                                        textTransform: 'uppercase',
+                                        boxShadow: shadows.btnPrimary,
+                                        cursor: 'pointer',
+                                    }}
+                                >
+                                    Dashboard
                                 </Link>
                                 <Link
                                     href={route('logout')}
                                     method="post"
                                     as="button"
-                                    className="text-sm font-medium text-stone-500 hover:text-red-600 transition-colors"
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        color: colors.text.secondary,
+                                        cursor: 'pointer',
+                                        fontSize: '0.875rem',
+                                        fontWeight: 700,
+                                        textTransform: 'uppercase',
+                                    }}
                                 >
-                                    Log out
+                                    Logout
                                 </Link>
                             </>
                         ) : (
                             <>
                                 {canLogin && (
-                                    <Link href={route('login')} className="text-sm font-medium text-stone-600 hover:text-stone-900 transition-colors">
-                                        Log in
+                                    <Link
+                                        href={route('login')}
+                                        style={{
+                                            color: colors.text.primary,
+                                            textDecoration: 'none',
+                                            fontWeight: 700,
+                                            fontSize: '0.875rem',
+                                            textTransform: 'uppercase',
+                                        }}
+                                    >
+                                        Login
                                     </Link>
                                 )}
                                 {canRegister && (
-                                    <Link href={route('register')} className="bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-                                        Get started
+                                    <Link
+                                        href={route('register')}
+                                        style={{
+                                            padding: `${spacing.md} ${spacing.lg}`,
+                                            backgroundColor: colors.button.primary,
+                                            color: 'white',
+                                            borderRadius: borderRadius.lg,
+                                            textDecoration: 'none',
+                                            fontWeight: 700,
+                                            fontSize: '0.875rem',
+                                            textTransform: 'uppercase',
+                                            boxShadow: shadows.btnPrimary,
+                                            cursor: 'pointer',
+                                        }}
+                                    >
+                                        Get Started
                                     </Link>
                                 )}
                             </>
@@ -52,147 +167,451 @@ export default function Welcome({ canLogin, canRegister, authUser }) {
                 </div>
             </nav>
 
-            {/* HERO */}
-            <header className="text-center py-20 px-6">
-                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-100 text-amber-800 text-sm font-medium mb-8">
-                    Gamified certification platform
+            {/* Hero Section */}
+            <header
+                style={{
+                    maxWidth: '1200px',
+                    margin: '0 auto',
+                    padding: `${spacing.xl} ${spacing.lg}`,
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                    gap: spacing.xl,
+                    alignItems: 'center',
+                }}
+            >
+                {/* Hero Image */}
+                <div style={{ textAlign: 'center', order: 2 }}>
+                    <img
+                        src="/images/HermyLanding.png"
+                        alt="Hermy the Hermit Crab"
+                        style={{
+                            width: '100%',
+                            maxWidth: '400px',
+                            height: 'auto',
+                            borderRadius: borderRadius.lg,
+                        }}
+                    />
                 </div>
-                <h1 className="text-4xl md:text-5xl font-bold text-stone-900 leading-tight mb-4">
-                    Learn. Certify. <br className="md:hidden" />
-                    <span className="text-amber-600">Build your shoreline.</span>
-                </h1>
-                <p className="text-stone-500 max-w-lg mx-auto mt-4 text-lg">
-                    Sandbox turns certification into an adventure — earn Sand Dollars, customize your avatar, and grow your skills one sandbox at a time.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8">
-                    {isLoggedIn ? (
-                        <Link href={route('dashboard')} className="bg-amber-500 hover:bg-amber-600 text-white font-medium px-6 py-3 rounded-xl transition-colors">
-                            Go to Dashboard
-                        </Link>
-                    ) : (
-                        <>
-                            <Link href={route('register')} className="bg-amber-500 hover:bg-amber-600 text-white font-medium px-6 py-3 rounded-xl transition-colors">
-                                Browse certifications
+
+                {/* Hero Content */}
+                <div style={{ order: 1 }}>
+                    <h1
+                        style={{
+                            fontFamily: typography.fontFamily.heading,
+                            fontSize: '2.5rem',
+                            fontWeight: 'bold',
+                            color: colors.text.primary,
+                            marginBottom: spacing.lg,
+                            lineHeight: 1.2,
+                            margin: 0,
+                        }}
+                    >
+                        Break out of your shell, expand and learn playfully!
+                    </h1>
+
+                    <p
+                        style={{
+                            color: colors.text.secondary,
+                            fontSize: '1rem',
+                            lineHeight: 1.6,
+                            marginBottom: spacing.xl,
+                            margin: `0 0 ${spacing.xl} 0`,
+                        }}
+                    >
+                        Sandbox turns learning into an adventure — earn Sand Dollars, customize your hermit avatar, and grow your skills one shell at a time.
+                    </p>
+
+                    {/* CTA Buttons */}
+                    <div
+                        style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: spacing.md,
+                        }}
+                    >
+                        {isLoggedIn ? (
+                            <Link href={route('dashboard')} style={{ textDecoration: 'none' }}>
+                                <Button variant="filled" size="lg" style={{ width: '100%' }}>
+                                    GO TO DASHBOARD
+                                </Button>
                             </Link>
-                            <Link href={route('login')} className="border border-stone-300 hover:bg-stone-50 text-stone-700 font-medium px-6 py-3 rounded-xl transition-colors">
-                                Log in
-                            </Link>
-                        </>
-                    )}
+                        ) : (
+                            <>
+                                <Link href={canRegister ? route('register') : '#'} style={{ textDecoration: 'none' }}>
+                                    <Button variant="filled" size="lg" style={{ width: '100%' }}>
+                                        GET STARTED
+                                    </Button>
+                                </Link>
+                                <Link
+                                    href={canLogin ? route('login') : '#'}
+                                    style={{ textDecoration: 'none' }}
+                                >
+                                    <Button
+                                        variant="secondary"
+                                        size="lg"
+                                        style={{
+                                            width: '100%',
+                                            backgroundColor: colors.button.secondary,
+                                        }}
+                                    >
+                                        I ALREADY HAVE A SHELL
+                                    </Button>
+                                </Link>
+                            </>
+                        )}
+                    </div>
                 </div>
             </header>
 
-            {/* ROLE CARDS — only show for guests */}
+            {/* Role Cards Section */}
             {!isLoggedIn && (
-                <section className="pb-20">
-                    <p className="text-center uppercase text-xs text-stone-400 tracking-widest mt-16 mb-8 font-semibold">
+                <section
+                    style={{
+                        maxWidth: '1200px',
+                        margin: `${spacing.xl} auto`,
+                        padding: `0 ${spacing.lg}`,
+                    }}
+                >
+                    <p
+                        style={{
+                            textAlign: 'center',
+                            fontSize: typography.fontSize.xs,
+                            color: colors.text.secondary,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.1em',
+                            marginBottom: spacing.lg,
+                            fontWeight: 600,
+                            margin: `0 0 ${spacing.lg} 0`,
+                        }}
+                    >
                         Join as
                     </p>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 px-6 max-w-5xl mx-auto">
-                        {/* CARD 1 — Student */}
-                        <div className="border-2 border-amber-400 rounded-2xl p-6 flex flex-col h-full bg-white relative overflow-hidden">
-                            <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center mb-4 text-xl">
+
+                    <div
+                        style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                            gap: spacing.xl,
+                        }}
+                    >
+                        {/* Learner Card */}
+                        <div
+                            style={{
+                                border: `3px solid ${colors.button.primary}`,
+                                borderRadius: borderRadius.lg,
+                                padding: spacing.xl,
+                                backgroundColor: '#FFFFFF',
+                                boxShadow: shadows.card,
+                            }}
+                        >
+                            <div
+                                style={{
+                                    width: '40px',
+                                    height: '40px',
+                                    borderRadius: borderRadius.sm,
+                                    backgroundColor: colors.button.primaryLight,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '1.5rem',
+                                    marginBottom: spacing.md,
+                                }}
+                            >
                                 🎓
                             </div>
-                            <h3 className="font-bold text-lg text-stone-900">Student</h3>
-                            <p className="text-stone-500 text-sm mt-1 mb-4 flex-grow">
-                                Browse the marketplace, enroll in shells, and earn your certifications.
+                            <h3
+                                style={{
+                                    fontFamily: typography.fontFamily.heading,
+                                    fontWeight: 'bold',
+                                    fontSize: '1.2rem',
+                                    color: colors.text.primary,
+                                    marginBottom: spacing.sm,
+                                    margin: `0 0 ${spacing.sm} 0`,
+                                }}
+                            >
+                                Learner
+                            </h3>
+                            <p
+                                style={{
+                                    color: colors.text.secondary,
+                                    fontSize: '0.9rem',
+                                    lineHeight: 1.6,
+                                    marginBottom: spacing.lg,
+                                    margin: `0 0 ${spacing.lg} 0`,
+                                }}
+                            >
+                                Browse certifications, earn Sand Dollars, and customize your hermit avatar.
                             </p>
-                            <div className="flex flex-wrap gap-2 mb-6">
-                                <span className="bg-amber-100 text-amber-800 text-xs rounded-full px-3 py-1 font-medium">Marketplace</span>
-                                <span className="bg-amber-100 text-amber-800 text-xs rounded-full px-3 py-1 font-medium">Sand Dollars</span>
-                                <span className="bg-amber-100 text-amber-800 text-xs rounded-full px-3 py-1 font-medium">Streaks</span>
+
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg }}>
+                                {['Marketplace', 'Sand Dollars', 'Streaks'].map((tag) => (
+                                    <span
+                                        key={tag}
+                                        style={{
+                                            backgroundColor: colors.button.primaryLight,
+                                            color: colors.button.primary,
+                                            fontSize: typography.fontSize.xs,
+                                            padding: `${spacing.sm} ${spacing.md}`,
+                                            borderRadius: borderRadius.full,
+                                            fontWeight: 600,
+                                        }}
+                                    >
+                                        {tag}
+                                    </span>
+                                ))}
                             </div>
-                            <Link href={route('register')} className="block w-full text-center bg-amber-500 hover:bg-amber-600 text-white font-medium py-3 rounded-xl transition-colors">
-                                Register as student
-                            </Link>
+
+                            {canRegister && (
+                                <Link href={route('register')} style={{ textDecoration: 'none', display: 'block', width: '100%' }}>
+                                    <Button variant="filled" size="lg" style={{ width: '100%' }}>
+                                        Register as Learner
+                                    </Button>
+                                </Link>
+                            )}
                         </div>
 
-                        {/* CARD 2 — Teacher */}
-                        <div className="border border-stone-200 rounded-2xl p-6 flex flex-col h-full bg-white">
-                            <div className="w-10 h-10 rounded-xl bg-teal-100 flex items-center justify-center mb-4 text-xl">
+                        {/* Educator Card */}
+                        <div
+                            style={{
+                                border: `3px solid #6DB5D4`,
+                                borderRadius: borderRadius.lg,
+                                padding: spacing.xl,
+                                backgroundColor: '#FFFFFF',
+                                boxShadow: '0 5px 0 0 #5A9BAF',
+                            }}
+                        >
+                            <div
+                                style={{
+                                    width: '40px',
+                                    height: '40px',
+                                    borderRadius: borderRadius.sm,
+                                    backgroundColor: '#E0F5F0',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '1.5rem',
+                                    marginBottom: spacing.md,
+                                }}
+                            >
                                 👥
                             </div>
-                            <h3 className="font-bold text-lg text-stone-900">Teacher / Affiliate</h3>
-                            <p className="text-stone-500 text-sm mt-1 mb-4 flex-grow">
-                                Purchase bulk vouchers for your class and track every student's progress.
+                            <h3
+                                style={{
+                                    fontFamily: typography.fontFamily.heading,
+                                    fontWeight: 'bold',
+                                    fontSize: '1.2rem',
+                                    color: colors.text.primary,
+                                    marginBottom: spacing.sm,
+                                    margin: `0 0 ${spacing.sm} 0`,
+                                }}
+                            >
+                                Educator / Affiliate
+                            </h3>
+                            <p
+                                style={{
+                                    color: colors.text.secondary,
+                                    fontSize: '0.9rem',
+                                    lineHeight: 1.6,
+                                    marginBottom: spacing.lg,
+                                    margin: `0 0 ${spacing.lg} 0`,
+                                }}
+                            >
+                                Create affiliated hermit accounts, purchase vouchers, and track progress.
                             </p>
-                            <div className="flex flex-wrap gap-2 mb-4">
-                                <span className="bg-teal-100 text-teal-800 text-xs rounded-full px-3 py-1 font-medium">Bulk vouchers</span>
-                                <span className="bg-teal-100 text-teal-800 text-xs rounded-full px-3 py-1 font-medium">Cohort analytics</span>
-                            </div>
-                            <p className="text-xs text-stone-400 italic mb-4">
-                                Requires admin verification after registration.
-                            </p>
-                            <Link href={route('register.teacher')} className="block w-full text-center border border-stone-300 hover:bg-stone-50 text-stone-700 font-medium py-3 rounded-xl transition-colors mt-auto">
-                                Register as teacher
-                            </Link>
-                        </div>
 
-                        {/* CARD 3 — Creator */}
-                        <div className="border border-stone-200 rounded-2xl p-6 flex flex-col h-full bg-white opacity-50 pointer-events-none">
-                            <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center mb-4 text-xl">
-                                ✏️
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg }}>
+                                {['Bulk Vouchers', 'Analytics', 'Affiliate'].map((tag) => (
+                                    <span
+                                        key={tag}
+                                        style={{
+                                            backgroundColor: '#E0F5F0',
+                                            color: '#008080',
+                                            fontSize: typography.fontSize.xs,
+                                            padding: `${spacing.sm} ${spacing.md}`,
+                                            borderRadius: borderRadius.full,
+                                            fontWeight: 600,
+                                        }}
+                                    >
+                                        {tag}
+                                    </span>
+                                ))}
                             </div>
-                            <h3 className="font-bold text-lg text-stone-900">Content creator</h3>
-                            <p className="text-stone-500 text-sm mt-1 mb-4 flex-grow">
-                                Build certification shells, upload content, and earn from enrollments.
+
+                            <p
+                                style={{
+                                    fontSize: typography.fontSize.xs,
+                                    color: colors.text.secondary,
+                                    fontStyle: 'italic',
+                                    marginBottom: spacing.lg,
+                                    margin: `0 0 ${spacing.lg} 0`,
+                                }}
+                            >
+                                Requires verification after registration.
                             </p>
-                            <div className="flex flex-wrap gap-2 mb-6">
-                                <span className="bg-purple-100 text-purple-800 text-xs rounded-full px-3 py-1 font-medium">Creator studio</span>
-                                <span className="bg-purple-100 text-purple-800 text-xs rounded-full px-3 py-1 font-medium">Revenue share</span>
-                            </div>
-                            <button disabled className="block w-full text-center border border-stone-200 text-stone-400 font-medium py-3 rounded-xl mt-auto">
-                                Coming soon
-                            </button>
+
+                            {canRegister && (
+                                <Link href={route('register')} style={{ textDecoration: 'none', display: 'block', width: '100%' }}>
+                                    <Button
+                                        variant="filled"
+                                        size="lg"
+                                        style={{ width: '100%' }}
+                                    >
+                                        Register as Educator
+                                    </Button>
+                                </Link>
+                            )}
                         </div>
                     </div>
                 </section>
             )}
 
-            {/* GAMIFICATION STRIP */}
-            <section className="bg-stone-100 py-16 px-6 mt-16">
-                <div className="max-w-4xl mx-auto flex flex-col md:flex-row gap-8 items-start">
-                    <div className="w-16 h-16 rounded-2xl bg-amber-200 flex shrink-0 items-center justify-center text-3xl shadow-sm">
-                        🏆
-                    </div>
-                    <div>
-                        <h3 className="font-bold text-2xl text-stone-900">
-                            Keep your streak. Spend your Sand Dollars.
-                        </h3>
-                        <p className="text-stone-600 mt-3 text-lg max-w-2xl">
-                            Complete modules daily to maintain your learning streak. Every completed sandbox earns Sand Dollars — spend them in the Hermy shop to customize your avatar.
-                        </p>
-                        <div className="flex flex-col sm:flex-row gap-8 mt-8">
-                            <div>
-                                <p className="font-bold text-stone-900 text-lg flex items-center gap-2">🔥 Streaks</p>
-                                <p className="text-sm text-stone-500 mt-1">Daily learning rewards</p>
-                            </div>
-                            <div className="hidden sm:block w-px bg-stone-300"></div>
-                            <div>
-                                <p className="font-bold text-stone-900 text-lg flex items-center gap-2">💰 Sand Dollars</p>
-                                <p className="text-sm text-stone-500 mt-1">Platform currency</p>
-                            </div>
-                            <div className="hidden sm:block w-px bg-stone-300"></div>
-                            <div>
-                                <p className="font-bold text-stone-900 text-lg flex items-center gap-2">🦀 Hermy</p>
-                                <p className="text-sm text-stone-500 mt-1">Your avatar</p>
-                            </div>
+            {/* Gamification Section */}
+            <section
+                style={{
+                    backgroundColor: 'white',
+                    padding: `${spacing.xl} ${spacing.lg}`,
+                    margin: `${spacing.xl} 0 0 0`,
+                }}
+            >
+                <div
+                    style={{
+                        maxWidth: '1200px',
+                        margin: '0 auto',
+                    }}
+                >
+                    <div style={{ display: 'flex', gap: spacing.lg, marginBottom: spacing.lg }}>
+                        <div style={{ fontSize: '2rem' }}>🏆</div>
+                        <div>
+                            <h2
+                                style={{
+                                    fontFamily: typography.fontFamily.heading,
+                                    fontSize: '1.5rem',
+                                    color: colors.text.primary,
+                                    marginBottom: spacing.md,
+                                    margin: `0 0 ${spacing.md} 0`,
+                                }}
+                            >
+                                Keep your streak. Spend your Sand Dollars.
+                            </h2>
+                            <p
+                                style={{
+                                    color: colors.text.secondary,
+                                    fontSize: '1rem',
+                                    lineHeight: 1.6,
+                                    margin: 0,
+                                }}
+                            >
+                                Complete modules daily to maintain your learning streak. Every completed certification earns Sand Dollars — spend them in the Hermy shop to customize your avatar.
+                            </p>
                         </div>
+                    </div>
+
+                    <div
+                        style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                            gap: spacing.xl,
+                        }}
+                    >
+                        {[
+                            { icon: '🔥', label: 'Streaks', desc: 'Daily learning rewards' },
+                            { icon: '💰', label: 'Sand Dollars', desc: 'Platform currency' },
+                            { icon: '🦀', label: 'Hermy', desc: 'Your avatar' },
+                        ].map((item) => (
+                            <div
+                                key={item.label}
+                                style={{
+                                    textAlign: 'center',
+                                }}
+                            >
+                                <div style={{ fontSize: '2rem', marginBottom: spacing.md }}>
+                                    {item.icon}
+                                </div>
+                                <h4
+                                    style={{
+                                        fontFamily: typography.fontFamily.heading,
+                                        fontSize: '1rem',
+                                        color: colors.text.primary,
+                                        fontWeight: 'bold',
+                                        marginBottom: spacing.sm,
+                                        margin: `0 0 ${spacing.sm} 0`,
+                                    }}
+                                >
+                                    {item.label}
+                                </h4>
+                                <p
+                                    style={{
+                                        fontSize: typography.fontSize.sm,
+                                        color: colors.text.secondary,
+                                        margin: 0,
+                                    }}
+                                >
+                                    {item.desc}
+                                </p>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </section>
 
-            {/* FOOTER */}
-            <footer className="border-t border-stone-200 py-6 px-6 bg-white mt-12">
-                <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
-                    <p className="text-stone-400 text-sm">
-                        © 2026 Sandbox — Certification Platform
+            {/* Footer */}
+            <footer
+                style={{
+                    backgroundColor: colors.bg.primary,
+                    borderTop: `1px solid ${colors.border.light}`,
+                    padding: `${spacing.xl} ${spacing.lg}`,
+                    textAlign: 'center',
+                }}
+            >
+                <div
+                    style={{
+                        maxWidth: '1200px',
+                        margin: '0 auto',
+                    }}
+                >
+                    <p
+                        style={{
+                            color: colors.text.secondary,
+                            fontSize: typography.fontSize.sm,
+                            margin: `0 0 ${spacing.md} 0`,
+                        }}
+                    >
+                        © 2026 Sandbox — Learning Platform
                     </p>
-                    <div className="flex gap-6">
-                        <span className="text-stone-400 hover:text-stone-600 cursor-pointer text-sm transition-colors">Privacy</span>
-                        <span className="text-stone-400 hover:text-stone-600 cursor-pointer text-sm transition-colors">Terms</span>
-                        <span className="text-stone-400 hover:text-stone-600 cursor-pointer text-sm transition-colors">Contact</span>
+                    <div style={{ display: 'flex', gap: spacing.md, justifyContent: 'center' }}>
+                        <a
+                            href="#"
+                            style={{
+                                color: colors.text.link,
+                                textDecoration: 'underline',
+                                fontSize: typography.fontSize.xs,
+                                cursor: 'pointer',
+                            }}
+                        >
+                            Privacy
+                        </a>
+                        <a
+                            href="#"
+                            style={{
+                                color: colors.text.link,
+                                textDecoration: 'underline',
+                                fontSize: typography.fontSize.xs,
+                                cursor: 'pointer',
+                            }}
+                        >
+                            Terms
+                        </a>
+                        <a
+                            href="#"
+                            style={{
+                                color: colors.text.link,
+                                textDecoration: 'underline',
+                                fontSize: typography.fontSize.xs,
+                                cursor: 'pointer',
+                            }}
+                        >
+                            Contact
+                        </a>
                     </div>
                 </div>
             </footer>

@@ -1,12 +1,14 @@
-import React from 'react';
-import { colors, borderRadius, transitions } from '../Styles/theme';
+import React, { useState } from 'react';
+import { colors, shadows, transitions, borderRadius, typography } from '../Styles/theme';
 
 /**
- * Primary button component with multiple variants
- * @param {string} variant - 'primary', 'secondary', 'ghost', 'danger'
+ * Primary button component with multiple variants and hard shadow system
+ * Implements Duolingo-style press mechanic with hard shadows
+ * @param {string} variant - 'primary', 'secondary', 'ghost', 'danger', 'filled'
  * @param {string} size - 'sm', 'md', 'lg'
  * @param {boolean} isLoading - Show loading state
  * @param {boolean} disabled - Disable button
+ * @param {boolean} isFilled - For form-gated buttons (unfilled/filled states)
  * @param {function} onClick - Click handler
  * @param {ReactNode} children - Button content
  */
@@ -15,73 +17,134 @@ export const Button = ({
   size = 'md',
   isLoading = false,
   disabled = false,
+  isFilled = true,  // For form-gated buttons
   onClick,
   className = '',
   children,
   ...props
 }) => {
-  const baseStyles = `
-    font-medium rounded-lg transition-all duration-200 cursor-pointer
-    focus:outline-none focus:ring-2 focus:ring-offset-2
-    disabled:opacity-50 disabled:cursor-not-allowed
-    inline-flex items-center justify-center gap-2
-  `;
-
-  const variants = {
-    primary: `
-      bg-[${colors.button.primary}] text-white
-      hover:bg-[${colors.button.primaryDark}]
-      focus:ring-[${colors.button.primary}]
-      active:bg-[${colors.button.primaryDark}]
-    `,
-    secondary: `
-      bg-[${colors.button.secondary}] text-white
-      hover:bg-[${colors.button.secondaryDark}]
-      focus:ring-[${colors.button.secondary}]
-      active:bg-[${colors.button.secondaryDark}]
-    `,
-    ghost: `
-      bg-transparent border-2 border-[${colors.button.primary}] text-[${colors.button.primary}]
-      hover:bg-[${colors.button.primaryLight}]
-      focus:ring-[${colors.button.primary}]
-    `,
-    danger: `
-      bg-[${colors.status.error}] text-white
-      hover:bg-[${colors.status.error}] opacity-90 hover:opacity-100
-      focus:ring-[${colors.status.error}]
-    `,
+  const sizeMap = {
+    sm: { padding: '8px 12px', fontSize: '0.875rem', minHeight: '32px' },
+    md: { padding: '12px 24px', fontSize: '0.875rem', minHeight: '44px' },
+    lg: { padding: '16px 32px', fontSize: '0.875rem', minHeight: '52px' },
   };
 
-  const sizes = {
-    sm: 'px-3 py-2 text-sm min-h-8',
-    md: 'px-4 py-3 text-base min-h-10',
-    lg: 'px-6 py-4 text-lg min-h-12',
+  // Form-gated button: unfilled state (transparent border)
+  const unfilledStyle = {
+    backgroundColor: 'transparent',
+    color: colors.button.primary,
+    border: `2.5px solid ${colors.button.primary}`,
+    boxShadow: 'none',
+    cursor: 'default',
+    pointerEvents: 'none',
   };
 
-  const variantClass = variants[variant] || variants.primary;
-  const sizeClass = sizes[size] || sizes.md;
+  // Form-gated button: filled state (solid)
+  const filledPrimaryStyle = {
+    backgroundColor: colors.button.primary,
+    color: '#FFFFFF',
+    border: 'none',
+    boxShadow: shadows.btnPrimary,
+    cursor: 'pointer',
+    pointerEvents: 'auto',
+  };
+
+  // Form-gated button: filled secondary (sandy)
+  const filledSecondaryStyle = {
+    backgroundColor: colors.button.secondary,
+    color: colors.text.primary,
+    border: 'none',
+    boxShadow: shadows.btnSecondary,
+    cursor: 'pointer',
+    pointerEvents: 'auto',
+  };
+
+  const variantMap = {
+    primary: isFilled ? filledPrimaryStyle : unfilledStyle,
+    secondary: isFilled ? filledSecondaryStyle : unfilledStyle,
+    ghost: {
+      backgroundColor: colors.input.bg,
+      color: colors.button.primary,
+      border: `2px solid ${colors.button.primary}`,
+      boxShadow: shadows.input,
+    },
+    danger: {
+      backgroundColor: colors.status.error,
+      color: '#FFFFFF',
+      border: 'none',
+      boxShadow: shadows.errorBanner,
+    },
+    filled: {
+      backgroundColor: colors.button.primary,
+      color: '#FFFFFF',
+      border: 'none',
+      boxShadow: shadows.btnPrimary,
+    },
+  };
+
+  const baseStyle = {
+    ...sizeMap[size] || sizeMap.md,
+    ...variantMap[variant] || variantMap.primary,
+    borderRadius: borderRadius.lg,
+    fontWeight: 700,
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+    opacity: disabled ? 0.5 : 1,
+    transition: `transform ${transitions.base}, box-shadow ${transitions.base}`,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    textDecoration: 'none',
+    whiteSpace: 'nowrap',
+    fontFamily: typography.fontFamily.primary,
+  };
+
+  const { style: userStyle, ...restProps } = props;
 
   return (
     <button
       onClick={onClick}
-      disabled={disabled || isLoading}
-      className={`${baseStyles} ${variantClass} ${sizeClass} ${className}`}
-      style={{
-        backgroundColor: variant === 'primary' ? colors.button.primary : 
-                        variant === 'secondary' ? colors.button.secondary :
-                        variant === 'danger' ? colors.status.error : 'transparent',
-        color: variant === 'ghost' ? colors.button.primary : 'white',
-        border: variant === 'ghost' ? `2px solid ${colors.button.primary}` : 'none',
-        borderRadius: '8px',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        opacity: disabled ? 0.5 : 1,
-        transition: transitions.base,
+      disabled={disabled || isLoading || (variant === 'primary' && !isFilled)}
+      style={{ 
+        ...baseStyle, 
+        ...userStyle,
       }}
-      {...props}
+      onMouseDown={(e) => {
+        // Duolingo press mechanic: move down on active
+        if (!disabled && isFilled) {
+          e.currentTarget.style.transform = 'translateY(5px)';
+          e.currentTarget.style.boxShadow = '0 0 0 0 ' + 
+            (variant === 'secondary' ? '#B89A3A' : 
+             variant === 'danger' ? '#D07070' : 
+             '#A04035');
+        }
+      }}
+      onMouseUp={(e) => {
+        // Return to resting state
+        if (!disabled && isFilled) {
+          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.boxShadow = 
+            (variant === 'secondary' ? shadows.btnSecondary : 
+             variant === 'danger' ? shadows.errorBanner : 
+             shadows.btnPrimary);
+        }
+      }}
+      onMouseLeave={(e) => {
+        // Ensure clean state on mouse leave
+        if (!disabled && isFilled) {
+          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.boxShadow = 
+            (variant === 'secondary' ? shadows.btnSecondary : 
+             variant === 'danger' ? shadows.errorBanner : 
+             shadows.btnPrimary);
+        }
+      }}
+      {...restProps}
     >
       {isLoading ? (
         <>
-          <span className="animate-spin">⟳</span>
+          <span style={{ animation: 'spin 1s linear infinite' }}>⟳</span>
           Loading...
         </>
       ) : (

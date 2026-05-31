@@ -1,84 +1,91 @@
 /**
  * Sandbox Design System - Theme & Tokens
- * Centralized color, spacing, and typography definitions
+ * Derived from comprehensive mockup analysis
+ * Master UI Styling Guide v1.0
  */
 
 export const colors = {
   // Backgrounds
   bg: {
-    primary: '#FAF4ED',    // Warm cream
-    secondary: '#F5E6D3',  // Softer beige
-    light: '#FFFAF5',      // Off-white
-    dark: '#2C3E50',       // Dark charcoal
+    primary: '#FAF0DC',    // Warm cream (page background)
+    secondary: '#F2E4BF',  // Light sandy (input background)
+    light: '#FFFFFF',      // White (card backgrounds)
+    dark: '#4A3F35',       // Dark brown-gray (text)
   },
 
   // Buttons & Actions
   button: {
-    primary: '#ED8680',    // Coral red
-    primaryDark: '#D97269', // Darker coral
-    primaryLight: '#F5A5A1', // Light coral
-    secondary: '#A0725A',  // Rustic brown
-    secondaryDark: '#8B6B5E', // Darker brown
+    primary: '#E8735A',        // Coral salmon (primary CTA)
+    primaryDark: '#A04035',    // Dark coral (button shadow color)
+    primaryLight: '#F5A5A1',   // Light coral (tags, backgrounds)
+    secondary: '#E8C97A',      // Sandy yellow ("I ALREADY HAVE A SHELL")
+    secondaryDark: '#B89A3A',  // Sandy dark (secondary button shadow)
   },
 
   // Text & Content
   text: {
-    primary: '#2C3E50',    // Dark charcoal
-    secondary: '#5F6B7A',  // Medium gray
-    light: '#8B9BA8',      // Light gray
-    white: '#FFFFFF',
-    muted: '#A8B3BA',      // Muted gray for placeholders
+    primary: '#4A3F35',        // Dark brown-gray (headings, body)
+    secondary: '#5F6B7A',      // Medium gray (secondary text)
+    light: '#8B9BA8',          // Light gray
+    white: '#FFFFFF',          // White
+    muted: '#B09A78',          // Muted tan (placeholder text)
+    helper: '#8C7A62',         // Helper text color
+    link: '#7A8FA6',           // Link text (underlined)
   },
 
   // Inputs & Forms
   input: {
-    bg: '#FFF9F5',         // Cream background
-    border: '#D9CFC0',     // Light tan border
-    borderFocus: '#ED8680', // Red on focus
-    borderError: '#F5A5A1', // Light red for error
-    placeholder: '#A8B3BA', // Muted placeholder
+    bg: '#F2E4BF',             // Light sandy background
+    border: '#D4BC8A',         // Warm tan border
+    borderFocus: '#E8735A',    // Coral on focus
+    borderError: '#F4A0A0',    // Soft pink-red on error
+    placeholder: '#B09A78',    // Muted tan placeholder
   },
 
   // Status Colors
   status: {
-    success: '#6BBF8E',    // Green
-    error: '#ED7B77',      // Red
-    warning: '#F5B95F',    // Orange
-    info: '#6B9FBF',       // Blue
+    success: '#4CAF50',        // Leaf green (password requirements met)
+    error: '#F4A0A0',          // Soft pink-red (error banner)
+    errorText: '#FFFFFF',      // White text on error banner
+    warning: '#F5B95F',        // Orange
+    info: '#6B9FBF',           // Blue
   },
 
   // Borders & Dividers
   border: {
-    light: '#E8DDD2',      // Light border
-    medium: '#D9CFC0',     // Medium border
-    dark: '#8B9BA8',       // Dark border
+    light: '#E8DCCC',          // Light warm gray (nav border)
+    medium: '#D4BC8A',         // Medium warm tan
+    dark: '#8B9BA8',           // Dark border
   },
 };
 
 export const spacing = {
-  xs: '0.25rem',
-  sm: '0.5rem',
-  md: '1rem',
-  lg: '1.5rem',
-  xl: '2rem',
-  '2xl': '2.5rem',
-  '3xl': '3rem',
-  '4xl': '4rem',
+  xs: '4px',
+  sm: '8px',
+  md: '16px',
+  lg: '24px',
+  xl: '32px',
+  '2xl': '48px',
+  '3xl': '64px',
+  '4xl': '80px',
 };
 
 export const typography = {
   fontFamily: {
-    primary: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif",
+    primary: "Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif",
+    brand: "'Sparky Stones', Georgia, serif",      // Logo/wordmark only
+    heading: "'Montley Forces', Georgia, serif",   // Page titles
   },
   fontSize: {
-    xs: '0.75rem',
-    sm: '0.875rem',
-    base: '1rem',
-    lg: '1.125rem',
-    xl: '1.25rem',
-    '2xl': '1.5rem',
-    '3xl': '1.875rem',
-    '4xl': '2.25rem',
+    xs: '0.75rem',       // 12px - fine print
+    sm: '0.875rem',      // 14px - helper text, buttons
+    base: '1rem',        // 16px - body text, form labels
+    lg: '1.125rem',      // 18px - section headers
+    xl: '1.25rem',       // 20px
+    '2xl': '1.5rem',     // 24px - error banner text
+    '3xl': '1.875rem',   // 30px - page titles (h1)
+    '4xl': '2rem',       // 32px
+    display: '2.5rem',   // 40px - hero headline
   },
   fontWeight: {
     normal: 400,
@@ -94,24 +101,27 @@ export const typography = {
 };
 
 export const shadows = {
-  sm: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-  md: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-  lg: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-  xl: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+  // Hard/flat shadows — ZERO blur, ZERO spread, opaque darker shade (Duolingo style)
+  btnPrimary: '0 5px 0 0 #A04035',      // Coral button shadow (dark coral)
+  btnSecondary: '0 5px 0 0 #B89A3A',    // Sandy button shadow (dark sandy)
+  input: '0 4px 0 0 #C4AC7A',           // Input field shadow (warm tan)
+  backBtn: '0 4px 0 0 #C4AC7A',         // Back button shadow (warm tan)
+  errorBanner: '0 5px 0 0 #D07070',     // Error banner shadow
+  card: '0 5px 0 0 #C8B88A',            // Card/container shadow
 };
 
 export const borderRadius = {
   none: '0',
-  sm: '0.25rem',
-  md: '0.375rem',
-  lg: '0.5rem',
+  sm: '8px',
+  md: '12px',
+  lg: '16px',
   full: '9999px',
 };
 
 export const transitions = {
   fast: '150ms cubic-bezier(0.4, 0, 0.2, 1)',
   base: '200ms cubic-bezier(0.4, 0, 0.2, 1)',
-  slow: '300ms cubic-bezier(0.4, 0, 0.2, 1)',
+  slow: '400ms cubic-bezier(0.4, 0, 0.2, 1)',
 };
 
 export const theme = {

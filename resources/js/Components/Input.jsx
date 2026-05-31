@@ -1,8 +1,8 @@
 import React, { forwardRef } from 'react';
-import { colors, borderRadius, transitions } from '../Styles/theme';
+import { colors, borderRadius, transitions, typography, shadows } from '../Styles/theme';
 
 /**
- * Base text input component
+ * Base text input component with hard shadow system
  * @param {string} type - Input type (text, email, password, number, etc.)
  * @param {string} label - Label text
  * @param {string} placeholder - Placeholder text
@@ -27,12 +27,16 @@ export const Input = forwardRef(({
   const inputId = props.id || `input-${Math.random()}`;
 
   return (
-    <div className="flex flex-col gap-2 w-full">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
       {label && (
         <label
           htmlFor={inputId}
-          style={{ color: colors.text.primary, fontWeight: 600 }}
-          className="text-sm"
+          style={{ 
+            color: colors.text.primary, 
+            fontWeight: 700, 
+            fontSize: '1rem',
+            fontFamily: typography.fontFamily.primary,
+          }}
         >
           {label}
           {required && <span style={{ color: colors.status.error }}>*</span>}
@@ -46,29 +50,39 @@ export const Input = forwardRef(({
         onChange={onChange}
         placeholder={placeholder}
         disabled={disabled}
-        className={`w-full px-4 py-3 rounded-lg transition-all ${className}`}
         style={{
+          width: '100%',
+          padding: '12px 16px',
           backgroundColor: colors.input.bg,
-          border: `1px solid ${error ? colors.input.borderError : colors.input.border}`,
+          border: `2px solid ${error ? colors.status.error : colors.input.border}`,
+          borderRadius: borderRadius.lg,
           color: colors.text.primary,
           fontSize: '1rem',
-          fontFamily: colors.typography.fontFamily.primary,
+          fontFamily: typography.fontFamily.primary,
           opacity: disabled ? 0.6 : 1,
           cursor: disabled ? 'not-allowed' : 'text',
           outline: 'none',
+          transition: transitions.base,
+          boxShadow: shadows.input,
+          fontWeight: 500,
         }}
         onFocus={(e) => {
-          e.target.style.borderColor = error ? colors.input.borderError : colors.input.borderFocus;
-          e.target.style.boxShadow = `0 0 0 3px ${error ? colors.button.primaryLight : colors.button.primaryLight}`;
+          e.target.style.borderColor = error ? colors.status.error : colors.button.primary;
+          e.target.style.backgroundColor = colors.input.bg;
         }}
         onBlur={(e) => {
-          e.target.style.borderColor = error ? colors.input.borderError : colors.input.border;
-          e.target.style.boxShadow = 'none';
+          e.target.style.borderColor = error ? colors.status.error : colors.input.border;
         }}
         {...props}
       />
       {error && (
-        <p style={{ color: colors.status.error }} className="text-sm font-medium">
+        <p style={{ 
+          color: colors.status.error, 
+          fontSize: '0.875rem', 
+          fontWeight: 600, 
+          margin: 0,
+          fontFamily: typography.fontFamily.primary,
+        }}>
           {error}
         </p>
       )}
