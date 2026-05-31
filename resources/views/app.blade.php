@@ -12,6 +12,10 @@
         @routes
         @viteReactRefresh
         @vite(['resources/js/app.jsx', "resources/js/Pages/{$page['component']}.jsx"])
+
+        {{-- Sandbox UI components — after Tailwind so styles are not reset --}}
+        @include('partials.sandbox-components-styles')
+
         @inertiaHead
     </head>
     <body class="font-sans antialiased">

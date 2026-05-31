@@ -1,5 +1,6 @@
+@import './sandbox-components.css';
+@import './sandbox-admin.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import './sandbox-components.css';
