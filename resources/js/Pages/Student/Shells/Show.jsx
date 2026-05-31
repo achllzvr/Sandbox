@@ -1,14 +1,31 @@
 import { Head, router, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import StudentExamDisclaimerModal from '@/Components/Student/StudentExamDisclaimerModal';
+import StudentQuizResults from '@/Components/Student/StudentQuizResults';
+import StudentSandboxQuiz from '@/Components/Student/StudentSandboxQuiz';
 import StudentShellMap from '@/Components/Student/StudentShellMap';
 import StudentLayout from '@/Layouts/StudentLayout';
+import { clearExamDraft, hasExamDraft, loadExamDraft, saveExamDraft } from '@/utils/examProgressStorage';
+import { shellThemeCssVars, themeKeyForShell } from '@/utils/shellThemes';
 import { assetUrl } from '@/utils/assetUrl';
 
 export default function Show() {
-    const { certification, progress, shellMeta: shellMetaProp, auth } = usePage().props;
+    const {
+        certification,
+        progress,
+        moduleProgress = {},
+        shellMeta: shellMetaProp,
+        examStatus = {},
+        auth,
+    } = usePage().props;
+
+    const userId = auth?.user?.id;
+
     const [viewingModule, setViewingModule] = useState(null);
+    const [isReviewMode, setIsReviewMode] = useState(false);
     const [contentIndex, setContentIndex] = useState(0);
     const [isViewingQuiz, setIsViewingQuiz] = useState(false);
+    const [isViewingResults, setIsViewingResults] = useState(false);
     const [quizIndex, setQuizIndex] = useState(0);
     const [selectedAnswer, setSelectedAnswer] = useState(null);
     const [answerStatus, setAnswerStatus] = useState('unanswered');
@@ -18,16 +35,136 @@ export default function Show() {
     const [isTakingFinalExam, setIsTakingFinalExam] = useState(false);
     const [isViewingCertificate, setIsViewingCertificate] = useState(false);
     const [contentFinished, setContentFinished] = useState(false);
+    const [examIntroOpen, setExamIntroOpen] = useState(false);
+    const [examExitOpen, setExamExitOpen] = useState(false);
+    const [examDraftAvailable, setExamDraftAvailable] = useState(() => hasExamDraft(certification.id, userId));
 
     const allModules = certification.lessons.flatMap((lesson) => lesson.modules);
     const isCompleted = (moduleId) => progress.completed_module_ids?.includes(moduleId);
-    const isUnlocked = (index) => {
-        if (index === 0) {
-            return true;
-        }
-        return isCompleted(allModules[index - 1].id);
+    const isAllCompleted = progress.completed_modules >= progress.total_modules && progress.total_modules > 0;
+
+    const shellMeta = shellMetaProp ?? {
+        badge_type: 'pro',
+        badge_label: 'Professional Certificate',
+        github_verified: false,
+        progress: progress.percentage,
+        completed_modules: progress.completed_modules,
+        total_modules: progress.total_modules,
+        theme: 'pink',
     };
-    const isAllCompleted = progress.completed_modules === progress.total_modules;
+    const themeVars = shellThemeCssVars(themeKeyForShell(shellMeta));
+
+    const resetSession = useCallback(() => {
+        setViewingModule(null);
+        setIsReviewMode(false);
+        setContentIndex(0);
+        setIsViewingQuiz(false);
+        setIsViewingResults(false);
+        setQuizIndex(0);
+        setSelectedAnswer(null);
+        setAnswerStatus('unanswered');
+        setScore(0);
+        setUserAnswers([]);
+        setIsViewingSummary(false);
+        setIsTakingFinalExam(false);
+        setContentFinished(false);
+    }, []);
+
+    const reloadShellProgress = useCallback(() => {
+        router.reload({ only: ['progress', 'moduleProgress', 'examStatus'], preserveScroll: true });
+    }, []);
+
+    useEffect(() => {
+        if (!isTakingFinalExam || !userId) {
+            return;
+        }
+
+        saveExamDraft(certification.id, userId, { quizIndex, userAnswers });
+        setExamDraftAvailable(true);
+    }, [isTakingFinalExam, quizIndex, userAnswers, certification.id, userId]);
+
+    const beginFinalExam = useCallback(
+        ({ resume = false } = {}) => {
+            resetSession();
+            setIsTakingFinalExam(true);
+
+            if (resume) {
+                const draft = loadExamDraft(certification.id, userId);
+                if (draft) {
+                    setQuizIndex(draft.quizIndex);
+                    setUserAnswers(draft.userAnswers);
+                    setSelectedAnswer(null);
+                    setAnswerStatus('unanswered');
+                    setScore(0);
+                    return;
+                }
+            }
+
+            setQuizIndex(0);
+            setSelectedAnswer(null);
+            setAnswerStatus('unanswered');
+            setScore(0);
+            setUserAnswers([]);
+        },
+        [certification.id, userId, resetSession],
+    );
+
+    const returnToShellMap = useCallback(
+        (moduleId = viewingModule?.id) => {
+            const alreadyDone = moduleId && progress.completed_module_ids?.includes(moduleId);
+
+            const goToMap = () => {
+                router.get(route('student.shells.show', certification.id), {}, {
+                    preserveScroll: true,
+                });
+            };
+
+            if (!moduleId || alreadyDone) {
+                goToMap();
+                return;
+            }
+
+            router.post(route('student.shells.modules.complete', moduleId), {}, {
+                preserveScroll: true,
+                onFinish: goToMap,
+            });
+        },
+        [viewingModule?.id, progress.completed_module_ids, certification.id],
+    );
+
+    const openModule = useCallback(
+        (module, { review = false } = {}) => {
+            resetSession();
+            setViewingModule(module);
+            setIsReviewMode(review);
+
+            if (review) {
+                const saved = moduleProgress[module.id];
+                const hasQuiz = module.questions?.length > 0;
+                const hasContent = module.contents?.length > 0;
+
+                if (hasQuiz && !hasContent) {
+                    setScore(saved?.score ?? 0);
+                    setIsViewingResults(true);
+                } else if (hasContent) {
+                    setContentFinished(true);
+                }
+            }
+        },
+        [moduleProgress, resetSession],
+    );
+
+    const buildSubmission = useCallback(
+        (questions) => {
+            const current = questions[quizIndex];
+            if (!current || !selectedAnswer) {
+                return userAnswers;
+            }
+            const withoutCurrent = userAnswers.filter((a) => a.question_id !== current.id);
+            return [...withoutCurrent, { question_id: current.id, selected_option: selectedAnswer }];
+        },
+        [quizIndex, selectedAnswer, userAnswers],
+    );
 
     if (isViewingCertificate) {
         return (
@@ -59,31 +196,16 @@ export default function Show() {
                         style={{ position: 'absolute', right: 32, bottom: 0, width: 160 }}
                     />
                 </div>
-                <div className="student-certificate__actions">
-                    <button type="button" className="student-certificate__action-btn" onClick={() => alert('TODO: Copy certificate link')}>
-                        COPY LINK <span className="student-todo-badge">TODO</span>
-                    </button>
-                    <button type="button" className="student-certificate__action-btn" onClick={() => alert('TODO: Download PDF')}>
-                        DOWNLOAD <span className="student-todo-badge">TODO</span>
-                    </button>
-                    <button type="button" className="student-certificate__action-btn" onClick={() => alert('TODO: Share certificate')}>
-                        SHARE <span className="student-todo-badge">TODO</span>
-                    </button>
-                </div>
             </div>
         );
     }
 
-    if (isViewingSummary) {
+    if (isViewingSummary && viewingModule) {
         const videosCount =
-            viewingModule?.contents?.filter(
-                (c) => c.content_type === 'video' || c.content_type === 'youtube_embed',
-            ).length || 0;
+            viewingModule.contents?.filter((c) => c.content_type === 'video' || c.content_type === 'youtube_embed').length || 0;
         const presentationsCount =
-            viewingModule?.contents?.filter(
-                (c) => c.content_type === 'presentation' || c.content_type === 'document',
-            ).length || 0;
-        const questionsCount = viewingModule?.questions?.length || 0;
+            viewingModule.contents?.filter((c) => c.content_type === 'presentation' || c.content_type === 'document').length || 0;
+        const questionsCount = viewingModule.questions?.length || 0;
 
         return (
             <div className="student-finish">
@@ -117,7 +239,7 @@ export default function Show() {
                         <div className="student-finish__stat">
                             <p className="student-finish__stat-label">Test score</p>
                             <p className="student-finish__stat-value">
-                                {score}/{questionsCount}
+                                {(moduleProgress[viewingModule.id]?.score ?? score)}/{questionsCount}
                             </p>
                         </div>
                     )}
@@ -125,60 +247,66 @@ export default function Show() {
                 <div className="student-finish__progress">
                     <p className="student-finish__progress-title">Shell progress</p>
                     <div className="student-finish__progress-icons">
-                        {allModules.map((m) => (
+                        {allModules.map((module) => (
                             <img
-                                key={m.id}
-                                src={assetUrl('images/shells/shell_var2.png')}
+                                key={module.id}
+                                src={assetUrl(
+                                    isCompleted(module.id)
+                                        ? 'images/shells/shell_var1.png'
+                                        : 'images/shells/shell_var2.png',
+                                )}
+                                className={isCompleted(module.id) ? 'is-done' : ''}
                                 alt=""
-                                className={isCompleted(m.id) || m.id === viewingModule?.id ? 'is-done' : ''}
                             />
                         ))}
-                        <img src={assetUrl('images/shells/castle_final_exam.png')} alt="" className={isAllCompleted ? 'is-done' : ''} />
+                        <img
+                            src={assetUrl('images/shells/castle_final_exam.png')}
+                            className={examStatus.has_passed ? 'is-done' : ''}
+                            alt=""
+                        />
                     </div>
                 </div>
                 <button
                     type="button"
-                    className="student-sandbox__action student-sandbox__action--primary"
-                    style={{ background: '#fdf6e3', color: '#57534e', boxShadow: '0 4px 0 0 #c4ac7a' }}
-                    onClick={() => {
-                        router.post(
-                            route('student.shells.modules.complete', viewingModule.id),
-                            {},
-                            {
-                                preserveScroll: true,
-                                onSuccess: () => {
-                                    setIsViewingSummary(false);
-                                    setViewingModule(null);
-                                    setUserAnswers([]);
-                                },
-                            },
-                        );
-                    }}
+                    className="student-sandbox__action student-sandbox__action--primary student-finish__back"
+                    onClick={() => returnToShellMap(viewingModule.id)}
                 >
-                    BACK TO SHELL MENU
+                    Back to shell map
                 </button>
             </div>
         );
     }
 
-    if (isViewingQuiz || isTakingFinalExam) {
+    if (isViewingResults && viewingModule) {
+        const saved = moduleProgress[viewingModule.id];
+        return (
+            <>
+                <Head title={`${viewingModule.title} — Results`} />
+                <div style={themeVars}>
+                    <StudentQuizResults
+                        module={viewingModule}
+                        score={saved?.score ?? score}
+                        total={viewingModule.questions?.length ?? 0}
+                        reviewOnly
+                        onBack={() => returnToShellMap(viewingModule.id)}
+                    />
+                </div>
+            </>
+        );
+    }
+
+    if ((isViewingQuiz || isTakingFinalExam) && (viewingModule || isTakingFinalExam)) {
         const questionsSource = isTakingFinalExam ? certification.exam_questions : viewingModule?.questions;
         const questions = questionsSource || [];
-        const currentQuestion = questions[quizIndex];
-        const isLastQuestion = quizIndex === questions.length - 1;
 
-        if (!currentQuestion) {
+        if (questions.length === 0) {
             return (
-                <div className="student-sandbox">
+                <div className="student-sandbox" style={themeVars}>
                     <Head title="Quiz" />
                     <div className="student-sandbox__content">
-                        <h2 className="student-quiz__question">No questions available.</h2>
-                        <button
-                            type="button"
-                            className="student-sandbox__action student-sandbox__action--primary"
-                            onClick={() => (isTakingFinalExam ? setIsViewingCertificate(true) : setIsViewingSummary(true))}
-                        >
-                            Finish
+                        <p className="student-quiz__empty">No questions available for this sandbox.</p>
+                        <button type="button" className="student-sandbox__action student-sandbox__action--primary" onClick={returnToShellMap}>
+                            Back to shell map
                         </button>
                     </div>
                 </div>
@@ -187,169 +315,151 @@ export default function Show() {
 
         const submitAnswers = (finalAnswersList) => {
             if (isTakingFinalExam) {
-                router.post(
-                    route('student.certifications.exam.submit', certification.id),
-                    { answers: finalAnswersList },
-                    {
-                        preserveScroll: true,
-                        onSuccess: () => {
-                            setIsViewingCertificate(true);
-                            setUserAnswers([]);
-                        },
-                        onError: () => {
-                            setIsTakingFinalExam(false);
-                            setUserAnswers([]);
-                            alert('Final exam failed! Review the sandboxes and try again.');
-                        },
+                router.post(route('student.certifications.exam.submit', certification.id), { answers: finalAnswersList }, {
+                    preserveScroll: true,
+                    preserveState: true,
+                    onSuccess: () => {
+                        clearExamDraft(certification.id, userId);
+                        setExamDraftAvailable(false);
+                        resetSession();
+                        reloadShellProgress();
+                        setIsViewingCertificate(true);
                     },
-                );
-            } else {
-                router.post(
-                    route('student.modules.quiz.submit', viewingModule.id),
-                    { answers: finalAnswersList },
-                    {
-                        preserveScroll: true,
-                        onSuccess: () => {
-                            setIsViewingSummary(true);
-                            setUserAnswers([]);
-                        },
+                    onError: () => {
+                        clearExamDraft(certification.id, userId);
+                        setExamDraftAvailable(false);
+                        setIsTakingFinalExam(false);
+                        reloadShellProgress();
+                        alert('Final exam failed! Review the sandboxes and try again.');
                     },
-                );
+                });
+                return;
             }
+
+            router.post(route('student.modules.quiz.submit', viewingModule.id), { answers: finalAnswersList }, {
+                preserveScroll: true,
+                preserveState: true,
+                onSuccess: () => {
+                    setIsViewingQuiz(false);
+                    setUserAnswers([]);
+                    setIsViewingSummary(true);
+                    reloadShellProgress();
+                },
+            });
         };
 
         const handleCheckAnswer = () => {
-            const answer = currentQuestion.answers.find((a) => a.id === selectedAnswer);
-            if (userAnswers.length === quizIndex) {
-                setUserAnswers([...userAnswers, { question_id: currentQuestion.id, selected_option: selectedAnswer }]);
-            }
+            const current = questions[quizIndex];
+            const answer = current.answers.find((a) => a.id === selectedAnswer);
             if (answer?.is_correct) {
                 setAnswerStatus('correct');
-                setScore(score + 1);
+                setUserAnswers(buildSubmission(questions));
+                const alreadyRecorded = userAnswers.some((a) => a.question_id === current.id);
+                if (!alreadyRecorded) {
+                    setScore((s) => s + 1);
+                }
             } else {
                 setAnswerStatus('incorrect');
             }
         };
 
         const handleNext = () => {
-            let finalAnswersList = userAnswers;
-            if (isTakingFinalExam && userAnswers.length === quizIndex) {
-                finalAnswersList = [...userAnswers, { question_id: currentQuestion.id, selected_option: selectedAnswer }];
-                setUserAnswers(finalAnswersList);
-            }
-            if (isLastQuestion) {
+            const finalAnswersList = isTakingFinalExam || answerStatus === 'correct'
+                ? buildSubmission(questions)
+                : userAnswers;
+            setUserAnswers(finalAnswersList);
+
+            if (quizIndex >= questions.length - 1) {
                 submitAnswers(finalAnswersList);
-            } else {
-                setQuizIndex(quizIndex + 1);
-                setSelectedAnswer(null);
-                setAnswerStatus('unanswered');
+                return;
+            }
+
+            const nextIndex = quizIndex + 1;
+            setQuizIndex(nextIndex);
+            setSelectedAnswer(null);
+            setAnswerStatus('unanswered');
+
+            if (isTakingFinalExam && userId) {
+                saveExamDraft(certification.id, userId, {
+                    quizIndex: nextIndex,
+                    userAnswers: finalAnswersList,
+                });
             }
         };
 
+        const handleExamCloseRequest = () => {
+            if (isTakingFinalExam) {
+                setExamExitOpen(true);
+                return;
+            }
+            returnToShellMap(viewingModule?.id);
+        };
+
+        const confirmExamExit = () => {
+            if (userId) {
+                saveExamDraft(certification.id, userId, { quizIndex, userAnswers });
+                setExamDraftAvailable(true);
+            }
+            setExamExitOpen(false);
+            resetSession();
+            router.get(route('student.shells.show', certification.id), {}, { preserveScroll: true });
+        };
+
         return (
-            <div className="student-sandbox">
+            <>
                 <Head title={isTakingFinalExam ? 'Final Exam' : viewingModule?.title} />
-                <header className="student-sandbox__header">
-                    <button
-                        type="button"
-                        className="student-sandbox__header-btn"
-                        onClick={() => (isTakingFinalExam ? setIsTakingFinalExam(false) : setIsViewingQuiz(false))}
-                    >
-                        ✕
-                    </button>
-                    <h2 className="student-sandbox__header-title">
-                        {isTakingFinalExam ? 'Final Exam' : viewingModule?.title}
-                    </h2>
-                    <button type="button" className="student-sandbox__header-btn">
-                        ↑
-                    </button>
-                </header>
-                <div className="student-sandbox__content">
-                    <div className="student-quiz__progress">
-                        <div
-                            className="student-quiz__progress-bar"
-                            style={{ width: `${((quizIndex + 1) / questions.length) * 100}%` }}
-                        />
-                    </div>
-                    <h3 className="student-quiz__question">{currentQuestion.question_text}</h3>
-                    <div className="student-quiz__grid">
-                        {currentQuestion.answers?.map((answer) => {
-                            const isSelected = selectedAnswer === answer.id;
-                            let stateClass = '';
-                            if (isSelected) {
-                                if (answerStatus === 'unanswered') {
-                                    stateClass = 'student-quiz__option--selected';
-                                } else if (answerStatus === 'correct') {
-                                    stateClass = 'student-quiz__option--correct';
-                                } else {
-                                    stateClass = 'student-quiz__option--wrong';
-                                }
-                            }
-                            return (
-                                <button
-                                    key={answer.id}
-                                    type="button"
-                                    disabled={answerStatus !== 'unanswered'}
-                                    onClick={() => setSelectedAnswer(answer.id)}
-                                    className={`student-quiz__option ${stateClass}`}
-                                >
-                                    {answer.answer_text}
-                                </button>
-                            );
-                        })}
-                    </div>
-                    {answerStatus === 'unanswered' ? (
-                        <button
-                            type="button"
-                            disabled={!selectedAnswer}
-                            onClick={handleCheckAnswer}
-                            className={`student-sandbox__action ${selectedAnswer ? 'student-sandbox__action--primary' : 'student-sandbox__action--disabled'}`}
-                        >
-                            {selectedAnswer ? 'CHECK ANSWER' : 'SELECT THE CORRECT ANSWER'}
-                        </button>
-                    ) : answerStatus === 'correct' || isTakingFinalExam ? (
-                        <button type="button" onClick={handleNext} className="student-sandbox__action student-sandbox__action--primary">
-                            {isLastQuestion
-                                ? isTakingFinalExam
-                                    ? 'CLAIM CERTIFICATE'
-                                    : 'FINISH SANDBOX'
-                                : 'NEXT QUESTION'}
-                        </button>
-                    ) : (
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setAnswerStatus('unanswered');
-                                setSelectedAnswer(null);
-                            }}
-                            className="student-sandbox__action student-sandbox__action--disabled"
-                        >
-                            TRY AGAIN!
-                        </button>
-                    )}
+                <div style={themeVars}>
+                    <StudentSandboxQuiz
+                        title={viewingModule?.title}
+                        questions={questions}
+                        quizIndex={quizIndex}
+                        selectedAnswer={selectedAnswer}
+                        answerStatus={answerStatus}
+                        onSelectAnswer={setSelectedAnswer}
+                        onCheckAnswer={handleCheckAnswer}
+                        onNext={handleNext}
+                        onRetry={() => {
+                            setAnswerStatus('unanswered');
+                            setSelectedAnswer(null);
+                        }}
+                        onClose={handleExamCloseRequest}
+                        isFinalExam={isTakingFinalExam}
+                    />
                 </div>
-            </div>
+                <StudentExamDisclaimerModal
+                    show={examExitOpen}
+                    variant="exit"
+                    shellMeta={shellMeta}
+                    onConfirm={confirmExamExit}
+                    onCancel={() => setExamExitOpen(false)}
+                />
+            </>
         );
     }
 
     if (viewingModule) {
         const contents = viewingModule.contents || [];
+        const hasQuiz = viewingModule.questions?.length > 0;
 
-        const closeViewer = () => {
-            setViewingModule(null);
-            setContentIndex(0);
-            setContentFinished(false);
-        };
+        const closeViewer = () => returnToShellMap(viewingModule.id);
 
         const proceedFromContent = () => {
             const atEnd = contents.length === 0 || contentIndex === contents.length - 1;
 
             if (atEnd) {
-                const hasQuiz = viewingModule.questions?.length > 0;
+                if (isReviewMode && hasQuiz) {
+                    setIsViewingResults(true);
+                    return;
+                }
+                if (isReviewMode) {
+                    returnToShellMap(viewingModule.id);
+                    return;
+                }
                 setScore(0);
                 setQuizIndex(0);
                 setSelectedAnswer(null);
                 setAnswerStatus('unanswered');
+                setUserAnswers([]);
                 if (hasQuiz) {
                     setIsViewingQuiz(true);
                 } else {
@@ -359,91 +469,94 @@ export default function Show() {
             }
 
             setContentIndex(contentIndex + 1);
-            setContentFinished(false);
+            if (!isReviewMode) {
+                setContentFinished(false);
+            }
         };
 
         const currentContent = contents[contentIndex];
         const isLastContent = contentIndex === contents.length - 1;
 
-        let actionLabel = 'PROCEED TO NEXT MATERIAL';
+        let actionLabel = 'Next material';
         if (contents.length === 0) {
-            actionLabel = 'PROCEED TO QUIZ';
+            actionLabel = hasQuiz ? 'Proceed to quiz' : 'Finish sandbox';
+        } else if (isReviewMode && isLastContent) {
+            actionLabel = hasQuiz ? 'View quiz results' : 'Back to shell map';
         } else if (isLastContent) {
-            actionLabel = viewingModule.questions?.length ? 'PROCEED TO QUIZ' : 'FINISH SANDBOX';
+            actionLabel = hasQuiz ? 'Proceed to quiz' : 'Finish sandbox';
         } else {
             const next = contents[contentIndex + 1];
-            const typeMap = { video: 'VIDEO', youtube_embed: 'VIDEO', presentation: 'PRESENTATION', document: 'DOCUMENT' };
-            actionLabel = `PROCEED TO ${typeMap[next.content_type] || 'NEXT MATERIAL'}`;
+            const typeMap = { video: 'video', youtube_embed: 'video', presentation: 'presentation', document: 'document' };
+            actionLabel = `Next ${typeMap[next.content_type] || 'material'}`;
         }
 
-        const actionDisabled = contents.length > 0 && !contentFinished;
+        const actionDisabled = !isReviewMode && contents.length > 0 && !contentFinished;
 
         return (
-            <div className="student-sandbox">
+            <div className="student-sandbox student-sandbox--material" style={themeVars}>
                 <Head title={`${viewingModule.title} — Sandbox`} />
                 <header className="student-sandbox__header">
-                    <button type="button" className="student-sandbox__header-btn" onClick={closeViewer}>
+                    <button type="button" className="student-sandbox__header-btn" onClick={closeViewer} aria-label="Close">
                         ✕
                     </button>
                     <h2 className="student-sandbox__header-title">{viewingModule.title}</h2>
-                    <button type="button" className="student-sandbox__header-btn">
-                        ↑
-                    </button>
+                    <div className="student-sandbox__header-spacer" aria-hidden="true" />
                 </header>
-                <div className="student-sandbox__content">
+
+                <div className="student-sandbox__content student-sandbox__content--material">
+                    {isReviewMode && (
+                        <p className="student-sandbox__review-banner">Review mode — quiz results are saved and cannot be retaken.</p>
+                    )}
+
                     {contents.length === 0 ? (
-                        <>
-                            <p className="student-quiz__question" style={{ fontSize: '1.25rem' }}>
-                                {viewingModule.questions?.length
-                                    ? 'This sandbox is a quiz — no materials to review first.'
-                                    : 'No materials in this sandbox yet.'}
-                            </p>
-                            <button
-                                type="button"
-                                className="student-sandbox__action student-sandbox__action--primary"
-                                onClick={proceedFromContent}
-                            >
-                                {viewingModule.questions?.length ? 'PROCEED TO QUIZ' : 'FINISH SANDBOX'}
+                        <div className="student-sandbox__empty-state">
+                            <p>{hasQuiz ? 'This sandbox is a quiz only.' : 'No materials in this sandbox yet.'}</p>
+                            <button type="button" className="student-sandbox__action student-sandbox__action--primary" onClick={proceedFromContent}>
+                                {isReviewMode && hasQuiz ? 'View quiz results' : hasQuiz ? 'Proceed to quiz' : 'Finish sandbox'}
                             </button>
-                        </>
+                        </div>
                     ) : (
-                        <>
-                            <div className="student-sandbox__viewer">
-                                {currentContent.content_type === 'youtube_embed' ? (
-                                    <iframe
-                                        src={currentContent.file_url}
-                                        title={viewingModule.title}
-                                        className="w-full h-full min-h-[50vh]"
-                                        allowFullScreen
-                                        onLoad={() => setContentFinished(true)}
-                                    />
-                                ) : currentContent.content_type === 'video' ? (
-                                    <video
-                                        src={`/storage/${currentContent.file_url}`}
-                                        controls
-                                        className="w-full h-full min-h-[50vh] object-contain bg-black"
-                                        onEnded={() => setContentFinished(true)}
-                                    />
-                                ) : currentContent.content_type === 'presentation' && currentContent.file_url ? (
-                                    <iframe
-                                        src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(`${window.location.origin}/storage/${currentContent.file_url}`)}`}
-                                        title={viewingModule.title}
-                                        className="w-full h-full min-h-[50vh]"
-                                        onLoad={() => setContentFinished(true)}
-                                    />
-                                ) : currentContent.content_type === 'document' && currentContent.file_url ? (
-                                    <iframe
-                                        src={`/storage/${currentContent.file_url}`}
-                                        title={viewingModule.title}
-                                        className="w-full h-full min-h-[50vh]"
-                                        onLoad={() => setContentFinished(true)}
-                                    />
-                                ) : (
-                                    <div className="flex items-center justify-center min-h-[50vh] text-stone-500">
-                                        Unsupported content type.
-                                    </div>
-                                )}
+                        <div className="student-sandbox__material-layout">
+                            <div className="student-sandbox__viewer-wrap">
+                                <p className="student-sandbox__viewer-label">
+                                    {currentContent?.title || `Material ${contentIndex + 1} of ${contents.length}`}
+                                </p>
+                                <div className="student-sandbox__viewer">
+                                    {currentContent.content_type === 'youtube_embed' ? (
+                                        <iframe
+                                            src={currentContent.file_url}
+                                            title={viewingModule.title}
+                                            className="student-sandbox__iframe"
+                                            allowFullScreen
+                                            onLoad={() => !isReviewMode && setContentFinished(true)}
+                                        />
+                                    ) : currentContent.content_type === 'video' ? (
+                                        <video
+                                            src={`/storage/${currentContent.file_url}`}
+                                            controls
+                                            className="student-sandbox__iframe"
+                                            onEnded={() => !isReviewMode && setContentFinished(true)}
+                                        />
+                                    ) : currentContent.content_type === 'presentation' && currentContent.file_url ? (
+                                        <iframe
+                                            src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(`${window.location.origin}/storage/${currentContent.file_url}`)}`}
+                                            title={viewingModule.title}
+                                            className="student-sandbox__iframe"
+                                            onLoad={() => !isReviewMode && setContentFinished(true)}
+                                        />
+                                    ) : currentContent.content_type === 'document' && currentContent.file_url ? (
+                                        <iframe
+                                            src={`/storage/${currentContent.file_url}`}
+                                            title={viewingModule.title}
+                                            className="student-sandbox__iframe"
+                                            onLoad={() => !isReviewMode && setContentFinished(true)}
+                                        />
+                                    ) : (
+                                        <div className="student-sandbox__viewer-fallback">Unsupported content type.</div>
+                                    )}
+                                </div>
                             </div>
+
                             {contents.length > 1 && (
                                 <div className="student-sandbox__dots">
                                     {contents.map((_, i) => (
@@ -454,6 +567,7 @@ export default function Show() {
                                     ))}
                                 </div>
                             )}
+
                             <button
                                 type="button"
                                 disabled={actionDisabled}
@@ -461,29 +575,17 @@ export default function Show() {
                                 className={`student-sandbox__action ${actionDisabled ? 'student-sandbox__action--disabled' : 'student-sandbox__action--primary'}`}
                             >
                                 {actionDisabled
-                                    ? currentContent?.content_type === 'video' ||
-                                      currentContent?.content_type === 'youtube_embed'
-                                        ? 'FINISH VIDEO TO PROCEED'
-                                        : 'FINISH ALL SLIDES TO PROCEED'
+                                    ? currentContent?.content_type === 'video' || currentContent?.content_type === 'youtube_embed'
+                                        ? 'Finish video to proceed'
+                                        : 'Finish material to proceed'
                                     : actionLabel}
                             </button>
-                        </>
+                        </div>
                     )}
                 </div>
             </div>
         );
     }
-
-    const githubVerified = certification.title?.toLowerCase().includes('java');
-    const shellMeta = shellMetaProp ?? {
-        badge_type: githubVerified ? 'github' : 'pro',
-        badge_label: githubVerified ? 'GITHUB VERIFIED CERTIFICATE' : 'Professional Certificate',
-        github_verified: githubVerified,
-        progress: progress.percentage,
-        completed_modules: progress.completed_modules,
-        total_modules: progress.total_modules,
-        theme: 'pink',
-    };
 
     return (
         <StudentLayout activeNav="shells" layoutMode="shell">
@@ -493,19 +595,30 @@ export default function Show() {
                 certification={certification}
                 progress={progress}
                 shellMeta={shellMeta}
+                examStatus={examStatus}
+                examDraftAvailable={examDraftAvailable}
                 selectHref={route('student.dashboard', { select: 1 })}
-                onPlayModule={(module) => {
-                    setViewingModule(module);
-                    setContentIndex(0);
-                    setContentFinished(false);
+                onPlayModule={(module, options = {}) => {
+                    const completed = isCompleted(module.id);
+                    openModule(module, { review: options.review || completed });
                 }}
-                onTakeFinalExam={() => {
-                    setIsTakingFinalExam(true);
-                    setQuizIndex(0);
-                    setSelectedAnswer(null);
-                    setAnswerStatus('unanswered');
-                    setScore(0);
+                onTakeFinalExam={() => setExamIntroOpen(true)}
+                onViewCertificate={() => {
+                    resetSession();
+                    setIsViewingCertificate(true);
                 }}
+            />
+
+            <StudentExamDisclaimerModal
+                show={examIntroOpen}
+                variant="intro"
+                attemptCount={examStatus.attempt_count ?? 0}
+                shellMeta={shellMeta}
+                onConfirm={() => {
+                    setExamIntroOpen(false);
+                    beginFinalExam({ resume: examDraftAvailable || hasExamDraft(certification.id, userId) });
+                }}
+                onCancel={() => setExamIntroOpen(false)}
             />
         </StudentLayout>
     );

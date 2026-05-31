@@ -31,6 +31,14 @@ class QuizController extends Controller
         // Let's allow retakes of the sandbox quiz if they want, but typically progress is linear.
         // The instructions say "Grades the assessment... Updates score, calculates gamification".
 
+        $existing = UserModuleProgress::where('user_id', $user->id)
+            ->where('module_id', $module->id)
+            ->first();
+
+        if ($existing?->is_completed) {
+            return back()->with('info', 'This sandbox has already been completed.');
+        }
+
         $score = $this->quizService->calculateScore($module, $validated['answers']);
         $totalQuestions = count($validated['answers']); // Or $module->questions()->count()
 

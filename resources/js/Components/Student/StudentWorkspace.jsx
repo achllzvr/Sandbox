@@ -41,7 +41,12 @@ export default function StudentWorkspace({ layoutMode = 'standard', children }) 
         <div
             className={`student-workspace ${shellActive ? 'student-workspace--shell' : 'student-workspace--select'} ${profileCollapsed ? 'student-workspace--profile-collapsed' : ''}`}
         >
-            <div className="student-workspace__primary">{children}</div>
+            <div
+                id={shellActive ? 'student-shell-scroll' : undefined}
+                className="student-workspace__primary"
+            >
+                {children}
+            </div>
             {shellActive ? (
                 <StudentShellSidebar {...sidebarProps} />
             ) : (

@@ -35,6 +35,17 @@ class MyShellController extends Controller
         // Get the IDs of all modules the user has completed
         $completedModuleIds = $user->completedModules()->pluck('modules.id')->toArray();
 
+        $moduleProgressRows = \App\Models\UserModuleProgress::where('user_id', $user->id)
+            ->whereIn('module_id', $certification->lessons->flatMap->modules->pluck('id'))
+            ->get()
+            ->keyBy('module_id');
+
+        $moduleProgress = $moduleProgressRows->map(fn ($row) => [
+            'is_completed' => (bool) $row->is_completed,
+            'score' => $row->score,
+            'completed_at' => $row->completed_at,
+        ])->all();
+
         // Calculate total modules
         $totalModules = $certification->lessons->sum(function ($lesson) {
             return $lesson->modules->count();
@@ -45,6 +56,30 @@ class MyShellController extends Controller
             'total_modules' => $totalModules,
             'completed_module_ids' => $completedModuleIds,
             'percentage' => $totalModules > 0 ? (count($completedModuleIds) / $totalModules) * 100 : 0,
+        ];
+
+        $examAttempts = \Illuminate\Support\Facades\DB::table('exam_attempts')
+            ->where('user_id', $user->id)
+            ->where('certification_id', $id)
+            ->orderByDesc('attempted_at')
+            ->get();
+
+        $hasCertificate = \Illuminate\Support\Facades\DB::table('certificates')
+            ->where('user_id', $user->id)
+            ->where('certification_id', $id)
+            ->where('status', 'valid')
+            ->exists();
+
+        $latestAttempt = $examAttempts->first();
+        $hasPassedExam = $hasCertificate || $examAttempts->contains(fn ($row) => (bool) $row->passed);
+
+        $examStatus = [
+            'has_passed' => $hasPassedExam,
+            'has_certificate' => $hasCertificate,
+            'attempt_count' => $examAttempts->count(),
+            'latest_score' => $latestAttempt?->score,
+            'latest_total' => $latestAttempt?->total_questions,
+            'latest_passed' => (bool) ($latestAttempt?->passed ?? false),
         ];
 
         $enrollmentIndex = Enrollment::where('user_id', $user->id)
@@ -68,7 +103,9 @@ class MyShellController extends Controller
         return Inertia::render('Student/Shells/Show', [
             'certification' => $certification,
             'progress' => $progress,
+            'moduleProgress' => $moduleProgress,
             'shellMeta' => $shellMeta,
+            'examStatus' => $examStatus,
         ]);
     }
 

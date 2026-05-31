@@ -1,6 +1,6 @@
 import { Link } from '@inertiajs/react';
-import { CheckCircle2, Home } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { CheckCircle2, ChevronDown, ChevronUp, Home } from 'lucide-react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import StudentShellInfoModal from '@/Components/Student/StudentShellInfoModal';
 import { shellThemeCssVars, themeKeyForShell } from '@/utils/shellThemes';
 import { assetUrl } from '@/utils/assetUrl';
@@ -67,7 +67,9 @@ function SandboxBubble({ module, globalIndex, totalModules, completed, unlocked,
                       : 'Complete all sandboxes above to unlock this!'}
             </p>
             {completed ? (
-                <span className="student-shell-map__status-pill">✓ Completed</span>
+                <button type="button" className="student-shell-map__play-btn student-shell-map__play-btn--review" onClick={() => onPlay?.(module, { review: true })}>
+                    Review
+                </button>
             ) : unlocked ? (
                 <button type="button" className="student-shell-map__play-btn" onClick={() => onPlay?.(module)}>
                     Start
@@ -79,7 +81,24 @@ function SandboxBubble({ module, globalIndex, totalModules, completed, unlocked,
     );
 }
 
-function FinalExamBubble({ isAllCompleted, onTakeFinalExam }) {
+function FinalExamBubble({ isAllCompleted, examStatus = {}, hasDraft = false, onTakeFinalExam, onViewCertificate }) {
+    const { has_passed: hasPassed = false, attempt_count: attemptCount = 0 } = examStatus;
+
+    let ctaLabel = 'Start final exam';
+    let ctaAction = onTakeFinalExam;
+    let subcopy = 'An exam covering all previous sandboxes';
+
+    if (hasPassed) {
+        ctaLabel = 'View Hermit certificate';
+        ctaAction = onViewCertificate;
+        subcopy = 'You passed! View your Hermit certificate anytime.';
+    } else if (hasDraft) {
+        ctaLabel = 'Continue final exam';
+        subcopy = 'Pick up where you left off — your progress is saved.';
+    } else if (attemptCount > 0) {
+        subcopy = `An exam covering all previous sandboxes · ${attemptCount} attempt${attemptCount === 1 ? '' : 's'} recorded`;
+    }
+
     return (
         <div
             className={`student-shell-map__bubble ${isAllCompleted ? 'student-shell-map__bubble--ready' : 'student-shell-map__bubble--locked'}`}
@@ -88,17 +107,15 @@ function FinalExamBubble({ isAllCompleted, onTakeFinalExam }) {
         >
             <h3 className="student-shell-map__bubble-title">Final exam</h3>
             <p className="student-shell-map__bubble-sub">
-                {isAllCompleted
-                    ? 'An exam covering all previous sandboxes'
-                    : 'Finish all sandboxes above to unlock this!'}
+                {isAllCompleted ? subcopy : 'Finish all sandboxes above to unlock this!'}
             </p>
             {isAllCompleted ? (
                 <button
                     type="button"
-                    className="student-shell-map__play-btn student-shell-map__play-btn--exam"
-                    onClick={() => onTakeFinalExam?.()}
+                    className={`student-shell-map__play-btn student-shell-map__play-btn--exam ${hasPassed ? 'student-shell-map__play-btn--certificate' : ''}`}
+                    onClick={() => ctaAction?.()}
                 >
-                    See your Hermit certificate
+                    {ctaLabel}
                 </button>
             ) : (
                 <span className="student-shell-map__status-pill student-shell-map__status-pill--locked">Locked</span>
@@ -112,6 +129,8 @@ function MapNodeStack({
     y,
     isActive,
     isCastle = false,
+    nodeId,
+    nodeIndex = 0,
     visualClassName = '',
     ariaLabel,
     onToggle,
@@ -121,7 +140,8 @@ function MapNodeStack({
     return (
         <div
             className={`student-shell-map__stack ${isCastle ? 'student-shell-map__stack--castle' : ''} ${isActive ? 'student-shell-map__stack--active' : ''}`}
-            style={{ left: `${x}px`, top: `${y}px` }}
+            style={{ left: `${x}px`, top: `${y}px`, '--shell-node-index': nodeIndex }}
+            data-shell-node={nodeId}
         >
             <button
                 type="button"
@@ -146,9 +166,12 @@ export default function StudentShellMap({
     certification,
     progress,
     shellMeta = {},
+    examStatus = {},
+    examDraftAvailable = false,
     selectHref,
     onPlayModule,
     onTakeFinalExam,
+    onViewCertificate,
 }) {
     const allModules = useMemo(
         () => certification.lessons.flatMap((lesson) => lesson.modules),
@@ -162,10 +185,33 @@ export default function StudentShellMap({
         }
         return isCompleted(allModules[index - 1].id);
     };
-    const isAllCompleted = progress.completed_modules === progress.total_modules;
+    const isAllCompleted = progress.completed_modules >= progress.total_modules && progress.total_modules > 0;
 
     const [activeNode, setActiveNode] = useState(null);
     const [shellModalOpen, setShellModalOpen] = useState(false);
+    const [mapEntered, setMapEntered] = useState(false);
+    const hasAutoScrolledRef = useRef(false);
+
+    const currentNodeId = useMemo(() => {
+        const firstActive = allModules.findIndex((module, index) => isUnlocked(index) && !isCompleted(module.id));
+        if (firstActive >= 0) {
+            return allModules[firstActive].id;
+        }
+        if (isAllCompleted) {
+            return 'final';
+        }
+        return allModules[0]?.id ?? null;
+    }, [allModules, progress.completed_module_ids, isAllCompleted]);
+
+    useLayoutEffect(() => {
+        setMapEntered(false);
+        hasAutoScrolledRef.current = false;
+
+        const frame = requestAnimationFrame(() => {
+            requestAnimationFrame(() => setMapEntered(true));
+        });
+        return () => cancelAnimationFrame(frame);
+    }, [certification.id]);
 
     useEffect(() => {
         const firstActive = allModules.findIndex((module, index) => isUnlocked(index) && !isCompleted(module.id));
@@ -175,6 +221,52 @@ export default function StudentShellMap({
             setActiveNode('final');
         }
     }, [certification.id]);
+
+    const getScrollContainer = useCallback(() => {
+        return document.getElementById('student-shell-scroll');
+    }, []);
+
+    const scrollToNode = useCallback(
+        (nodeId) => {
+            const container = getScrollContainer();
+            const node = document.querySelector(`[data-shell-node="${nodeId}"]`);
+            if (!container || !node) {
+                return;
+            }
+
+            const containerTop = container.getBoundingClientRect().top;
+            const nodeTop = node.getBoundingClientRect().top;
+            const offset = nodeTop - containerTop + container.scrollTop - 100;
+
+            container.scrollTo({
+                top: Math.max(0, offset),
+                behavior: 'smooth',
+            });
+        },
+        [getScrollContainer],
+    );
+
+    const scrollToTop = useCallback(() => {
+        const container = getScrollContainer();
+        container?.scrollTo({ top: 0, behavior: 'smooth' });
+    }, [getScrollContainer]);
+
+    const scrollToCurrent = useCallback(() => {
+        if (currentNodeId) {
+            scrollToNode(currentNodeId);
+            setActiveNode(currentNodeId);
+        }
+    }, [currentNodeId, scrollToNode]);
+
+    useEffect(() => {
+        if (!mapEntered || !currentNodeId || hasAutoScrolledRef.current) {
+            return undefined;
+        }
+
+        hasAutoScrolledRef.current = true;
+        const timer = window.setTimeout(() => scrollToNode(currentNodeId), 520);
+        return () => window.clearTimeout(timer);
+    }, [mapEntered, currentNodeId, scrollToNode]);
 
     function toggleNode(nodeId) {
         setActiveNode((current) => (current === nodeId ? null : nodeId));
@@ -194,9 +286,11 @@ export default function StudentShellMap({
 
     const finalNode = { x: CANVAS_WIDTH / 2, y: 100 };
 
+    let globalNodeIndex = 0;
+
     return (
         <div
-            className={`student-shell-map student-shell-map--${themeKey}`}
+            className={`student-shell-map student-shell-map--${themeKey} ${mapEntered ? 'student-shell-map--entered' : ''}`}
             style={shellThemeCssVars(themeKey)}
         >
             <div className="student-shell-map__header">
@@ -234,7 +328,11 @@ export default function StudentShellMap({
                         const groupStartIndex = lessonOffsets[lessonIndex];
 
                         return (
-                            <section key={lesson.id} className="student-shell-group">
+                            <section
+                                key={lesson.id}
+                                className="student-shell-group"
+                                style={{ '--shell-group-index': lessonIndex }}
+                            >
                                 <div className="student-shell-group__divider">
                                     <span>{lesson.title}</span>
                                 </div>
@@ -267,11 +365,16 @@ export default function StudentShellMap({
                                         const unlocked = isUnlocked(globalIndex);
                                         const isActive = activeNode === module.id;
 
+                                        const nodeIndex = globalNodeIndex;
+                                        globalNodeIndex += 1;
+
                                         return (
                                             <MapNodeStack
                                                 key={module.id}
                                                 x={node.x}
                                                 y={node.y}
+                                                nodeId={module.id}
+                                                nodeIndex={nodeIndex}
                                                 isActive={isActive}
                                                 visualClassName={`${completed ? 'student-shell-map__visual--done' : unlocked ? 'student-shell-map__visual--unlocked' : ''}`}
                                                 ariaLabel={`${module.title}, lesson ${globalIndex + 1} of ${allModules.length}`}
@@ -294,7 +397,7 @@ export default function StudentShellMap({
                         );
                     })}
 
-                    <section className="student-shell-group student-shell-group--final">
+                    <section className="student-shell-group student-shell-group--final" style={{ '--shell-group-index': certification.lessons.length }}>
                         <div className="student-shell-group__divider">
                             <span>Final exam</span>
                         </div>
@@ -306,6 +409,8 @@ export default function StudentShellMap({
                             <MapNodeStack
                                 x={finalNode.x}
                                 y={finalNode.y}
+                                nodeId="final"
+                                nodeIndex={globalNodeIndex}
                                 isActive={activeNode === 'final'}
                                 isCastle
                                 visualClassName="student-shell-map__visual--castle"
@@ -313,11 +418,38 @@ export default function StudentShellMap({
                                 onToggle={() => toggleNode('final')}
                                 visualSrc={assetUrl('images/shells/castle_final_exam.png')}
                             >
-                                <FinalExamBubble isAllCompleted={isAllCompleted} onTakeFinalExam={onTakeFinalExam} />
+                                <FinalExamBubble
+                                    isAllCompleted={isAllCompleted}
+                                    examStatus={examStatus}
+                                    hasDraft={examDraftAvailable}
+                                    onTakeFinalExam={onTakeFinalExam}
+                                    onViewCertificate={onViewCertificate}
+                                />
                             </MapNodeStack>
                         </div>
                     </section>
                 </div>
+            </div>
+
+            <div className="student-shell-map__jump-nav" aria-label="Shell map navigation">
+                <button
+                    type="button"
+                    className="student-shell-map__jump-btn"
+                    onClick={scrollToTop}
+                    aria-label="Jump to top"
+                    title="Jump to top"
+                >
+                    <ChevronUp size={22} strokeWidth={2.5} aria-hidden="true" />
+                </button>
+                <button
+                    type="button"
+                    className="student-shell-map__jump-btn student-shell-map__jump-btn--current"
+                    onClick={scrollToCurrent}
+                    aria-label="Jump to current sandbox"
+                    title="Jump to current sandbox"
+                >
+                    <ChevronDown size={22} strokeWidth={2.5} aria-hidden="true" />
+                </button>
             </div>
 
             <StudentShellInfoModal

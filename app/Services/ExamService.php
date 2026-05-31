@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Certification;
 use App\Models\Question;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class ExamService
 {
@@ -64,6 +65,27 @@ class ExamService
             $record['attempt_id'] = $attemptId;
         }
         DB::table('exam_attempt_answers')->insert($answerRecords);
+
+        if ($passed) {
+            $existing = DB::table('certificates')
+                ->where('user_id', $userId)
+                ->where('certification_id', $certification->id)
+                ->where('status', 'valid')
+                ->exists();
+
+            if (! $existing) {
+                DB::table('certificates')->insert([
+                    'user_id' => $userId,
+                    'certification_id' => $certification->id,
+                    'exam_attempt_id' => $attemptId,
+                    'certificate_code' => 'HERMIT-'.strtoupper(Str::random(10)),
+                    'status' => 'valid',
+                    'issued_at' => now(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
 
         return [
             'score' => $score,

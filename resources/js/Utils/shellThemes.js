@@ -98,6 +98,8 @@ export function themeKeyForShell(shell, fallbackIndex = 0) {
 export function shellThemeCssVars(themeKey) {
     const theme = SHELL_THEMES[themeKey] ?? SHELL_THEMES.pink;
     return {
+        '--shell-card-border': theme.cardBorder,
+        '--shell-card-shadow': theme.cardShadow,
         '--shell-header': theme.header,
         '--shell-header-border': theme.headerBorder,
         '--shell-header-shadow': theme.headerShadow,
