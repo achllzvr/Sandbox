@@ -342,8 +342,9 @@ export default function Show() {
         };
 
         const proceedFromContent = () => {
-            const isLast = contentIndex === contents.length - 1;
-            if (isLast) {
+            const atEnd = contents.length === 0 || contentIndex === contents.length - 1;
+
+            if (atEnd) {
                 const hasQuiz = viewingModule.questions?.length > 0;
                 setScore(0);
                 setQuizIndex(0);
@@ -354,10 +355,11 @@ export default function Show() {
                 } else {
                     setIsViewingSummary(true);
                 }
-            } else {
-                setContentIndex(contentIndex + 1);
-                setContentFinished(false);
+                return;
             }
+
+            setContentIndex(contentIndex + 1);
+            setContentFinished(false);
         };
 
         const currentContent = contents[contentIndex];
@@ -392,10 +394,16 @@ export default function Show() {
                     {contents.length === 0 ? (
                         <>
                             <p className="student-quiz__question" style={{ fontSize: '1.25rem' }}>
-                                No materials in this sandbox yet.
+                                {viewingModule.questions?.length
+                                    ? 'This sandbox is a quiz — no materials to review first.'
+                                    : 'No materials in this sandbox yet.'}
                             </p>
-                            <button type="button" className="student-sandbox__action student-sandbox__action--primary" onClick={proceedFromContent}>
-                                PROCEED TO QUIZ
+                            <button
+                                type="button"
+                                className="student-sandbox__action student-sandbox__action--primary"
+                                onClick={proceedFromContent}
+                            >
+                                {viewingModule.questions?.length ? 'PROCEED TO QUIZ' : 'FINISH SANDBOX'}
                             </button>
                         </>
                     ) : (
