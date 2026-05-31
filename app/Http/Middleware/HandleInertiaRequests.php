@@ -34,6 +34,21 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            'studentGamification' => function () use ($request) {
+                $user = $request->user();
+                if (! $user || $user->role !== 'user') {
+                    return null;
+                }
+
+                return [
+                    'sand_dollars' => 1250,
+                    'streak_days' => 14,
+                    'rank' => 'Sandcastle Builder',
+                    'progress_to_next_rank' => 75,
+                    'hermy_name' => $user->first_name,
+                    'hermy_avatar' => asset('images/Hermy.png'),
+                ];
+            },
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error'   => fn () => $request->session()->get('error'),

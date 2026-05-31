@@ -1,16 +1,23 @@
-import React, { useState } from 'react';
-import { Head, Link, usePage, useForm } from '@inertiajs/react';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import Modal from '@/Components/Modal';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { Search } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import StudentLayout from '@/Layouts/StudentLayout';
+
+const CARD_THEMES = ['green', 'blue', 'pink'];
+
+function formatPrice(price) {
+    const num = parseFloat(price);
+    return num === 0 ? 'Free' : `₱${num.toLocaleString('en-PH', { minimumFractionDigits: 0 })}`;
+}
 
 export default function Index({ certifications }) {
-    const { auth, flash } = usePage().props;
-
-    // --- UI Flow State ---
+    const { flash } = usePage().props;
     const [selectedCert, setSelectedCert] = useState(null);
-    const [modalView, setModalView] = useState('details'); // 'details', 'enroll_tos', 'voucher'
+    const [modalView, setModalView] = useState('details');
+    const [search, setSearch] = useState('');
+    const [technology, setTechnology] = useState('all');
+    const [sort, setSort] = useState('price-asc');
 
-    // --- Forms ---
     const enrollForm = useForm({
         certification_id: null,
         payment_method: 'xendit',
@@ -20,27 +27,42 @@ export default function Index({ certifications }) {
 
     const voucherForm = useForm({
         certification_id: null,
-        code: ''
+        code: '',
     });
 
-    function formatDate(dateStr) {
-        return new Date(dateStr).toLocaleDateString('en-US', {
-            month: 'short', day: 'numeric', year: 'numeric',
+    const catalog = useMemo(() => {
+        let items = [...certifications.data];
+
+        if (search.trim()) {
+            const q = search.trim().toLowerCase();
+            items = items.filter(
+                (cert) =>
+                    cert.title.toLowerCase().includes(q) ||
+                    cert.description?.toLowerCase().includes(q),
+            );
+        }
+
+        if (technology !== 'all') {
+            items = items.filter((cert) =>
+                cert.title.toLowerCase().includes(technology.toLowerCase()),
+            );
+        }
+
+        items.sort((a, b) => {
+            const priceA = parseFloat(a.price);
+            const priceB = parseFloat(b.price);
+            return sort === 'price-desc' ? priceB - priceA : priceA - priceB;
         });
-    }
 
-    function formatPrice(price) {
-        const num = parseFloat(price);
-        return num === 0 ? 'Free' : `₱${num.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`;
-    }
+        return items;
+    }, [certifications.data, search, technology, sort]);
 
-    // --- Handlers ---
-    const openShellDetail = (cert) => {
+    function openShellDetail(cert) {
         setSelectedCert(cert);
         setModalView('details');
     }
 
-    const closeModal = () => {
+    function closeModal() {
         setSelectedCert(null);
         setModalView('details');
         enrollForm.reset();
@@ -49,7 +71,7 @@ export default function Index({ certifications }) {
         voucherForm.clearErrors();
     }
 
-    const openEnrollmentToS = () => {
+    function openEnrollmentToS() {
         setModalView('enroll_tos');
         enrollForm.setData({
             certification_id: selectedCert.id,
@@ -59,323 +81,278 @@ export default function Index({ certifications }) {
         });
     }
 
-    const submitEnrollment = (e) => {
-        e.preventDefault();
+    function submitEnrollment(event) {
+        event.preventDefault();
         enrollForm.post(route('student.enrollments.checkout'), {
-            onSuccess: () => closeModal()
+            onSuccess: () => closeModal(),
         });
     }
 
-    const openVoucherParams = () => {
+    function openVoucherParams() {
         setModalView('voucher');
         voucherForm.setData({
             certification_id: selectedCert.id,
-            code: ''
+            code: '',
         });
     }
 
-    const submitVoucher = (e) => {
-        e.preventDefault();
+    function submitVoucher(event) {
+        event.preventDefault();
         voucherForm.post(route('student.vouchers.redeem'), {
-            onSuccess: () => closeModal()
+            onSuccess: () => closeModal(),
         });
     }
 
     return (
-        <AuthenticatedLayout
-            auth={auth}
-            header={
-                <div className="flex items-center gap-4">
-                    <Link
-                        href={route('student.dashboard')}
-                        className="bg-white border text-center border-stone-200 text-stone-500 hover:text-stone-700 hover:bg-stone-50 p-2.5 rounded-full transition-colors shadow-sm"
-                        title="Back to Dashboard"
-                    >
-                        {/* Inline SVG for Back Arrow */}
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                            <path strokeLinecap="round" strokeLinelinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                        </svg>
-                    </Link>
-                    <div>
-                        <h2 className="text-2xl font-bold text-stone-900">Marketplace</h2>
-                        <p className="text-sm text-stone-500 mt-1">Browse available Shells and start your certification journey.</p>
-                    </div>
+        <StudentLayout activeNav="shop" pageTitle="Shop">
+            <Head title="Shop — Available Shells" />
+
+            <h2 className="student-page-title">Available Shells</h2>
+            <p className="student-page-subtitle">Browse the available certificates for taking!</p>
+
+            <div className="student-shop-toolbar">
+                <div className="student-shop-search">
+                    <Search size={18} aria-hidden="true" />
+                    <input
+                        type="search"
+                        placeholder="Search shells..."
+                        value={search}
+                        onChange={(event) => setSearch(event.target.value)}
+                        aria-label="Search shells"
+                    />
                 </div>
-            }
-        >
-            <Head title="Marketplace" />
-
-            <div className="py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-
-                {/* Success flash */}
-                {flash?.success && (
-                    <div className="mb-6 rounded-xl bg-green-50 border border-green-200 p-4 text-sm text-green-700 font-medium">
-                        {flash.success}
-                    </div>
-                )}
-
-                {/* Empty state */}
-                {certifications.data.length === 0 ? (
-                    <div className="text-center py-24">
-                        <div className="text-5xl mb-4">🐚</div>
-                        <h3 className="text-xl font-bold text-stone-700">No Shells available yet</h3>
-                        <p className="text-stone-400 mt-2 text-sm max-w-sm mx-auto">
-                            Check back soon — new certifications are published regularly.
-                        </p>
-                    </div>
-                ) : (
-                    <>
-                        {/* Grid */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {certifications.data.map((cert) => (
-                                <div
-                                    key={cert.id}
-                                    className="bg-white rounded-2xl border border-stone-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col"
-                                >
-                                    {/* Card header accent */}
-                                    <div className="h-1.5 bg-gradient-to-r from-amber-400 to-amber-500" />
-
-                                    <div className="p-6 flex flex-col flex-grow">
-                                        {/* Title & Badge */}
-                                        <div className="flex justify-between items-start gap-2">
-                                            <h3 className="font-bold text-lg text-stone-900 leading-snug line-clamp-2">
-                                                {cert.title}
-                                            </h3>
-                                            {(cert.status === 'approved' || cert.status === 'published') && (
-                                                <span title="Verified Certification" className="flex-shrink-0 bg-blue-100 text-blue-700 text-[10px] uppercase font-bold px-2 py-1 rounded-md border border-blue-200">
-                                                    ✓ Verified
-                                                </span>
-                                            )}
-                                        </div>
-
-                                        {/* Creator + Date */}
-                                        <p className="text-xs text-stone-400 mt-1.5">
-                                            by{' '}
-                                            <span className="text-stone-600 font-medium">
-                                                {cert.creator
-                                                    ? `${cert.creator.first_name} ${cert.creator.last_name}`
-                                                    : 'Unknown'}
-                                            </span>
-                                            {' · '}
-                                            {formatDate(cert.created_at)}
-                                        </p>
-
-                                        {/* Description */}
-                                        <p className="text-sm text-stone-500 mt-3 line-clamp-3 flex-grow">
-                                            {cert.description || 'No description provided.'}
-                                        </p>
-
-                                        {/* Meta pills */}
-                                        <div className="flex items-center gap-3 mt-4">
-                                            <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 text-xs font-semibold px-3 py-1 rounded-full border border-amber-200">
-                                                💰 {formatPrice(cert.price)}
-                                            </span>
-                                            <span className="inline-flex items-center gap-1 bg-stone-100 text-stone-600 text-xs font-semibold px-3 py-1 rounded-full">
-                                                🎯 {cert.pass_threshold}% to pass
-                                            </span>
-                                        </div>
-
-                                        {/* Action button */}
-                                        <button
-                                            onClick={() => openShellDetail(cert)}
-                                            className="mt-5 w-full text-center bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold py-2.5 rounded-xl transition-colors"
-                                        >
-                                            View Shell
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* Pagination */}
-                        {certifications.last_page > 1 && (
-                            <nav className="mt-10 flex justify-center gap-2">
-                                {certifications.links.map((link, i) => (
-                                    <Link
-                                        key={i}
-                                        href={link.url || '#'}
-                                        className={`px-4 py-2 text-sm rounded-lg transition-colors ${
-                                            link.active
-                                                ? 'bg-amber-500 text-white font-bold'
-                                                : link.url
-                                                    ? 'bg-white text-stone-600 border border-stone-200 hover:bg-stone-50'
-                                                    : 'text-stone-300 cursor-not-allowed'
-                                        }`}
-                                        preserveScroll
-                                        dangerouslySetInnerHTML={{ __html: link.label }}
-                                    />
-                                ))}
-                            </nav>
-                        )}
-                    </>
-                )}
+                <select
+                    className="student-shop-select"
+                    value={technology}
+                    onChange={(event) => setTechnology(event.target.value)}
+                    aria-label="Filter by technology"
+                >
+                    <option value="all">Technology</option>
+                    <option value="java">Java</option>
+                    <option value="react">React</option>
+                    <option value="laravel">Laravel</option>
+                </select>
+                <select
+                    className="student-shop-select"
+                    value={sort}
+                    onChange={(event) => setSort(event.target.value)}
+                    aria-label="Sort shells"
+                >
+                    <option value="price-asc">Low to high</option>
+                    <option value="price-desc">High to low</option>
+                </select>
             </div>
 
-            {/* ── Shell Details & Flow Modals ── */}
+            {catalog.length === 0 ? (
+                <div className="student-empty">
+                    <p className="student-empty__title">No shells match your filters</p>
+                    <p className="student-page-subtitle">Try clearing search or changing technology.</p>
+                </div>
+            ) : (
+                <div className="student-shop-grid">
+                    {catalog.map((cert, index) => {
+                        const theme = CARD_THEMES[index % CARD_THEMES.length];
+                        const creatorName = cert.creator
+                            ? `${cert.creator.first_name} ${cert.creator.last_name}`
+                            : 'Sandbox';
+
+                        return (
+                            <article key={cert.id} className={`student-shop-card student-shop-card--${theme}`}>
+                                <div className="student-shop-card__hero">
+                                    <span className="student-shop-card__price">{formatPrice(cert.price)}</span>
+                                    <span
+                                        style={{
+                                            fontFamily: 'var(--font-heading)',
+                                            fontSize: '2.5rem',
+                                            fontWeight: 800,
+                                            color: theme === 'blue' ? '#61dafb' : '#ef4444',
+                                        }}
+                                        aria-hidden="true"
+                                    >
+                                        {cert.title.charAt(0)}
+                                    </span>
+                                </div>
+                                <div className="student-shop-card__body">
+                                    <h3 className="student-shop-card__title">{cert.title.toUpperCase()}</h3>
+                                    <p className="student-shop-card__creator">by {creatorName}</p>
+                                    <p className="student-shop-card__desc">
+                                        {cert.description || 'An exam covering foundational skills for this technology.'}
+                                    </p>
+                                    <button
+                                        type="button"
+                                        className="student-shop-card__btn"
+                                        onClick={() => openShellDetail(cert)}
+                                    >
+                                        MORE DETAILS
+                                    </button>
+                                </div>
+                            </article>
+                        );
+                    })}
+                </div>
+            )}
+
+            {certifications.last_page > 1 && (
+                <nav className="student-shop-pagination" style={{ marginTop: 32, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {certifications.links.map((link, index) => (
+                        <Link
+                            key={index}
+                            href={link.url || '#'}
+                            className="student-nav__link"
+                            style={{ padding: '8px 14px', fontSize: '0.75rem' }}
+                            preserveScroll
+                            dangerouslySetInnerHTML={{ __html: link.label }}
+                        />
+                    ))}
+                </nav>
+            )}
+
             {selectedCert && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden relative border border-amber-100 flex flex-col">
-                        
-                        {/* Header */}
-                        <div className="bg-slate-50 px-6 py-4 flex items-center justify-between border-b border-slate-100">
-                            <button onClick={() => modalView !== 'details' ? setModalView('details') : closeModal()} className="text-stone-400 hover:text-stone-700 font-bold p-1">
+                <div className="student-modal-overlay" role="dialog" aria-modal="true">
+                    <div className="student-modal">
+                        <div className="student-modal__header">
+                            <button
+                                type="button"
+                                className="student-modal__header-btn"
+                                onClick={() => (modalView !== 'details' ? setModalView('details') : closeModal())}
+                            >
                                 {modalView !== 'details' ? '← Back' : '✕ Close'}
                             </button>
-                            <h3 className="font-extrabold text-stone-800 text-sm tracking-wide">
-                                {modalView === 'details' ? selectedCert.title : modalView === 'enroll_tos' ? 'YOU ARE ENROLLING' : 'REDEEM VOUCHER'}
+                            <h3 className="student-modal__title">
+                                {modalView === 'details'
+                                    ? selectedCert.title
+                                    : modalView === 'enroll_tos'
+                                      ? 'You are enrolling'
+                                      : 'Redeem voucher'}
                             </h3>
-                            <div className="w-8"></div> {/* Spacer for centering */}
+                            <span style={{ width: 48 }} />
                         </div>
-
-                        {/* Body based on state */}
-                        <div className="p-6 bg-stone-50 flex-grow">
-                            
-                            {/* 1. DETAILS VIEW */}
+                        <div className="student-modal__body">
                             {modalView === 'details' && (
-                                <div className="space-y-5">
-                                    <div className="text-center space-y-2">
-                                        <div className="w-20 h-20 mx-auto bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center shadow-inner border border-blue-300">
-                                            <span className="text-4xl text-white font-bold">{selectedCert.title.charAt(0)}</span>
+                                <>
+                                    <div
+                                        className="student-modal__shell-icon"
+                                        style={{ background: '#3b82f6' }}
+                                    >
+                                        {selectedCert.title.charAt(0)}
+                                    </div>
+                                    <h4 className="student-modal__cert-title">{selectedCert.title}</h4>
+                                    <p className="student-modal__cert-sub">Professional Certificate</p>
+                                    <div className="student-modal__desc">
+                                        {selectedCert.description ||
+                                            'An exam that covers the basics and foundational skills required. Ensure that you learn the fundamentals and modern technologies associated.'}
+                                    </div>
+                                    <div className="student-modal__meta-grid">
+                                        <div className="student-modal__meta-item">
+                                            <span className="student-modal__meta-label">Duration</span>
+                                            <span className="student-modal__meta-value">Self-Paced</span>
                                         </div>
-                                        <h2 className="text-xl font-black text-blue-600 tracking-tight leading-tight">{selectedCert.title}</h2>
-                                        <p className="text-xs font-semibold text-stone-500 uppercase tracking-widest">Professional Certificate</p>
+                                        <div className="student-modal__meta-item">
+                                            <span className="student-modal__meta-label">Passing Goal</span>
+                                            <span className="student-modal__meta-value" style={{ color: '#e8735a' }}>
+                                                {selectedCert.pass_threshold}%
+                                            </span>
+                                        </div>
                                     </div>
-
-                                    <div className="bg-white p-4 rounded-2xl border border-stone-200 text-sm text-stone-600 shadow-sm leading-relaxed">
-                                        {selectedCert.description || "An exam that covers the basics and foundational skills required. Ensure that you learn the fundamentals and modern technologies associated."}
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-3 mt-4">
-                                         <div className="bg-white p-3 rounded-xl border border-stone-200 text-center shadow-sm">
-                                            <span className="block text-[10px] uppercase font-bold text-stone-400 mb-1">Duration</span>
-                                            <span className="text-sm font-extrabold text-blue-600">Self-Paced</span>
-                                         </div>
-                                         <div className="bg-white p-3 rounded-xl border border-stone-200 text-center shadow-sm">
-                                            <span className="block text-[10px] uppercase font-bold text-stone-400 mb-1">Passing Goal</span>
-                                            <span className="text-sm font-extrabold text-amber-500">{selectedCert.pass_threshold}%</span>
-                                         </div>
-                                    </div>
-
-                                    <div className="space-y-3 pt-2">
-                                        <button 
-                                            onClick={openEnrollmentToS}
-                                            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-extrabold py-3.5 px-4 rounded-2xl transition-colors shadow-md shadow-blue-500/20"
-                                        >
-                                            ENROLL FOR {formatPrice(selectedCert.price)}
-                                        </button>
-
-                                        <button 
-                                            onClick={openVoucherParams}
-                                            className="w-full bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 font-extrabold py-3 px-4 rounded-xl transition-colors"
-                                        >
-                                            HAVE A VOUCHER?
-                                        </button>
-                                        
-                                        {/* Mock diagnostic link */}
-                                        <button 
-                                            onClick={() => alert("Diagnostic Pre-Assessment Coming Soon!")}
-                                            className="w-full bg-white hover:bg-stone-50 text-stone-500 border border-stone-200 font-bold py-2.5 px-4 rounded-xl transition-colors text-xs"
-                                        >
-                                            TRY A QUICK TEST
-                                        </button>
-                                    </div>
-                                </div>
+                                    <button type="button" className="student-btn student-btn--primary" onClick={openEnrollmentToS}>
+                                        ENROLL FOR {formatPrice(selectedCert.price)}
+                                    </button>
+                                    <button type="button" className="student-btn student-btn--secondary" onClick={openVoucherParams}>
+                                        HAVE A VOUCHER?
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="student-btn student-btn--ghost"
+                                        onClick={() => alert('TODO: Diagnostic pre-assessment flow')}
+                                    >
+                                        TRY A QUICK TEST
+                                        <span className="student-todo-badge">TODO</span>
+                                    </button>
+                                </>
                             )}
 
-                            {/* 2. ENROLLMENT ToS VIEW */}
                             {modalView === 'enroll_tos' && (
-                                <form onSubmit={submitEnrollment} className="space-y-5">
-                                    <div className="bg-blue-500 p-3 rounded-xl text-center shadow-inner">
-                                        <h3 className="text-white font-black">{selectedCert.title}</h3>
-                                        <span className="text-blue-100 text-[10px] uppercase font-bold tracking-widest">Professional Certificate</span>
+                                <form onSubmit={submitEnrollment}>
+                                    <div className="student-modal__desc" style={{ textAlign: 'center', marginBottom: 16 }}>
+                                        <strong>{selectedCert.title}</strong>
+                                        <br />
+                                        <span className="student-modal__cert-sub">Professional Certificate</span>
                                     </div>
-
-                                    <div className="bg-white p-5 rounded-2xl border border-stone-200 space-y-4 shadow-sm">
-                                        <label className="flex items-start gap-3 cursor-pointer group">
-                                            <input 
-                                                type="checkbox" 
-                                                className="mt-1 w-5 h-5 rounded border-stone-300 text-amber-500 focus:ring-amber-500 cursor-pointer"
-                                                checked={enrollForm.data.tos_action_irreversible}
-                                                onChange={e => enrollForm.setData('tos_action_irreversible', e.target.checked)}
-                                            />
-                                            <span className="text-sm font-medium text-stone-700 leading-snug select-none group-hover:text-stone-900 transition-colors">
-                                                Do you understand that this action is <strong className="text-red-500">irreversible</strong> and refunds are not allowed?
-                                            </span>
-                                        </label>
-
-                                        <label className="flex items-start gap-3 cursor-pointer group">
-                                            <input 
-                                                type="checkbox" 
-                                                className="mt-1 w-5 h-5 rounded border-stone-300 text-amber-500 focus:ring-amber-500 cursor-pointer"
-                                                checked={enrollForm.data.tos_privacy_act}
-                                                onChange={e => enrollForm.setData('tos_privacy_act', e.target.checked)}
-                                            />
-                                            <span className="text-sm font-medium text-stone-700 leading-snug select-none group-hover:text-stone-900 transition-colors">
-                                                Do you accept the <strong className="text-stone-900">Terms of Service</strong> and you allow Sandbox to process your data with respect to the <strong className="text-stone-900">Data Privacy Act of 2012</strong>?
-                                            </span>
-                                        </label>
-                                    </div>
-
-                                    <div className="space-y-3 pt-2">
-                                        <button 
-                                            type="submit"
-                                            disabled={!enrollForm.data.tos_action_irreversible || !enrollForm.data.tos_privacy_act || enrollForm.processing}
-                                            className="w-full bg-blue-500 disabled:bg-stone-300 disabled:cursor-not-allowed hover:bg-blue-600 text-white font-extrabold py-3.5 px-4 rounded-2xl transition-colors shadow-md"
-                                        >
-                                            {enrollForm.processing ? 'PROCESSING...' : `ENROLL FOR ${formatPrice(selectedCert.price)}`}
-                                        </button>
-
-                                        <button 
-                                            type="button"
-                                            onClick={openVoucherParams}
-                                            className="w-full bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 font-extrabold py-3 px-4 rounded-xl transition-colors"
-                                        >
-                                            HAVE A VOUCHER?
-                                        </button>
-                                    </div>
+                                    <label className="student-modal__checkbox">
+                                        <input
+                                            type="checkbox"
+                                            checked={enrollForm.data.tos_action_irreversible}
+                                            onChange={(event) =>
+                                                enrollForm.setData('tos_action_irreversible', event.target.checked)
+                                            }
+                                        />
+                                        <span>
+                                            Do you understand that this action is <strong>irreversible</strong> and
+                                            refunds are not allowed?
+                                        </span>
+                                    </label>
+                                    <label className="student-modal__checkbox">
+                                        <input
+                                            type="checkbox"
+                                            checked={enrollForm.data.tos_privacy_act}
+                                            onChange={(event) =>
+                                                enrollForm.setData('tos_privacy_act', event.target.checked)
+                                            }
+                                        />
+                                        <span>
+                                            Do you accept the Terms of Service and allow Sandbox to process your data
+                                            under the Data Privacy Act of 2012?
+                                        </span>
+                                    </label>
+                                    <button
+                                        type="submit"
+                                        className="student-btn student-btn--primary"
+                                        disabled={
+                                            !enrollForm.data.tos_action_irreversible ||
+                                            !enrollForm.data.tos_privacy_act ||
+                                            enrollForm.processing
+                                        }
+                                    >
+                                        {enrollForm.processing
+                                            ? 'Processing...'
+                                            : `ENROLL FOR ${formatPrice(selectedCert.price)}`}
+                                    </button>
+                                    <button type="button" className="student-btn student-btn--secondary" onClick={openVoucherParams}>
+                                        HAVE A VOUCHER?
+                                    </button>
                                 </form>
                             )}
 
-                            {/* 3. VOUCHER VIEW */}
                             {modalView === 'voucher' && (
-                                <form onSubmit={submitVoucher} className="space-y-6">
-                                     <div className="text-center pt-2">
-                                        <h4 className="font-extrabold text-stone-800 text-lg mb-4 opacity-0 h-0">Voucher Field</h4>
-                                        
-                                        {voucherForm.errors.code && (
-                                            <div className="mb-4 bg-red-100 text-red-500 text-xs font-bold py-2 px-3 rounded-lg border border-red-200 animate-in shake">
-                                                {voucherForm.errors.code}
-                                            </div>
-                                        )}
-
-                                        <div className="bg-amber-100/50 p-6 rounded-2xl border border-amber-200/50 shadow-inner">
-                                            <input 
-                                                type="text" 
-                                                placeholder="Voucher Code"
-                                                className="w-full text-center tracking-widest font-mono font-bold text-lg bg-white border border-stone-300 focus:border-amber-400 focus:ring-amber-400 rounded-xl py-3 px-4 shadow-sm"
-                                                value={voucherForm.data.code}
-                                                onChange={e => voucherForm.setData('code', e.target.value.toUpperCase())}
-                                                required
-                                            />
-                                        </div>
-                                     </div>
-
-                                     <div className="pt-4 pb-2">
-                                        <button 
-                                            type="submit"
-                                            disabled={!voucherForm.data.code || voucherForm.processing}
-                                            className="w-full bg-amber-400 hover:bg-amber-500 disabled:bg-stone-300 text-white font-extrabold py-3.5 px-4 rounded-2xl transition-colors shadow-md shadow-amber-400/20"
-                                        >
-                                            {voucherForm.processing ? 'VERIFYING...' : 'CONFIRM VOUCHER CODE'}
-                                        </button>
-                                     </div>
+                                <form onSubmit={submitVoucher}>
+                                    {voucherForm.errors.code && (
+                                        <div className="student-modal__error">{voucherForm.errors.code}</div>
+                                    )}
+                                    {flash?.error && <div className="student-modal__error">{flash.error}</div>}
+                                    <input
+                                        type="text"
+                                        className="student-modal__voucher-input"
+                                        placeholder="Voucher Code"
+                                        value={voucherForm.data.code}
+                                        onChange={(event) =>
+                                            voucherForm.setData('code', event.target.value.toUpperCase())
+                                        }
+                                        required
+                                    />
+                                    <button
+                                        type="submit"
+                                        className="student-btn student-btn--coral"
+                                        style={{ marginTop: 16 }}
+                                        disabled={!voucherForm.data.code || voucherForm.processing}
+                                    >
+                                        {voucherForm.processing ? 'Verifying...' : 'CONFIRM VOUCHER CODE'}
+                                    </button>
                                 </form>
                             )}
-
                         </div>
                     </div>
                 </div>
             )}
-        </AuthenticatedLayout>
+        </StudentLayout>
     );
 }

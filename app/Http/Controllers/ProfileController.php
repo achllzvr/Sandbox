@@ -10,6 +10,10 @@ class ProfileController extends Controller
 {
     public function edit(Request $request)
     {
+        if ($request->user()?->role === 'user') {
+            return redirect()->route('student.dashboard');
+        }
+
         return Inertia::render('Profile/Edit', [
             'mustVerifyEmail' => false,
             'status' => session('status'),

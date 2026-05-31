@@ -182,6 +182,8 @@ Route::middleware(['auth', 'otp.verified', 'role:user'])
     ->name('student.')
     ->group(function () {
         Route::get('/dashboard', [StudentDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/leaderboard', [\App\Http\Controllers\Student\LeaderboardController::class, 'index'])->name('leaderboard');
+        Route::get('/cast', [\App\Http\Controllers\Student\CastController::class, 'index'])->name('cast');
         
         // Sandbox Enrollment & Voucher Flow
         Route::post('/enrollments/checkout', [\App\Http\Controllers\Student\EnrollmentController::class, 'checkout'])->name('enrollments.checkout');
