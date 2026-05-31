@@ -1,5 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import AdminLayout from '@/Layouts/AdminLayout';
+import AdminAppearanceSettings from '@/Components/Admin/AdminAppearanceSettings';
 import DeleteUserForm from './Partials/DeleteUserForm';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm';
@@ -17,6 +18,9 @@ export default function Edit({ mustVerifyEmail, status }) {
             <AdminLayout pageTitle="Profile settings">
                 <Head title="Profile settings" />
                 <div className="admin-profile-stack">
+                    <div className="admin-card admin-card--chunky admin-profile-card">
+                        <AdminAppearanceSettings />
+                    </div>
                     {/* Profile information — form submits to profile.update (stub controller) */}
                     <div className="admin-card admin-card--chunky admin-profile-card">
                         <UpdateProfileInformationForm

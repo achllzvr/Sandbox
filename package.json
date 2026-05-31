@@ -21,6 +21,7 @@
         "vite": "^4.0.0"
     },
     "dependencies": {
-        "jszip": "^3.10.1"
+        "jszip": "^3.10.1",
+        "lucide-react": "^1.17.0"
     }
 }

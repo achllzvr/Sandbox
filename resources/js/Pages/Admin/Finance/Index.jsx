@@ -17,6 +17,8 @@ import AdminLayout from '@/Layouts/AdminLayout';
 import AdminBadge from '@/Components/Admin/AdminBadge';
 import AdminModal from '@/Components/Admin/AdminModal';
 import AdminDateRangeModal from '@/Components/Admin/AdminDateRangeModal';
+import AdminTablePagination from '@/Components/Admin/AdminTablePagination';
+import { useAdminPagination } from '@/hooks/useAdminPagination';
 import {
     formatCurrency,
     formatFinanceTimestamp,
@@ -131,6 +133,10 @@ export default function FinanceIndex({ filters = {}, is_mock = true }) {
         return rows;
     }, [search, statusFilter, dateFrom, dateTo]);
 
+    const masterLedgerPagination = useAdminPagination(filteredMasterLedger);
+    const withdrawalsPagination = useAdminPagination(filteredWithdrawals);
+    const webhooksPagination = useAdminPagination(filteredWebhooks);
+
     function openTodoAction(type, payload) {
         setActionModal({ type, payload });
         setWithdrawalMenuId(null);
@@ -143,6 +149,7 @@ export default function FinanceIndex({ filters = {}, is_mock = true }) {
                 type="button"
                 className={`admin-page-tabs__btn ${topTab === 'ledger' ? 'admin-page-tabs__btn--active' : ''}`}
                 onClick={() => setTopTab('ledger')}
+                aria-selected={topTab === 'ledger'}
             >
                 Financial ledger
             </button>
@@ -150,6 +157,7 @@ export default function FinanceIndex({ filters = {}, is_mock = true }) {
                 type="button"
                 className={`admin-page-tabs__btn ${topTab === 'webhook' ? 'admin-page-tabs__btn--active' : ''}`}
                 onClick={() => setTopTab('webhook')}
+                aria-selected={topTab === 'webhook'}
             >
                 Webhook monitor
             </button>
@@ -191,7 +199,9 @@ export default function FinanceIndex({ filters = {}, is_mock = true }) {
             )}
 
             {/* TODO[backend]: Finance metric cards — MOCK_LEDGER_METRICS / MOCK_WEBHOOK_METRICS */}
-            <div className={`admin-finance-metrics ${topTab === 'webhook' ? 'admin-finance-metrics--3' : ''}`}>
+            <div
+                className={`admin-finance-metrics ${topTab === 'webhook' ? 'admin-finance-metrics--3' : ''}`}
+            >
                 {metricItems.map((item) => (
                     <div
                         key={item.key}
@@ -219,12 +229,18 @@ export default function FinanceIndex({ filters = {}, is_mock = true }) {
                     className="input-field admin-subtoolbar__search"
                     aria-label="Search finance records"
                 />
-                {(topTab === 'webhook' || ledgerTab === 'withdrawals') && (
+                <div
+                    className={`admin-subtoolbar__control admin-subtoolbar__role-wrap ${
+                        topTab === 'webhook' || ledgerTab === 'withdrawals' ? '' : 'admin-subtoolbar__control--hidden'
+                    }`}
+                >
                     <select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
                         className="input-field admin-subtoolbar__role"
                         aria-label="Filter by status"
+                        aria-hidden={topTab !== 'webhook' && ledgerTab !== 'withdrawals'}
+                        tabIndex={topTab === 'webhook' || ledgerTab === 'withdrawals' ? 0 : -1}
                     >
                         {(topTab === 'webhook' ? WEBHOOK_STATUS_OPTIONS : WITHDRAWAL_STATUS_OPTIONS).map(
                             (opt) => (
@@ -234,7 +250,7 @@ export default function FinanceIndex({ filters = {}, is_mock = true }) {
                             )
                         )}
                     </select>
-                )}
+                </div>
                 <button
                     type="button"
                     className={`admin-btn admin-btn--secondary ${dateFrom || dateTo ? 'admin-btn--active-filter' : ''}`}
@@ -242,24 +258,31 @@ export default function FinanceIndex({ filters = {}, is_mock = true }) {
                 >
                     {dateRangeLabel}
                 </button>
-                {/* TODO[backend]: Export CSV — openTodoAction placeholder only */}
-                {topTab === 'ledger' && (
+                <div
+                    className={`admin-subtoolbar__control admin-subtoolbar__add-wrap ${
+                        topTab === 'ledger' ? '' : 'admin-subtoolbar__control--hidden'
+                    }`}
+                >
                     <button
                         type="button"
                         className="admin-btn admin-btn--secondary admin-subtoolbar__add"
                         onClick={() => openTodoAction('export_csv')}
+                        aria-hidden={topTab !== 'ledger'}
+                        tabIndex={topTab === 'ledger' ? 0 : -1}
                     >
                         Export to CSV
                     </button>
-                )}
+                </div>
             </div>
 
             {/* Ledger panel: master ledger + withdrawal tabs — mock row data */}
             {topTab === 'ledger' ? (
                 <div className="admin-finance-panel admin-card admin-card--chunky admin-panel--clip-visible">
-                    <div className="admin-finance-panel__tabs">
+                    <div className="admin-finance-panel__tabs" role="tablist" aria-label="Ledger views">
                         <button
                             type="button"
+                            role="tab"
+                            aria-selected={ledgerTab === 'master'}
                             className={`admin-finance-panel__tab ${ledgerTab === 'master' ? 'admin-finance-panel__tab--active' : ''}`}
                             onClick={() => setLedgerTab('master')}
                         >
@@ -267,6 +290,8 @@ export default function FinanceIndex({ filters = {}, is_mock = true }) {
                         </button>
                         <button
                             type="button"
+                            role="tab"
+                            aria-selected={ledgerTab === 'withdrawals'}
                             className={`admin-finance-panel__tab ${ledgerTab === 'withdrawals' ? 'admin-finance-panel__tab--active' : ''}`}
                             onClick={() => setLedgerTab('withdrawals')}
                         >
@@ -274,6 +299,7 @@ export default function FinanceIndex({ filters = {}, is_mock = true }) {
                         </button>
                     </div>
 
+                    <div key={`ledger-${ledgerTab}`} className="admin-finance-panel__view admin-panel-swap">
                     {ledgerTab === 'master' ? (
                         <>
                             <div className="admin-finance-panel__header admin-finance-panel__header--ledger">
@@ -291,7 +317,7 @@ export default function FinanceIndex({ filters = {}, is_mock = true }) {
                                         No ledger entries found.
                                     </p>
                                 ) : (
-                                    filteredMasterLedger.map((row) => (
+                                    masterLedgerPagination.paginatedItems.map((row) => (
                                         <article key={row.id} className="admin-finance-row admin-finance-row--ledger">
                                             <span className="admin-finance-row__cell">{formatFinanceTimestamp(row.timestamp)}</span>
                                             <span className="admin-finance-row__cell admin-finance-row__mono">{row.transaction_id}</span>
@@ -308,6 +334,14 @@ export default function FinanceIndex({ filters = {}, is_mock = true }) {
                                     ))
                                 )}
                             </div>
+                            <AdminTablePagination
+                                page={masterLedgerPagination.page}
+                                totalPages={masterLedgerPagination.totalPages}
+                                totalItems={masterLedgerPagination.totalItems}
+                                rangeStart={masterLedgerPagination.rangeStart}
+                                rangeEnd={masterLedgerPagination.rangeEnd}
+                                onPageChange={masterLedgerPagination.setPage}
+                            />
                         </>
                     ) : (
                         <>
@@ -325,8 +359,8 @@ export default function FinanceIndex({ filters = {}, is_mock = true }) {
                                         No withdrawal requests found.
                                     </p>
                                 ) : (
-                                    filteredWithdrawals.map((row, index) => {
-                                        const popoverAbove = index >= filteredWithdrawals.length - 2;
+                                    withdrawalsPagination.paginatedItems.map((row, index) => {
+                                        const popoverAbove = index >= withdrawalsPagination.paginatedItems.length - 2;
                                         return (
                                         <article key={row.id} className="admin-finance-row admin-finance-row--withdrawals">
                                             <span className="admin-finance-row__cell">{formatFinanceTimestamp(row.timestamp)}</span>
@@ -379,8 +413,17 @@ export default function FinanceIndex({ filters = {}, is_mock = true }) {
                                     })
                                 )}
                             </div>
+                            <AdminTablePagination
+                                page={withdrawalsPagination.page}
+                                totalPages={withdrawalsPagination.totalPages}
+                                totalItems={withdrawalsPagination.totalItems}
+                                rangeStart={withdrawalsPagination.rangeStart}
+                                rangeEnd={withdrawalsPagination.rangeEnd}
+                                onPageChange={withdrawalsPagination.setPage}
+                            />
                         </>
                     )}
+                    </div>
                 </div>
             ) : (
                 /* TODO[backend]: Webhook monitor table — MOCK_WEBHOOK_EVENTS; action popover not wired */
@@ -401,8 +444,8 @@ export default function FinanceIndex({ filters = {}, is_mock = true }) {
                                 No webhook events found.
                             </p>
                         ) : (
-                            filteredWebhooks.map((row, index) => {
-                                const popoverAbove = index >= filteredWebhooks.length - 2;
+                            webhooksPagination.paginatedItems.map((row, index) => {
+                                const popoverAbove = index >= webhooksPagination.paginatedItems.length - 2;
                                 return (
                                 <article key={row.id} className="admin-finance-row admin-finance-row--webhook">
                                     <span className="admin-finance-row__cell">{formatFinanceTimestamp(row.timestamp)}</span>
@@ -448,6 +491,14 @@ export default function FinanceIndex({ filters = {}, is_mock = true }) {
                             })
                         )}
                     </div>
+                    <AdminTablePagination
+                        page={webhooksPagination.page}
+                        totalPages={webhooksPagination.totalPages}
+                        totalItems={webhooksPagination.totalItems}
+                        rangeStart={webhooksPagination.rangeStart}
+                        rangeEnd={webhooksPagination.rangeEnd}
+                        onPageChange={webhooksPagination.setPage}
+                    />
                 </div>
             )}
 

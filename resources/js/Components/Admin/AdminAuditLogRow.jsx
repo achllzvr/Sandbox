@@ -16,7 +16,7 @@ export default function AdminAuditLogRow({ log }) {
         : log.done_by || 'System';
 
     return (
-        <article className="admin-audit-row admin-card--chunky">
+        <article className="admin-audit-row">
             <div className="admin-audit-row__action">
                 <p className="admin-audit-row__action-text">{log.action}</p>
                 {log.details_summary && (

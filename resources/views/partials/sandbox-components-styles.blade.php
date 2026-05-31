@@ -8,3 +8,17 @@
 {{-- Loaded after Vite/Tailwind so Sandbox component styles win over Preflight --}}
 <link rel="stylesheet" href="{{ $assetBase }}/css/sandbox-components.css?v={{ $componentsCssVersion }}">
 <link rel="stylesheet" href="{{ $assetBase }}/css/sandbox-admin.css?v={{ $adminCssVersion }}">
+<script>
+    (function () {
+        try {
+            var theme = localStorage.getItem('sandbox-admin-theme');
+            var highContrast = localStorage.getItem('sandbox-admin-high-contrast');
+            if (theme === 'light' || theme === 'dark') {
+                document.documentElement.setAttribute('data-admin-theme', theme);
+            }
+            if (theme === 'light' && highContrast === '1') {
+                document.documentElement.setAttribute('data-admin-contrast', 'high');
+            }
+        } catch (e) {}
+    })();
+</script>

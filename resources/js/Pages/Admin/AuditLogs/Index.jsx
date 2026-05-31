@@ -7,13 +7,14 @@
  * TODO (backend + database):
  * - Falls back to MOCK_AUDIT_LOGS when table empty/missing
  * - Search, action filter, date range → client-side only (not persisted to query string)
- * - Pagination not implemented
  * - Audit log writes on admin actions (suspend, finance, etc.) not implemented
  */
 import { Head } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import AdminAuditLogRow from '@/Components/Admin/AdminAuditLogRow';
 import AdminDateRangeModal from '@/Components/Admin/AdminDateRangeModal';
+import AdminTablePagination from '@/Components/Admin/AdminTablePagination';
+import { useAdminPagination } from '@/hooks/useAdminPagination';
 import {
     AUDIT_ACTION_OPTIONS,
     MOCK_AUDIT_LOGS,
@@ -69,6 +70,16 @@ export default function AuditLogsIndex({ logs, is_mock = true, filters = {} }) {
         return result;
     }, [sourceLogs, search, actionFilter, dateFrom, dateTo]);
 
+    const {
+        page,
+        setPage,
+        totalPages,
+        totalItems,
+        paginatedItems,
+        rangeStart,
+        rangeEnd,
+    } = useAdminPagination(displayedLogs);
+
     const dateRangeLabel =
         dateFrom || dateTo
             ? `${dateFrom || '…'} – ${dateTo || '…'}`
@@ -117,7 +128,7 @@ export default function AuditLogsIndex({ logs, is_mock = true, filters = {} }) {
             </div>
 
             {/* Audit log rows — mock or live from AuditLogController */}
-            <div className="admin-audit-panel admin-card admin-card--chunky admin-panel--clip-visible">
+            <div className="admin-audit-panel admin-card admin-card--chunky">
                 <div className="admin-audit-panel__header">
                     <span>Action</span>
                     <span>Done by</span>
@@ -129,12 +140,21 @@ export default function AuditLogsIndex({ logs, is_mock = true, filters = {} }) {
                             No audit log entries match this filter.
                         </p>
                     ) : (
-                        displayedLogs.map((log) => (
+                        paginatedItems.map((log) => (
                             <AdminAuditLogRow key={log.id} log={log} />
                         ))
                     )}
                 </div>
             </div>
+
+            <AdminTablePagination
+                page={page}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                rangeStart={rangeStart}
+                rangeEnd={rangeEnd}
+                onPageChange={setPage}
+            />
 
             {/* Date range modal — client-side filter only; TODO[backend] query params + SQL date filter */}
             <AdminDateRangeModal

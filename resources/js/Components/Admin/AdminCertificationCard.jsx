@@ -28,7 +28,7 @@ export default function AdminCertificationCard({
     const isPending = cert.status === 'pending_review';
 
     return (
-        <article className="admin-cert-row admin-card--chunky">
+        <article className="admin-cert-row">
             <div className="admin-cert-row__name">
                 <p className="admin-cert-row__title">{cert.title}</p>
                 <AdminBadge value={cert.status} />

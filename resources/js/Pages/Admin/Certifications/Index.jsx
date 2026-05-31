@@ -15,6 +15,8 @@ import { Head, router, useForm } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import AdminModal from '@/Components/Admin/AdminModal';
 import AdminCertificationCard from '@/Components/Admin/AdminCertificationCard';
+import AdminTablePagination from '@/Components/Admin/AdminTablePagination';
+import { useAdminPagination } from '@/hooks/useAdminPagination';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 const STATUS_OPTIONS = [
@@ -43,6 +45,16 @@ export default function CertificationsIndex({ certifications, filters }) {
     );
 
     const displayedCerts = activeTab === 'approvals' ? approvalCerts : certifications;
+
+    const {
+        page,
+        setPage,
+        totalPages,
+        totalItems,
+        paginatedItems,
+        rangeStart,
+        rangeEnd,
+    } = useAdminPagination(displayedCerts);
 
     const applyFilters = useCallback((nextSearch, nextStatus) => {
         router.get(
@@ -133,12 +145,18 @@ export default function CertificationsIndex({ certifications, filters }) {
                     className="input-field admin-subtoolbar__search"
                     aria-label="Search certifications"
                 />
-                {activeTab === 'management' && (
+                <div
+                    className={`admin-subtoolbar__control admin-subtoolbar__role-wrap ${
+                        activeTab === 'management' ? '' : 'admin-subtoolbar__control--hidden'
+                    }`}
+                >
                     <select
                         value={statusFilter}
                         onChange={handleStatusChange}
                         className="input-field admin-subtoolbar__role"
                         aria-label="Filter by status"
+                        aria-hidden={activeTab !== 'management'}
+                        tabIndex={activeTab === 'management' ? 0 : -1}
                     >
                         {STATUS_OPTIONS.map((opt) => (
                             <option key={opt.value || 'all'} value={opt.value}>
@@ -146,7 +164,7 @@ export default function CertificationsIndex({ certifications, filters }) {
                             </option>
                         ))}
                     </select>
-                )}
+                </div>
             </div>
 
             {/* Certification panel — list wired; archive/restore actions TODO[backend] */}
@@ -158,7 +176,7 @@ export default function CertificationsIndex({ certifications, filters }) {
                     <span>Actions</span>
                 </div>
 
-                <div className="admin-cert-panel__body">
+                <div key={activeTab} className="admin-cert-panel__body admin-panel-swap">
                     {displayedCerts.length === 0 ? (
                         <p className="admin-empty" style={{ padding: '3rem' }}>
                             {activeTab === 'approvals'
@@ -166,7 +184,7 @@ export default function CertificationsIndex({ certifications, filters }) {
                                 : 'No certifications found.'}
                         </p>
                     ) : (
-                        displayedCerts.map((cert, i) => (
+                        paginatedItems.map((cert, i) => (
                             <AdminCertificationCard
                                 key={cert.id}
                                 cert={cert}
@@ -182,6 +200,15 @@ export default function CertificationsIndex({ certifications, filters }) {
                     )}
                 </div>
             </div>
+
+            <AdminTablePagination
+                page={page}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                rangeStart={rangeStart}
+                rangeEnd={rangeEnd}
+                onPageChange={setPage}
+            />
 
             {/* Decline modal — wired to admin.certifications.status.update */}
             <AdminModal

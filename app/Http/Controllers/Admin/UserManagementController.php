@@ -44,7 +44,7 @@ class UserManagementController extends Controller
             });
         }
 
-        $users = $query->latest()->paginate(15)->withQueryString();
+        $users = $query->latest()->paginate(10)->withQueryString();
 
         return Inertia::render('Admin/Users/Index', [
             'users' => $users,
