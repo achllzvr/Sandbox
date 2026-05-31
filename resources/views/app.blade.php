@@ -4,13 +4,11 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title inertia>{{ config('app.name', 'Laravel') }}</title>
+        <title inertia>{{ config('app.name', 'Sandbox') }}</title>
 
-        <!-- Fonts -->
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+        {{-- Global Sandbox styles (public/css/style.css) — works without Vite --}}
+        @include('partials.sandbox-styles')
 
-        <!-- Scripts -->
         @routes
         @viteReactRefresh
         @vite(['resources/js/app.jsx', "resources/js/Pages/{$page['component']}.jsx"])
@@ -18,5 +16,6 @@
     </head>
     <body class="font-sans antialiased">
         @inertia
+        <script src="{{ rtrim(request()->getBaseUrl(), '/') }}/js/script.js" defer></script>
     </body>
 </html>

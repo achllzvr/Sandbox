@@ -15,7 +15,8 @@ Route::middleware('guest')->group(function () {
         [RegisteredUserController::class, 'create'])
         ->name('register');
     Route::post('register',
-        [RegisteredUserController::class, 'store']);
+        [RegisteredUserController::class, 'store'])
+        ->name('register.store');
 
     Route::get('register/teacher',
         [TeacherRegistrationController::class, 'create'])
@@ -44,8 +45,20 @@ Route::middleware('guest')->group(function () {
         ->name('password.store');
 
     Route::get('teacher/pending-approval', function () {
-        return Inertia\Inertia::render('Auth/TeacherPendingApproval');
+        return Inertia\Inertia::render('Auth/TeacherPendingApproval', [
+            'verified' => request()->boolean('verified'),
+        ]);
     })->name('teacher.pending-approval');
+
+    Route::get('registration/success', function () {
+        return Inertia\Inertia::render('Auth/RegistrationSuccess', [
+            'isAffiliate' => request()->boolean('affiliate'),
+        ]);
+    })->name('registration.success');
+
+    Route::get('password/reset-success', function () {
+        return Inertia\Inertia::render('Auth/PasswordResetSuccess');
+    })->name('password.reset.success');
 });
 
 // ── Authenticated only ─────────────────────────────────────

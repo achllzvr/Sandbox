@@ -20,6 +20,10 @@ export { default as OTPInput } from './OTPInput';
 export { default as PasswordRequirements } from './PasswordRequirements';
 export { default as CountdownTimer } from './CountdownTimer';
 export { default as MultiStepForm } from './MultiStepForm';
+export { default as AuthFooter } from './AuthFooter';
+export { default as AuthErrorBanner } from './AuthErrorBanner';
+export { default as ProgressButton } from './ProgressButton';
 
 // Layouts
 export { default as Layout } from '../Layouts/MainLayout';
+export { default as AuthLayout } from '../Layouts/AuthLayout';

@@ -1,11 +1,11 @@
 @extends('layouts.app')
 
-@section('title', 'Verify Your Email')
+@section('title', 'Verify Your Hermit — Sandbox')
 
 @section('content')
-<div class="container">
+<div class="auth-page-wrap">
     <div class="auth-container">
-        <x-card class="auth-card" title="Verify Your Email" subtitle="Enter the 6-digit code sent to your inbox.">
+        <x-card class="auth-card" title="Verify your Hermit" subtitle="Enter the 6-digit code sent to your inbox.">
             @if(session('success'))
                 <div class="alert alert-success">
                     {{ session('success') }}
@@ -13,12 +13,12 @@
             @endif
 
             @if($errors->any())
-                <div class="alert alert-error">
-                    {{ $errors->first() }}
+                <div class="error-banner alert-error" role="alert">
+                    <p>{{ $errors->first() }}</p>
                 </div>
             @endif
 
-            <form action="{{ route('verification.verify') }}" method="POST" class="auth-form">
+            <form action="{{ route('verification.verify') }}" method="POST" class="auth-form" id="verify-form">
                 @csrf
 
                 <x-input
@@ -26,7 +26,7 @@
                     name="email"
                     type="email"
                     placeholder="you@example.com"
-                    value="{{ old('email', $email) }}"
+                    :value="old('email', $email)"
                     required="true"
                 />
 
@@ -39,8 +39,8 @@
                 />
 
                 <div class="form-actions">
-                    <x-button type="submit" color="primary" class="btn-block">
-                        Verify Account
+                    <x-button type="submit" color="primary" class="btn-block" :gated="true">
+                        Create Shell
                     </x-button>
                 </div>
             </form>
@@ -58,7 +58,7 @@
             </form>
 
             <div class="auth-footer">
-                <p>Already verified? <a href="{{ route('login') }}">Login here</a></p>
+                <p>Already verified? <a href="{{ route('login') }}">Log in</a></p>
             </div>
         </x-card>
     </div>

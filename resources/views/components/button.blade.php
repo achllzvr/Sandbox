@@ -1,5 +1,16 @@
-@props(['type' => 'button', 'color' => 'primary'])
+@props([
+    'type' => 'button',
+    'color' => 'primary',
+    'gated' => false,
+])
 
-<button type="{{ $type }}" {{ $attributes->merge(['class' => 'btn btn-' . $color]) }}>
+@php
+    $classes = 'btn btn-' . $color;
+    if ($gated) {
+        $classes .= ' btn-form-gated';
+    }
+@endphp
+
+<button type="{{ $type }}" {{ $attributes->merge(['class' => $classes]) }}>
     {{ $slot }}
 </button>

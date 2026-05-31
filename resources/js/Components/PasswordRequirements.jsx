@@ -1,87 +1,37 @@
-import React, { useEffect, useState } from 'react';
-import { colors } from '../Styles/theme';
+import { useEffect, useState } from 'react';
 
-/**
- * Password requirements checker component
- * Shows password strength indicators
- * @param {string} password - Current password
- * @param {Array} requirements - Array of {label, test} objects
- */
+const DEFAULT_REQUIREMENTS = [
+    { key: 'length', label: 'At least 8 characters', test: (p) => p.length >= 8 },
+    { key: 'upper', label: 'Must have at least one Capital letter', test: (p) => /[A-Z]/.test(p) },
+    { key: 'symbol', label: 'Must have at least one Symbol', test: (p) => /[^A-Za-z0-9]/.test(p) },
+    { key: 'number', label: 'Must have at least one Number', test: (p) => /[0-9]/.test(p) },
+];
+
 export const PasswordRequirements = ({
-  password = '',
-  requirements = [
-    { label: 'At least 8 characters', test: (p) => p.length >= 8 },
-    { label: 'Contains uppercase letter', test: (p) => /[A-Z]/.test(p) },
-    { label: 'Contains lowercase letter', test: (p) => /[a-z]/.test(p) },
-    { label: 'Contains number', test: (p) => /[0-9]/.test(p) },
-    { label: 'Contains special character', test: (p) => /[!@#$%^&*]/.test(p) },
-  ],
+    password = '',
+    requirements = DEFAULT_REQUIREMENTS,
+    onAllMetChange,
 }) => {
-  const [checkedRequirements, setCheckedRequirements] = useState([]);
+    const [met, setMet] = useState([]);
 
-  useEffect(() => {
-    setCheckedRequirements(requirements.map((req) => req.test(password)));
-  }, [password, requirements]);
+    useEffect(() => {
+        const results = requirements.map((req) => req.test(password));
+        setMet(results);
+        onAllMetChange?.(results.every(Boolean));
+    }, [password, requirements, onAllMetChange]);
 
-  const isAllMet = checkedRequirements.every((check) => check === true);
-
-  return (
-    <div className="flex flex-col gap-3">
-      <div
-        style={{
-          color: colors.text.primary,
-          fontSize: '0.875rem',
-          fontWeight: 600,
-        }}
-      >
-        Password Requirements:
-      </div>
-      <div className="flex flex-col gap-2">
-        {requirements.map((requirement, index) => (
-          <div
-            key={index}
-            className="flex items-center gap-2"
-            style={{
-              opacity: checkedRequirements[index] ? 1 : 0.5,
-            }}
-          >
-            <span
-              style={{
-                color: checkedRequirements[index]
-                  ? colors.status.success
-                  : colors.text.light,
-                fontWeight: 'bold',
-                fontSize: '1.1rem',
-              }}
-            >
-              {checkedRequirements[index] ? '✓' : '○'}
-            </span>
-            <span
-              style={{
-                color: checkedRequirements[index]
-                  ? colors.status.success
-                  : colors.text.secondary,
-                fontSize: '0.9rem',
-              }}
-            >
-              {requirement.label}
-            </span>
-          </div>
-        ))}
-      </div>
-      {isAllMet && (
-        <div
-          style={{
-            color: colors.status.success,
-            fontSize: '0.875rem',
-            fontWeight: 600,
-          }}
-        >
-          ✓ Password is strong
+    return (
+        <div className="password-requirements">
+            <p className="password-requirements-title">Password Requirements:</p>
+            <ul>
+                {requirements.map((req, index) => (
+                    <li key={req.key || index} className={met[index] ? 'met' : ''}>
+                        {req.label}
+                    </li>
+                ))}
+            </ul>
         </div>
-      )}
-    </div>
-  );
+    );
 };
 
 export default PasswordRequirements;

@@ -1,14 +1,14 @@
 import { Head, Link } from '@inertiajs/react';
 import { assetUrl } from '@/utils/assetUrl';
 
-export default function TeacherPendingApproval({ verified = false }) {
-    const heading = verified
-        ? 'Your Affiliated Hermit has been verified!'
-        : 'Your Affiliated Hermit is awaiting verification';
+export default function RegistrationSuccess({ title, message, isAffiliate = false }) {
+    const heading = title || (isAffiliate
+        ? 'Your Affiliated Hermit has been created!'
+        : 'Your Hermit has been created!');
 
     return (
         <>
-            <Head title={heading} />
+            <Head title="Success — Sandbox" />
             <div className="auth-shell">
                 <header className="navbar app-header auth-header">
                     <div className="container flex-between">
@@ -35,18 +35,23 @@ export default function TeacherPendingApproval({ verified = false }) {
                                 src={assetUrl('images/HermyLanding.png')}
                                 alt="Hermit mascot"
                             />
-                            <Link
-                                href={route('login')}
-                                className={verified ? 'btn btn-primary' : 'btn btn-secondary'}
-                            >
-                                Proceed to Login
-                            </Link>
+                            {isAffiliate ? (
+                                <Link
+                                    href={route('teacher.pending-approval')}
+                                    className="btn btn-primary"
+                                >
+                                    Continue
+                                </Link>
+                            ) : (
+                                <Link href={route('login')} className="btn btn-primary">
+                                    Proceed to Login
+                                </Link>
+                            )}
                         </div>
                     </div>
-                    {!verified && (
-                        <p className="auth-subtitle" style={{ maxWidth: 520 }}>
-                            We are reviewing your affiliation documents. You will be able to log in
-                            once an administrator approves your account.
+                    {message && (
+                        <p className="auth-subtitle" style={{ maxWidth: 480 }}>
+                            {message}
                         </p>
                     )}
                 </section>
