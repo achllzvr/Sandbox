@@ -4,9 +4,25 @@ import StudentShellSidebar from '@/Components/Student/StudentShellSidebar';
 
 const PROFILE_KEY = 'sandbox-student-profile-collapsed';
 
+function readProfileCollapsed(fallback) {
+    if (typeof window === 'undefined') {
+        return fallback;
+    }
+
+    const stored = window.localStorage.getItem(PROFILE_KEY);
+    if (stored === '1') {
+        return true;
+    }
+    if (stored === '0') {
+        return false;
+    }
+
+    return fallback;
+}
+
 export default function StudentWorkspace({ layoutMode = 'standard', children }) {
     const shellActive = layoutMode === 'shell';
-    const [profileCollapsed, setProfileCollapsed] = useState(!shellActive);
+    const [profileCollapsed, setProfileCollapsed] = useState(() => readProfileCollapsed(!shellActive));
 
     useEffect(() => {
         if (shellActive) {

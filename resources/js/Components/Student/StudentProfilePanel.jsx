@@ -127,28 +127,29 @@ export default function StudentProfilePanel({ collapsed, onToggle, onEmptyClick,
                 </div>
             )}
 
-            {!collapsed && !editOpen && (
-                <Link
-                    href={route('logout')}
-                    method="post"
-                    as="button"
+            <div className="student-profile__actions">
+                {!collapsed && !editOpen && (
+                    <Link
+                        href={route('logout')}
+                        method="post"
+                        as="button"
+                        type="button"
+                        className="student-profile__logout student-panel-swap"
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        LOGOUT
+                    </Link>
+                )}
+                <button
                     type="button"
-                    className="student-profile__logout student-panel-swap"
-                    onClick={(event) => event.stopPropagation()}
+                    className="student-profile__toggle"
+                    onClick={onToggle}
+                    aria-label={collapsed ? 'Expand profile panel' : 'Collapse profile panel'}
+                    aria-expanded={!collapsed}
                 >
-                    LOGOUT
-                </Link>
-            )}
-
-            <button
-                type="button"
-                className="student-profile__toggle"
-                onClick={onToggle}
-                aria-label={collapsed ? 'Expand profile panel' : 'Collapse profile panel'}
-                aria-expanded={!collapsed}
-            >
-                {collapsed ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
-            </button>
+                    {collapsed ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
+                </button>
+            </div>
         </aside>
     );
 }

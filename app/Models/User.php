@@ -30,6 +30,7 @@ class User extends Authenticatable
         'verified_by',
         'verified_at',
         'sand_dollars',
+        'default_certification_id',
     ];
 
     protected $hidden = [

@@ -1,5 +1,6 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import { useCallback, useEffect, useState } from 'react';
+import StudentCertificateView from '@/Components/Student/StudentCertificateView';
 import StudentExamDisclaimerModal from '@/Components/Student/StudentExamDisclaimerModal';
 import StudentQuizResults from '@/Components/Student/StudentQuizResults';
 import StudentSandboxQuiz from '@/Components/Student/StudentSandboxQuiz';
@@ -16,6 +17,7 @@ export default function Show() {
         moduleProgress = {},
         shellMeta: shellMetaProp,
         examStatus = {},
+        certificate = null,
         auth,
     } = usePage().props;
 
@@ -71,7 +73,7 @@ export default function Show() {
     }, []);
 
     const reloadShellProgress = useCallback(() => {
-        router.reload({ only: ['progress', 'moduleProgress', 'examStatus'], preserveScroll: true });
+        router.reload({ only: ['progress', 'moduleProgress', 'examStatus', 'certificate'], preserveScroll: true });
     }, []);
 
     useEffect(() => {
@@ -168,35 +170,12 @@ export default function Show() {
 
     if (isViewingCertificate) {
         return (
-            <div className="student-certificate">
-                <Head title="Certificate of Achievement" />
-                <button
-                    type="button"
-                    className="student-sandbox__header-btn"
-                    style={{ position: 'absolute', top: 24, left: 24 }}
-                    onClick={() => router.get(route('student.shells.show', certification.id))}
-                >
-                    ✕
-                </button>
-                <div className="student-certificate__card">
-                    <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '2rem', margin: '0 0 8px' }}>
-                        CERTIFICATE OF ACHIEVEMENT
-                    </h1>
-                    <p style={{ color: '#78716c' }}>is awarded to</p>
-                    <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '2.5rem', color: '#f07167', margin: '16px 0' }}>
-                        {auth.user.first_name} {auth.user.last_name}
-                    </h2>
-                    <p style={{ color: '#78716c' }}>for successfully completing the certification requirements for</p>
-                    <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.75rem', color: '#f07167' }}>
-                        {certification.title}
-                    </h3>
-                    <img
-                        src={assetUrl('images/Hermy.png')}
-                        alt=""
-                        style={{ position: 'absolute', right: 32, bottom: 0, width: 160 }}
-                    />
-                </div>
-            </div>
+            <StudentCertificateView
+                certification={certification}
+                user={auth?.user}
+                certificate={certificate}
+                onClose={() => router.get(route('student.shells.show', certification.id))}
+            />
         );
     }
 

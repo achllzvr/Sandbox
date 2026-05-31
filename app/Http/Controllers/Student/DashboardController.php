@@ -44,16 +44,24 @@ class DashboardController extends Controller
             ]);
         }
 
+        $defaultShellId = $user->default_certification_id;
+        $defaultShell = $defaultShellId
+            ? $myShells->first(fn ($shell) => $shell['id'] === $defaultShellId && ! ($shell['is_mock'] ?? false))
+            : null;
+
         if ($selectMode) {
+            $sortedShells = $this->sortShellsWithDefaultFirst($myShells, $defaultShellId);
+
             return Inertia::render('Student/Dashboard', [
-                'myShells' => $myShells->values(),
+                'myShells' => $sortedShells->values(),
                 'selectMode' => true,
+                'defaultShellId' => $defaultShellId,
             ]);
         }
 
-        $firstReal = $myShells->first(fn ($shell) => ! ($shell['is_mock'] ?? false));
-        if ($firstReal && ! $request->has('shell')) {
-            return redirect()->route('student.shells.show', $firstReal['id']);
+        $landingShell = $defaultShell ?? $myShells->first(fn ($shell) => ! ($shell['is_mock'] ?? false));
+        if ($landingShell && ! $request->has('shell')) {
+            return redirect()->route('student.shells.show', $landingShell['id']);
         }
 
         $shellId = (int) $request->input('shell', $myShells->first()['id'] ?? 1);
@@ -75,7 +83,25 @@ class DashboardController extends Controller
             'certification' => $mockCert,
             'progress' => $progress,
             'shellMeta' => $activeShell,
+            'defaultShellId' => $defaultShellId,
         ]);
+    }
+
+    private function sortShellsWithDefaultFirst($shells, ?int $defaultShellId)
+    {
+        if (! $defaultShellId) {
+            return $shells->values();
+        }
+
+        $defaultShell = $shells->first(fn ($shell) => $shell['id'] === $defaultShellId);
+
+        if (! $defaultShell) {
+            return $shells->values();
+        }
+
+        return collect([$defaultShell])
+            ->merge($shells->filter(fn ($shell) => $shell['id'] !== $defaultShellId))
+            ->values();
     }
 
     private function mockProgress(array $certification, int $completedCount): array

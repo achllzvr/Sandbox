@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { ChevronLeft, ChevronRight, Lock, Trophy, Zap } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Trophy, Zap } from 'lucide-react';
 import { assetUrl } from '@/utils/assetUrl';
 
 const FOOTER_LINKS = [
@@ -22,6 +22,9 @@ export default function StudentShellSidebar({ collapsed, onToggle, onEmptyClick 
 
     const handle = user.email?.split('@')[0] ?? 'student';
     const displayName = gamification.hermy_name ?? user.first_name ?? 'Hermy';
+    const completedSandboxes = gamification.completed_sandboxes ?? 0;
+    const leaderboardPlacement = gamification.leaderboard_placement ?? null;
+    const hasLeaderboardPlacement = leaderboardPlacement !== null && completedSandboxes > 0;
 
     function handlePanelClick() {
         if (collapsed) {
@@ -62,19 +65,10 @@ export default function StudentShellSidebar({ collapsed, onToggle, onEmptyClick 
                         <div className="student-shell-sidebar__stat" title="Rank">
                             <Trophy size={18} strokeWidth={2.25} aria-hidden="true" />
                             <span className="student-shell-sidebar__stat-value student-shell-sidebar__stat-value--short">
-                                {gamification.rank ? 'Ranked' : '—'}
+                                {hasLeaderboardPlacement ? `#${leaderboardPlacement}` : '—'}
                             </span>
                         </div>
                     </div>
-                    <button
-                        type="button"
-                        className="student-shell-sidebar__collapse"
-                        onClick={handleToggle}
-                        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-                        aria-expanded={!collapsed}
-                    >
-                        {collapsed ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
-                    </button>
                 </div>
 
                 <div className="student-shell-sidebar__content">
@@ -89,16 +83,33 @@ export default function StudentShellSidebar({ collapsed, onToggle, onEmptyClick 
                     </div>
 
                     <div className="student-shell-sidebar__card">
-                        <div className="student-shell-sidebar__card-icon student-shell-sidebar__card-icon--muted">
-                            <Lock size={28} strokeWidth={2} aria-hidden="true" />
+                        <div className="student-shell-sidebar__card-icon">
+                            <Trophy size={28} strokeWidth={2} aria-hidden="true" />
                         </div>
-                        <h3 className="student-shell-sidebar__card-title">Unlock Leaderboards!</h3>
-                        <p className="student-shell-sidebar__card-text">
-                            Finish 2 more sandboxes to start competing with other Hermits.
-                        </p>
-                        <Link href={route('student.leaderboard')} className="student-shell-sidebar__card-link">
-                            View leaderboards
-                        </Link>
+                        <h3 className="student-shell-sidebar__card-title">
+                            {hasLeaderboardPlacement ? 'Leaderboard placement' : 'Leaderboards'}
+                        </h3>
+                        {hasLeaderboardPlacement ? (
+                            <>
+                                <p className="student-shell-sidebar__card-text">
+                                    You are currently <strong>#{leaderboardPlacement}</strong> on the Hermit leaderboard.
+                                </p>
+                                <Link href={route('student.leaderboard')} className="student-shell-sidebar__card-link">
+                                    View leaderboards
+                                </Link>
+                            </>
+                        ) : (
+                            <>
+                                <p className="student-shell-sidebar__card-text">
+                                    {completedSandboxes === 0
+                                        ? 'Complete sandboxes and shells to earn your first leaderboard placement.'
+                                        : 'Keep completing sandboxes to unlock your leaderboard rank.'}
+                                </p>
+                                <Link href={route('student.leaderboard')} className="student-shell-sidebar__card-link">
+                                    View leaderboards
+                                </Link>
+                            </>
+                        )}
                     </div>
 
                     <div className="student-shell-sidebar__card">
@@ -127,16 +138,6 @@ export default function StudentShellSidebar({ collapsed, onToggle, onEmptyClick 
                         </div>
                     </div>
 
-                    <Link
-                        href={route('logout')}
-                        method="post"
-                        as="button"
-                        type="button"
-                        className="student-shell-sidebar__logout"
-                    >
-                        Logout
-                    </Link>
-
                     <footer className="student-shell-sidebar__footer">
                         {FOOTER_LINKS.map((link) => (
                             <a key={link.label} href={link.href} className="student-shell-sidebar__footer-link">
@@ -144,6 +145,28 @@ export default function StudentShellSidebar({ collapsed, onToggle, onEmptyClick 
                             </a>
                         ))}
                     </footer>
+                </div>
+
+                <div className="student-shell-sidebar__actions">
+                    <Link
+                        href={route('logout')}
+                        method="post"
+                        as="button"
+                        type="button"
+                        className="student-shell-sidebar__logout"
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        Logout
+                    </Link>
+                    <button
+                        type="button"
+                        className="student-shell-sidebar__collapse"
+                        onClick={handleToggle}
+                        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                        aria-expanded={!collapsed}
+                    >
+                        {collapsed ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
+                    </button>
                 </div>
             </div>
         </aside>

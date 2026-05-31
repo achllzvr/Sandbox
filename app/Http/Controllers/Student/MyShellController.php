@@ -64,11 +64,13 @@ class MyShellController extends Controller
             ->orderByDesc('attempted_at')
             ->get();
 
-        $hasCertificate = \Illuminate\Support\Facades\DB::table('certificates')
+        $certificateRow = \Illuminate\Support\Facades\DB::table('certificates')
             ->where('user_id', $user->id)
             ->where('certification_id', $id)
             ->where('status', 'valid')
-            ->exists();
+            ->first();
+
+        $hasCertificate = (bool) $certificateRow;
 
         $latestAttempt = $examAttempts->first();
         $hasPassedExam = $hasCertificate || $examAttempts->contains(fn ($row) => (bool) $row->passed);
@@ -106,6 +108,11 @@ class MyShellController extends Controller
             'moduleProgress' => $moduleProgress,
             'shellMeta' => $shellMeta,
             'examStatus' => $examStatus,
+            'certificate' => $certificateRow ? [
+                'code' => $certificateRow->certificate_code,
+                'issued_at' => $certificateRow->issued_at,
+                'public_url' => route('certificates.public', $certificateRow->certificate_code),
+            ] : null,
         ]);
     }
 

@@ -9,6 +9,7 @@ export default function Dashboard({
     certification = null,
     progress = null,
     shellMeta = null,
+    defaultShellId = null,
 }) {
     const selectHref = route('student.dashboard', { select: 1 });
 
@@ -20,7 +21,9 @@ export default function Dashboard({
                 <div className="student-select-page">
                     <header className="student-home-header">
                         <h2 className="student-page-title">My Shells</h2>
-                        <p className="student-page-subtitle">Pick up where you left off in your sandboxes.</p>
+                        <p className="student-page-subtitle">
+                            Pick up where you left off, or choose a shell to open when you sign in.
+                        </p>
                     </header>
 
                     {myShells.length > 0 ? (
@@ -31,6 +34,8 @@ export default function Dashboard({
                                     shell={shell}
                                     index={index}
                                     style={{ '--student-stagger': index }}
+                                    defaultShellId={defaultShellId}
+                                    showDefaultAction
                                 />
                             ))}
                         </div>

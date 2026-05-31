@@ -36,6 +36,9 @@ Route::get('/', function () {
 
 Route::get('/affiliations', [AffiliationController::class, 'index'])->name('affiliations.index');
 
+Route::get('/certificates/{code}', [\App\Http\Controllers\CertificateController::class, 'show'])
+    ->name('certificates.public');
+
 /*
 |--------------------------------------------------------------------------
 | Authenticated Dashboard Redirect
@@ -182,6 +185,8 @@ Route::middleware(['auth', 'otp.verified', 'role:user'])
     ->name('student.')
     ->group(function () {
         Route::get('/dashboard', [StudentDashboardController::class, 'index'])->name('dashboard');
+        Route::post('/preferences/default-shell', [\App\Http\Controllers\Student\PreferencesController::class, 'updateDefaultShell'])
+            ->name('preferences.default-shell');
         Route::get('/leaderboard', [\App\Http\Controllers\Student\LeaderboardController::class, 'index'])->name('leaderboard');
         Route::get('/cast', [\App\Http\Controllers\Student\CastController::class, 'index'])->name('cast');
         

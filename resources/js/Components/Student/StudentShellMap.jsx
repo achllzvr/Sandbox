@@ -286,6 +286,14 @@ export default function StudentShellMap({
 
     const finalNode = { x: CANVAS_WIDTH / 2, y: 100 };
 
+    const finalCastleClassName = [
+        'student-shell-map__visual--castle',
+        examStatus.has_passed ? 'student-shell-map__visual--done' : '',
+        isAllCompleted ? 'student-shell-map__visual--unlocked' : '',
+    ]
+        .filter(Boolean)
+        .join(' ');
+
     let globalNodeIndex = 0;
 
     return (
@@ -413,7 +421,7 @@ export default function StudentShellMap({
                                 nodeIndex={globalNodeIndex}
                                 isActive={activeNode === 'final'}
                                 isCastle
-                                visualClassName="student-shell-map__visual--castle"
+                                visualClassName={finalCastleClassName}
                                 ariaLabel="Final exam"
                                 onToggle={() => toggleNode('final')}
                                 visualSrc={assetUrl('images/shells/castle_final_exam.png')}

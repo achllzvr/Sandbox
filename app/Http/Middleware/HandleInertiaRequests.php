@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\UserModuleProgress;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 use Tightenco\Ziggy\Ziggy;
@@ -40,10 +41,18 @@ class HandleInertiaRequests extends Middleware
                     return null;
                 }
 
+                $completedSandboxes = UserModuleProgress::where('user_id', $user->id)
+                    ->where('is_completed', true)
+                    ->count();
+
+                $leaderboardPlacement = $completedSandboxes > 0 ? 14 : null;
+
                 return [
                     'sand_dollars' => 1250,
                     'streak_days' => 14,
-                    'rank' => 'Sandcastle Builder',
+                    'rank' => $leaderboardPlacement ? 'Sandcastle Builder' : null,
+                    'leaderboard_placement' => $leaderboardPlacement,
+                    'completed_sandboxes' => $completedSandboxes,
                     'progress_to_next_rank' => 75,
                     'hermy_name' => $user->first_name,
                     'hermy_avatar' => asset('images/Hermy.png'),
