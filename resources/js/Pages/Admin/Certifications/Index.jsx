@@ -1,86 +1,250 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, router, useForm } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
-import AdminBadge from '@/Components/Admin/AdminBadge';
-import { useMemo } from 'react';
+import AdminModal from '@/Components/Admin/AdminModal';
+import AdminCertificationCard from '@/Components/Admin/AdminCertificationCard';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
-export default function CertificationsIndex({ certifications }) {
-    const pendingCount = useMemo(
-        () => certifications.filter((c) => c.status === 'pending_review').length,
-        [certifications],
+// TODO: Wire archive and restore certification actions to dedicated backend endpoints.
+// TODO: Pass certification filter to finance page when viewing finances per shell.
+
+const STATUS_OPTIONS = [
+    { value: '', label: 'All statuses' },
+    { value: 'draft', label: 'Draft' },
+    { value: 'pending_review', label: 'Pending review' },
+    { value: 'revision_required', label: 'Revision required' },
+    { value: 'published', label: 'Published' },
+    { value: 'approved', label: 'Approved' },
+    { value: 'denied', label: 'Denied' },
+];
+
+export default function CertificationsIndex({ certifications, filters }) {
+    const [activeTab, setActiveTab] = useState('management');
+    const [search, setSearch] = useState(filters?.search || '');
+    const [statusFilter, setStatusFilter] = useState(filters?.status || '');
+    const [declineTarget, setDeclineTarget] = useState(null);
+    const [actionModal, setActionModal] = useState(null);
+
+    const declineForm = useForm({ status: 'denied', decline_reason: '' });
+
+    const approvalCerts = useMemo(
+        () => certifications.filter((c) => c.status === 'pending_review'),
+        [certifications]
+    );
+
+    const displayedCerts = activeTab === 'approvals' ? approvalCerts : certifications;
+
+    const applyFilters = useCallback((nextSearch, nextStatus) => {
+        router.get(
+            route('admin.certifications.index'),
+            {
+                search: nextSearch || undefined,
+                status: nextStatus || undefined,
+            },
+            { preserveState: true, replace: true }
+        );
+    }, []);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (search !== (filters?.search || '')) {
+                applyFilters(search, statusFilter);
+            }
+        }, 400);
+        return () => clearTimeout(timer);
+    }, [search, filters?.search, statusFilter, applyFilters]);
+
+    function handleStatusChange(e) {
+        const value = e.target.value;
+        setStatusFilter(value);
+        applyFilters(search, value);
+    }
+
+    function handleAccept(cert) {
+        if (!confirm(`Publish "${cert.title}"?`)) return;
+        router.put(route('admin.certifications.status.update', cert.id), { status: 'published' });
+    }
+
+    function handleDeclineSubmit(e) {
+        e.preventDefault();
+        declineForm.put(route('admin.certifications.status.update', declineTarget.id), {
+            onSuccess: () => {
+                setDeclineTarget(null);
+                declineForm.reset();
+            },
+        });
+    }
+
+    function openDecline(cert) {
+        setDeclineTarget(cert);
+        declineForm.setData({ status: 'denied', decline_reason: '' });
+    }
+
+    function handleArchive(cert) {
+        setActionModal({ type: 'archive', cert });
+    }
+
+    function handleRestore(cert) {
+        setActionModal({ type: 'restore', cert });
+    }
+
+    const topbarTabs = (
+        <div className="admin-page-tabs admin-page-tabs--topbar">
+            <button
+                type="button"
+                className={`admin-page-tabs__btn ${activeTab === 'management' ? 'admin-page-tabs__btn--active' : ''}`}
+                onClick={() => setActiveTab('management')}
+            >
+                Certification management
+            </button>
+            <button
+                type="button"
+                className={`admin-page-tabs__btn ${activeTab === 'approvals' ? 'admin-page-tabs__btn--active' : ''}`}
+                onClick={() => setActiveTab('approvals')}
+            >
+                Approvals
+                {approvalCerts.length > 0 && (
+                    <span className="admin-page-tabs__count">{approvalCerts.length}</span>
+                )}
+            </button>
+        </div>
     );
 
     return (
-        <AdminLayout pageTitle="Certification Approval">
-            <Head title="Certification Approval" />
+        <AdminLayout pageTitle="Certifications" topbarEnd={topbarTabs}>
+            <Head title="Certifications" />
 
-            <div className="admin-notice">
-                <span>
-                    Pending for review: <strong>{pendingCount}</strong>
-                </span>
-            </div>
-
-            <div className="admin-card admin-card__body--flush">
-                <div className="admin-table-wrap">
-                    <table className="admin-table">
-                        <thead>
-                            <tr>
-                                <th>Title</th>
-                                <th>Creator</th>
-                                <th>Details</th>
-                                <th>Materials</th>
-                                <th>Status</th>
-                                <th>Submitted</th>
-                                <th className="admin-table__actions">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {certifications.map((c) => (
-                                <tr key={c.id}>
-                                    <td>
-                                        <p className="admin-table__name">{c.title}</p>
-                                        <p className="admin-table__muted" style={{ fontSize: '0.75rem' }}>
-                                            {c.category} · {c.difficulty}
-                                        </p>
-                                    </td>
-                                    <td className="admin-table__muted">
-                                        {c.creator
-                                            ? `${c.creator.first_name} ${c.creator.last_name}`
-                                            : '—'}
-                                    </td>
-                                    <td className="admin-table__muted" style={{ fontSize: '0.75rem' }}>
-                                        <div>Quiz: {c.quiz_questions_count} Qs</div>
-                                        <div>Exam: {c.exam_questions_count} Qs</div>
-                                    </td>
-                                    <td className="admin-table__name" style={{ textAlign: 'center' }}>
-                                        {c.module_count}
-                                    </td>
-                                    <td>
-                                        <AdminBadge value={c.status} />
-                                    </td>
-                                    <td className="admin-table__muted">
-                                        {c.submitted_at
-                                            ? new Date(c.submitted_at).toLocaleDateString()
-                                            : '—'}
-                                    </td>
-                                    <td className="admin-table__actions">
-                                        <Link
-                                            href={`/admin/certifications/${c.id}`}
-                                            className="admin-btn admin-btn--sm admin-btn--secondary"
-                                        >
-                                            Review
-                                        </Link>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-                {certifications.length === 0 && (
-                    <p className="admin-empty" style={{ padding: '3rem' }}>
-                        No certifications found.
-                    </p>
+            <div className="admin-subtoolbar">
+                <input
+                    type="search"
+                    placeholder="Search certifications..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="input-field admin-subtoolbar__search"
+                    aria-label="Search certifications"
+                />
+                {activeTab === 'management' && (
+                    <select
+                        value={statusFilter}
+                        onChange={handleStatusChange}
+                        className="input-field admin-subtoolbar__role"
+                        aria-label="Filter by status"
+                    >
+                        {STATUS_OPTIONS.map((opt) => (
+                            <option key={opt.value || 'all'} value={opt.value}>
+                                {opt.label}
+                            </option>
+                        ))}
+                    </select>
                 )}
             </div>
+
+            <div className="admin-cert-panel admin-card admin-card--chunky">
+                <div className="admin-cert-panel__header">
+                    <span>Name</span>
+                    <span>Author</span>
+                    <span>Description</span>
+                    <span>Actions</span>
+                </div>
+
+                <div className="admin-cert-panel__body">
+                    {displayedCerts.length === 0 ? (
+                        <p className="admin-empty" style={{ padding: '3rem' }}>
+                            {activeTab === 'approvals'
+                                ? 'No certifications pending approval.'
+                                : 'No certifications found.'}
+                        </p>
+                    ) : (
+                        displayedCerts.map((cert, i) => (
+                            <AdminCertificationCard
+                                key={cert.id}
+                                cert={cert}
+                                variantIndex={i}
+                                mode={activeTab === 'approvals' ? 'approvals' : 'management'}
+                                onAccept={handleAccept}
+                                onDecline={openDecline}
+                                onArchive={handleArchive}
+                                onRestore={handleRestore}
+                                processing={declineForm.processing}
+                            />
+                        ))
+                    )}
+                </div>
+            </div>
+
+            <AdminModal
+                show={!!declineTarget}
+                onClose={() => setDeclineTarget(null)}
+                title="Decline certification"
+                subtitle={declineTarget ? declineTarget.title : ''}
+                footer={
+                    <>
+                        <button
+                            type="button"
+                            className="admin-btn admin-btn--ghost"
+                            onClick={() => setDeclineTarget(null)}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            form="decline-cert-form"
+                            disabled={declineForm.processing}
+                            className="admin-btn admin-btn--danger"
+                        >
+                            Decline
+                        </button>
+                    </>
+                }
+            >
+                <form id="decline-cert-form" onSubmit={handleDeclineSubmit}>
+                    <div className="admin-form-group">
+                        <label htmlFor="decline-reason">Reason for declining</label>
+                        <textarea
+                            id="decline-reason"
+                            className="input-field"
+                            rows={4}
+                            value={declineForm.data.decline_reason}
+                            onChange={(e) => declineForm.setData('decline_reason', e.target.value)}
+                            required
+                        />
+                        {declineForm.errors.decline_reason && (
+                            <p className="admin-form-error">{declineForm.errors.decline_reason}</p>
+                        )}
+                    </div>
+                </form>
+            </AdminModal>
+
+            <AdminModal
+                show={!!actionModal}
+                onClose={() => setActionModal(null)}
+                title={
+                    actionModal?.type === 'archive'
+                        ? 'Archive certification'
+                        : 'Restore certification'
+                }
+                footer={
+                    <button
+                        type="button"
+                        className="admin-btn admin-btn--ghost"
+                        onClick={() => setActionModal(null)}
+                    >
+                        Close
+                    </button>
+                }
+            >
+                <p className="admin-table__muted">
+                    {actionModal?.cert && (
+                        <>
+                            {actionModal.cert.title} — {actionModal.cert.status}
+                        </>
+                    )}
+                </p>
+                <p className="admin-table__muted" style={{ marginTop: '12px' }}>
+                    <span className="admin-todo-badge admin-todo-badge--inline">
+                        TODO: wire {actionModal?.type} action to backend
+                    </span>
+                </p>
+            </AdminModal>
         </AdminLayout>
     );
 }

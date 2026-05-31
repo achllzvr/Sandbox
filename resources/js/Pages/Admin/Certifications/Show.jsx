@@ -77,7 +77,7 @@ export default function Show({ certification }) {
             <Head title={`Review: ${certification.title}`} />
 
             <Link href={route('admin.certifications.index')} className="admin-back-link">
-                ← Back to Requests
+                ← Back to certifications
             </Link>
 
             <div className="admin-card" style={{ marginBottom: '24px' }}>
