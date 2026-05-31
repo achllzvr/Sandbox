@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AffiliationController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\CertificationApprovalController;
 use App\Http\Controllers\Admin\UserManagementController;
@@ -33,6 +34,8 @@ Route::get('/', function () {
         'authUser' => auth()->user(),
     ]);
 })->name('welcome');
+
+Route::get('/affiliations', [AffiliationController::class, 'index'])->name('affiliations.index');
 
 /*
 |--------------------------------------------------------------------------

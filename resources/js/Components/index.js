@@ -23,6 +23,8 @@ export { default as MultiStepForm } from './MultiStepForm';
 export { default as AuthFooter } from './AuthFooter';
 export { default as AuthErrorBanner } from './AuthErrorBanner';
 export { default as ProgressButton } from './ProgressButton';
+export { default as GetStartedButton } from './GetStartedButton';
+export { default as AffiliationAutocomplete } from './AffiliationAutocomplete';
 
 // Layouts
 export { default as Layout } from '../Layouts/MainLayout';

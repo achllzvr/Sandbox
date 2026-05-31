@@ -1268,6 +1268,169 @@ textarea:focus {
     text-decoration: underline;
 }
 
+/* --- Get Started role chooser --------------------------------------------- */
+.get-started-wrap {
+    position: relative;
+    display: inline-block;
+}
+
+.get-started-wrap--block {
+    display: block;
+    width: 100%;
+}
+
+.get-started-menu {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    z-index: 200;
+    min-width: 280px;
+    max-width: 320px;
+    padding: var(--space-md);
+    background: var(--color-card-bg);
+    border: 2px solid var(--color-input-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    animation: fadeInUp 0.35s var(--ease-out-smooth) forwards;
+}
+
+.get-started-wrap--block .get-started-menu {
+    left: 0;
+    right: 0;
+    min-width: 100%;
+}
+
+.get-started-menu__title {
+    font-size: var(--font-xsmall);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-helper);
+    margin: 0 0 var(--space-sm);
+    text-align: center;
+}
+
+.get-started-menu__option {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    width: 100%;
+    padding: var(--space-md);
+    margin-bottom: var(--space-sm);
+    background: var(--color-primary);
+    color: var(--color-white);
+    border: none;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-btn-primary);
+    cursor: pointer;
+    text-align: left;
+    transition:
+        background 0.35s var(--ease-in-out-smooth),
+        transform 0.2s var(--ease-out-smooth),
+        box-shadow 0.35s var(--ease-in-out-smooth);
+}
+
+.get-started-menu__option:last-child {
+    margin-bottom: 0;
+}
+
+.get-started-menu__option:hover {
+    background: var(--color-primary-dark);
+}
+
+.get-started-menu__option:active {
+    transform: translateY(3px);
+    box-shadow: 0 0 0 0 var(--color-primary-dark);
+}
+
+.get-started-menu__option--secondary {
+    background: var(--color-input-bg);
+    color: var(--color-text-body);
+    box-shadow: var(--shadow-input);
+    border: 2px solid var(--color-input-border);
+}
+
+.get-started-menu__option--secondary:hover {
+    background: #E0D0A8;
+    border-color: var(--color-secondary-border);
+}
+
+.get-started-menu__option-label {
+    font-weight: 700;
+    font-size: var(--font-small);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.get-started-menu__option-desc {
+    font-size: var(--font-xsmall);
+    font-weight: 500;
+    opacity: 0.9;
+    line-height: 1.4;
+}
+
+.get-started-menu__option--secondary .get-started-menu__option-desc {
+    color: var(--color-text-helper);
+}
+
+/* --- Affiliation autocomplete --------------------------------------------- */
+.affiliation-autocomplete {
+    position: relative;
+}
+
+.affiliation-autocomplete__field {
+    position: relative;
+}
+
+.affiliation-autocomplete__list {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    z-index: 50;
+    max-height: 220px;
+    overflow-y: auto;
+    margin: 0;
+    padding: var(--space-xs);
+    list-style: none;
+    background: var(--color-card-bg);
+    border: 2px solid var(--color-input-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-card);
+    animation: fadeInUp 0.25s var(--ease-out-smooth) forwards;
+}
+
+.affiliation-autocomplete__option {
+    display: block;
+    width: 100%;
+    padding: 0.65rem 0.75rem;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-text-body);
+    font-family: var(--font-body);
+    font-size: var(--font-small);
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.25s var(--ease-in-out-smooth);
+}
+
+.affiliation-autocomplete__option:hover,
+.affiliation-autocomplete__option:focus {
+    background: rgba(232, 115, 90, 0.12);
+    color: var(--color-primary-dark);
+    outline: none;
+}
+
+.affiliation-autocomplete__empty {
+    padding: 0.65rem 0.75rem;
+    font-size: var(--font-xsmall);
+    color: var(--color-text-helper);
+    font-style: italic;
+}
+
 .roles-section {
     padding: var(--space-3xl) 0 var(--space-2xl);
     background: var(--color-bg);

@@ -7,10 +7,11 @@ import {
     ProgressButton,
     FileUpload,
     AuthErrorBanner,
+    AffiliationAutocomplete,
 } from '@/Components';
 import { validators } from '@/Utils/formUtils';
 
-export default function RegisterTeacher() {
+export default function RegisterTeacher({ affiliations = [] }) {
     const [step, setStep] = useState(1);
     const [isFilled, setIsFilled] = useState(false);
     const [passwordValid, setPasswordValid] = useState(false);
@@ -256,28 +257,28 @@ export default function RegisterTeacher() {
                                 required
                                 hideLabel
                             />
-                            <Input
+                            <AffiliationAutocomplete
                                 name="affiliation"
                                 placeholder="Affiliation"
                                 value={data.affiliation}
-                                onChange={handleChange}
+                                onChange={(val) => setData('affiliation', val)}
                                 error={errors.affiliation}
                                 required
-                                hideLabel
+                                initialOptions={affiliations}
                             />
                         </>
                     )}
 
                     {step === 4 && (
                         <>
-                            <Input
-                                name="affiliation"
+                            <AffiliationAutocomplete
+                                name="affiliation_verify"
                                 placeholder="Organization/ Institution"
                                 value={data.affiliation}
-                                onChange={handleChange}
+                                onChange={(val) => setData('affiliation', val)}
                                 error={errors.affiliation}
                                 required
-                                hideLabel
+                                initialOptions={affiliations}
                             />
                             <div className="auth-terms-block">
                                 <label>

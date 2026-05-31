@@ -1,4 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
+import { GetStartedButton } from '@/Components';
 
 function assetUrl(path) {
     const base =
@@ -64,9 +65,7 @@ export default function Welcome({ canLogin, canRegister, authUser }) {
                                     )}
                                     {canRegister && (
                                         <li className="fade-in-up" style={{ '--delay': '140ms' }}>
-                                            <Link href={route('register')} className="btn btn-primary nav-btn">
-                                                Get Started
-                                            </Link>
+                                            <GetStartedButton size="nav" />
                                         </li>
                                     )}
                                 </>
@@ -108,9 +107,7 @@ export default function Welcome({ canLogin, canRegister, authUser }) {
                             ) : (
                                 <>
                                     {canRegister && (
-                                        <Link href={route('register')} className="btn btn-primary btn-block btn-lg">
-                                            Get Started
-                                        </Link>
+                                        <GetStartedButton block variant="primary" />
                                     )}
                                     {canLogin && (
                                         <Link href={route('login')} className="btn btn-secondary btn-block btn-lg">

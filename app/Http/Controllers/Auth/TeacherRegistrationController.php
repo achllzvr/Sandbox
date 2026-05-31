@@ -15,7 +15,17 @@ class TeacherRegistrationController extends Controller
 {
     public function create()
     {
-        return Inertia::render('Auth/RegisterTeacher');
+        $affiliations = User::query()
+            ->whereNotNull('affiliation')
+            ->where('affiliation', '!=', '')
+            ->distinct()
+            ->orderBy('affiliation')
+            ->pluck('affiliation')
+            ->values();
+
+        return Inertia::render('Auth/RegisterTeacher', [
+            'affiliations' => $affiliations,
+        ]);
     }
 
     public function store(TeacherRegisterRequest $request)
