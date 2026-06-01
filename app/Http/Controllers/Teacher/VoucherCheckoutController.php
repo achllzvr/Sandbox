@@ -9,6 +9,10 @@ use App\Models\EnrollmentRequest;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
+use App\Models\Cohort;
+use App\Models\Voucher;
+use App\Models\Payment;
 
 class VoucherCheckoutController extends Controller
 {
@@ -88,6 +92,90 @@ class VoucherCheckoutController extends Controller
 
             return redirect()->back()->withErrors([
                 'checkout' => 'Failed to connect to payment gateway. Please try again later. (' . $e->getMessage() . ')'
+            ]);
+        }
+    }
+
+    /**
+     * Simulate payment success for a pending bulk request (only in local sandbox context).
+     *
+     * @param  \App\Models\EnrollmentRequest  $enrollmentRequest
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function simulateSuccess(EnrollmentRequest $enrollmentRequest)
+    {
+        // 1. Authorization guard: must belong to current authenticated user
+        if ($enrollmentRequest->user_id !== auth()->id() || auth()->user()->role !== 'teacher') {
+            abort(403, 'Unauthorized action.');
+        }
+
+        // 2. Guard: Must be pending and teacher_bulk
+        if ($enrollmentRequest->status !== 'pending' || $enrollmentRequest->request_type !== 'teacher_bulk') {
+            return redirect()->back()->withErrors([
+                'simulation' => 'This request cannot be simulated because it is not a pending bulk request.'
+            ]);
+        }
+
+        try {
+            DB::transaction(function () use ($enrollmentRequest) {
+                // A. Update status
+                $enrollmentRequest->update([
+                    'status' => 'paid',
+                    'payment_method' => 'SIMULATED',
+                    'reviewed_at' => now(),
+                ]);
+
+                // B. Create simulated payment
+                Payment::create([
+                    'enrollment_request_id' => $enrollmentRequest->id,
+                    'provider' => 'simulated',
+                    'provider_invoice_id' => 'sim_inv_' . Str::random(10),
+                    'provider_reference' => 'sim_ref_' . Str::random(10),
+                    'amount' => $enrollmentRequest->amount,
+                    'status' => 'paid',
+                    'method' => 'SIMULATED',
+                    'paid_at' => now(),
+                    'raw_payload' => json_encode(['simulated' => true]),
+                ]);
+
+                // C. Auto-provision a cohort class record
+                $cohortName = 'Batch ' . date('M j, Y') . ' (Simulated)';
+                $cohort = Cohort::create([
+                    'teacher_id' => $enrollmentRequest->user_id,
+                    'certification_id' => $enrollmentRequest->certification_id,
+                    'cohort_name' => $cohortName,
+                ]);
+
+                // D. Generate randomized unique bulk vouchers
+                $vouchers = [];
+                for ($i = 0; $i < $enrollmentRequest->quantity; $i++) {
+                    $code = 'TCH-' . strtoupper(Str::random(10));
+                    $vouchers[] = [
+                        'enrollment_request_id' => $enrollmentRequest->id,
+                        'teacher_id' => $enrollmentRequest->user_id,
+                        'cohort_id' => $cohort->id,
+                        'certification_id' => $enrollmentRequest->certification_id,
+                        'code' => $code,
+                        'is_used' => 0,
+                        'issued_at' => now(),
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                }
+
+                Voucher::insert($vouchers);
+            });
+
+            return redirect()->route('teacher.dashboard')->with('success', "Payment simulated successfully! Generated {$enrollmentRequest->quantity} vouchers.");
+
+        } catch (\Exception $e) {
+            Log::error('Simulation Checkout Payment Failure: ' . $e->getMessage(), [
+                'enrollment_request_id' => $enrollmentRequest->id,
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return redirect()->back()->withErrors([
+                'simulation' => 'Failed to simulate payment completion: ' . $e->getMessage()
             ]);
         }
     }

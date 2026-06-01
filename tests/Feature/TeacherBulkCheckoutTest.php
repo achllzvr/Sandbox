@@ -192,4 +192,57 @@ class TeacherBulkCheckoutTest extends TestCase
             $this->assertEquals($this->teacher->id, $voucher->teacher_id);
         }
     }
+
+    public function test_simulate_success_flow()
+    {
+        $this->actingAs($this->teacher);
+
+        // 1. Create a pending enrollment request
+        $enrollmentRequest = EnrollmentRequest::create([
+            'user_id' => $this->teacher->id,
+            'certification_id' => $this->certification->id,
+            'request_type' => 'teacher_bulk',
+            'quantity' => 5,
+            'amount' => 7500.00,
+            'status' => 'pending',
+            'payment_reference' => 'SBX-TCH-SIMTEST123',
+            'requested_at' => now(),
+        ]);
+
+        $response = $this->post(route('teacher.checkout.simulate-success', $enrollmentRequest->id));
+
+        // It should redirect to teacher.dashboard
+        $response->assertRedirect(route('teacher.dashboard'));
+
+        // Assert database state updates
+        $this->assertDatabaseHas('enrollment_requests', [
+            'id' => $enrollmentRequest->id,
+            'status' => 'paid',
+            'payment_method' => 'SIMULATED',
+        ]);
+
+        // Assert payment record creation
+        $this->assertDatabaseHas('payments', [
+            'enrollment_request_id' => $enrollmentRequest->id,
+            'provider' => 'simulated',
+            'status' => 'paid',
+            'method' => 'SIMULATED',
+        ]);
+
+        // Assert cohort provisioning
+        $this->assertDatabaseHas('cohorts', [
+            'teacher_id' => $this->teacher->id,
+            'certification_id' => $this->certification->id,
+            'cohort_name' => 'Batch ' . date('M j, Y') . ' (Simulated)',
+        ]);
+
+        // Assert voucher generation
+        $this->assertEquals(5, Voucher::where('enrollment_request_id', $enrollmentRequest->id)->count());
+        $vouchers = Voucher::where('enrollment_request_id', $enrollmentRequest->id)->get();
+        foreach ($vouchers as $voucher) {
+            $this->assertStringStartsWith('TCH-', $voucher->code);
+            $this->assertFalse($voucher->is_used);
+            $this->assertEquals($this->teacher->id, $voucher->teacher_id);
+        }
+    }
 }

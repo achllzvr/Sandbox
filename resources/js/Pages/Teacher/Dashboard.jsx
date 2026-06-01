@@ -1,7 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
 import TeacherLayout from '@/Layouts/TeacherLayout';
 
-export default function Dashboard({ metrics, claimLogs = [] }) {
+export default function Dashboard({ metrics, claimLogs = [], flash = {} }) {
     return (
         <TeacherLayout>
             <Head title="Dashboard - Teacher Portal" />
@@ -16,15 +16,27 @@ export default function Dashboard({ metrics, claimLogs = [] }) {
                 </p>
             </div>
 
+            {/* Success/Error Alerts */}
+            {flash?.success && (
+                <div className="mb-6 bg-[#EBF7EB] text-[#225522] border-4 border-[#5C4033] rounded-2xl p-4 shadow-[4px_4px_0px_#5C4033] font-bold text-sm">
+                    🎉 {flash.success}
+                </div>
+            )}
+            {flash?.error && (
+                <div className="mb-6 bg-[#FFEBE6] text-[#E2725B] border-4 border-[#5C4033] rounded-2xl p-4 shadow-[4px_4px_0px_#5C4033] font-bold text-sm">
+                    ⚠️ {flash.error}
+                </div>
+            )}
+
             {/* Metrics Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-                {/* Metric 1: Total Vouchers */}
+                {/* Metric 1: Total Students */}
                 <div className="bg-[#FFFDF6] border-4 border-[#5C4033] rounded-[24px] p-6 shadow-[6px_6px_0px_#5C4033] hover:translate-y-[-2px] transition-all flex flex-col items-center justify-center text-center">
                     <span className="text-[#8B6C58] font-black text-sm uppercase tracking-wider mb-2">
-                        Total Vouchers
+                        Total Students
                     </span>
                     <span className="text-5xl md:text-6xl font-black text-[#5C4033] tracking-tight font-mono">
-                        {metrics.total_vouchers}
+                        {metrics.total_students}
                     </span>
                 </div>
 
@@ -98,27 +110,6 @@ export default function Dashboard({ metrics, claimLogs = [] }) {
                             )}
                         </tbody>
                     </table>
-                </div>
-            </div>
-
-            {/* Quick Actions Panel */}
-            <div className="bg-[#FFFDF6] border-4 border-[#5C4033] rounded-[24px] p-6 shadow-[6px_6px_0px_#5C4033] mb-4">
-                <span className="text-[#8B6C58] font-black text-xs uppercase tracking-wider mb-4 block">
-                    Quick Access Shortcuts
-                </span>
-                <div className="flex flex-col sm:flex-row gap-4">
-                    <Link
-                        href={route('teacher.vouchers')}
-                        className="flex-1 text-center bg-[#FFFDF6] hover:bg-[#F5EFCF] text-[#5C4033] border-2 border-[#5C4033] font-bold py-3 px-4 rounded-xl transition-all shadow-[3px_3px_0px_#5C4033] hover:translate-x-[-1px] hover:translate-y-[-1px] text-sm uppercase tracking-wider"
-                    >
-                        Track Voucher Codes 🎟️
-                    </Link>
-                    <Link
-                        href={route('teacher.analytics')}
-                        className="flex-1 text-center bg-[#FFFDF6] hover:bg-[#F5EFCF] text-[#5C4033] border-2 border-[#5C4033] font-bold py-3 px-4 rounded-xl transition-all shadow-[3px_3px_0px_#5C4033] hover:translate-x-[-1px] hover:translate-y-[-1px] text-sm uppercase tracking-wider"
-                    >
-                        Monitor Student Analytics 📈
-                    </Link>
                 </div>
             </div>
         </TeacherLayout>

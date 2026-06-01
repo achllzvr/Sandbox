@@ -10,6 +10,10 @@ export default function Purchasing({ shells }) {
     const [selectedTech, setSelectedTech] = useState('All');
     const [sortBy, setSortBy] = useState('low-to-high');
 
+    const [checkoutStep, setCheckoutStep] = useState(1);
+    const [termsAccepted, setTermsAccepted] = useState(false);
+    const [refundsAccepted, setRefundsAccepted] = useState(false);
+
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         certification_id: '',
         quantity: 1,
@@ -21,6 +25,9 @@ export default function Purchasing({ shells }) {
             onSuccess: () => {
                 setIsCheckoutOpen(false);
                 setSelectedShell(null);
+                setCheckoutStep(1);
+                setTermsAccepted(false);
+                setRefundsAccepted(false);
                 reset();
             },
         });
@@ -224,89 +231,182 @@ export default function Purchasing({ shells }) {
 
             {/* Custom Outline Checkout Modal */}
             <Modal show={isCheckoutOpen} onClose={() => !processing && setIsCheckoutOpen(false)} maxWidth="md">
-                <div className="bg-[#FFFDF6] border-4 border-[#5C4033] rounded-[32px] p-6 md:p-8 shadow-[8px_8px_0px_#5C4033] text-[#5C4033]">
-                    <div className="mb-6">
-                        <span className="bubble-text text-3xl text-[#E2725B] tracking-tight block">
-                            CHECKOUT
-                        </span>
-                        <p className="text-[#8B6C58] font-bold uppercase text-[10px] tracking-wider mt-1">
-                            B2B Teacher Bulk Voucher Provisioning
-                        </p>
-                    </div>
-
-                    {errors.checkout && (
-                        <div className="mb-4 bg-[#FFEBE6] text-[#E2725B] text-xs font-bold py-2.5 px-4 rounded-xl border-2 border-[#E2725B] shadow-[2px_2px_0px_#E2725B]">
-                            ⚠️ {errors.checkout}
-                        </div>
-                    )}
-                    {errors.certification_id && (
-                        <div className="mb-4 bg-[#FFEBE6] text-[#E2725B] text-xs font-bold py-2.5 px-4 rounded-xl border-2 border-[#E2725B] shadow-[2px_2px_0px_#E2725B]">
-                            ⚠️ {errors.certification_id}
-                        </div>
-                    )}
-                    {errors.quantity && (
-                        <div className="mb-4 bg-[#FFEBE6] text-[#E2725B] text-xs font-bold py-2.5 px-4 rounded-xl border-2 border-[#E2725B] shadow-[2px_2px_0px_#E2725B]">
-                            ⚠️ {errors.quantity}
-                        </div>
+                <div className="bg-[#FFFDF6] border-4 border-[#5C4033] rounded-[32px] p-6 md:p-8 shadow-[8px_8px_0px_#5C4033] text-[#5C4033] relative">
+                    
+                    {/* Back Button for Step 2 */}
+                    {checkoutStep === 2 && (
+                        <button
+                            type="button"
+                            onClick={() => setCheckoutStep(1)}
+                            className="absolute top-6 left-6 text-2xl font-black text-[#5C4033] hover:text-[#E2725B] transition-colors"
+                            title="Back"
+                        >
+                            ←
+                        </button>
                     )}
 
-                    {selectedShell && (
-                        <div className="mb-6 bg-[#F5EFCF] p-4 rounded-2xl border-2 border-[#5C4033] shadow-[3px_3px_0px_#5C4033]">
-                            <h4 className="font-black text-sm uppercase tracking-wider text-[#5C4033]">
-                                {selectedShell.title}
-                            </h4>
-                            <p className="text-xs font-semibold text-[#8B6C58] mt-1">
-                                ₱{parseFloat(selectedShell.price).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} per voucher
-                            </p>
-                        </div>
-                    )}
+                    {checkoutStep === 1 ? (
+                        <>
+                            <div className="mb-6">
+                                <span className="bubble-text text-3xl text-[#E2725B] tracking-tight block">
+                                    CHECKOUT
+                                </span>
+                                <p className="text-[#8B6C58] font-bold uppercase text-[10px] tracking-wider mt-1">
+                                    B2B Teacher Bulk Voucher Provisioning
+                                </p>
+                            </div>
 
-                    <form onSubmit={handleConfirmPurchase}>
-                        <div className="mb-6">
-                            <label className="block text-xs font-black uppercase text-[#8B6C58] tracking-wider mb-2">
-                                Number of Vouchers (Cohort Size)
-                            </label>
-                            <input
-                                type="number"
-                                min="1"
-                                max="100"
-                                value={data.quantity}
-                                onChange={(e) => setData('quantity', Math.max(1, parseInt(e.target.value) || 1))}
-                                className="w-full bg-[#FFFDF6] border-2 border-[#5C4033] rounded-xl py-2 px-4 shadow-[2px_2px_0px_#5C4033] focus:outline-none focus:ring-0 font-bold text-sm"
-                                disabled={processing}
-                                required
-                            />
-                        </div>
+                            {errors.checkout && (
+                                <div className="mb-4 bg-[#FFEBE6] text-[#E2725B] text-xs font-bold py-2.5 px-4 rounded-xl border-2 border-[#E2725B] shadow-[2px_2px_0px_#E2725B]">
+                                    ⚠️ {errors.checkout}
+                                </div>
+                            )}
+                            {errors.certification_id && (
+                                <div className="mb-4 bg-[#FFEBE6] text-[#E2725B] text-xs font-bold py-2.5 px-4 rounded-xl border-2 border-[#E2725B] shadow-[2px_2px_0px_#E2725B]">
+                                    ⚠️ {errors.certification_id}
+                                </div>
+                            )}
+                            {errors.quantity && (
+                                <div className="mb-4 bg-[#FFEBE6] text-[#E2725B] text-xs font-bold py-2.5 px-4 rounded-xl border-2 border-[#E2725B] shadow-[2px_2px_0px_#E2725B]">
+                                    ⚠️ {errors.quantity}
+                                </div>
+                            )}
 
-                        {/* Calculated price block */}
-                        <div className="mb-8 border-t-2 border-dashed border-[#5C4033] pt-4 flex justify-between items-center">
-                            <span className="font-black uppercase text-xs tracking-wider text-[#8B6C58]">
-                                Total Amount:
+                            {selectedShell && (
+                                <div className="mb-6 bg-[#F5EFCF] p-4 rounded-2xl border-2 border-[#5C4033] shadow-[3px_3px_0px_#5C4033]">
+                                    <h4 className="font-black text-sm uppercase tracking-wider text-[#5C4033]">
+                                        {selectedShell.title}
+                                    </h4>
+                                    <p className="text-xs font-semibold text-[#8B6C58] mt-1">
+                                        ₱{parseFloat(selectedShell.price).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} per voucher
+                                    </p>
+                                </div>
+                            )}
+
+                            <form onSubmit={(e) => { e.preventDefault(); setCheckoutStep(2); }}>
+                                <div className="mb-6">
+                                    <label className="block text-xs font-black uppercase text-[#8B6C58] tracking-wider mb-2">
+                                        Number of Vouchers (Cohort Size)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="100"
+                                        value={data.quantity}
+                                        onChange={(e) => setData('quantity', Math.max(1, parseInt(e.target.value) || 1))}
+                                        className="w-full bg-[#FFFDF6] border-2 border-[#5C4033] rounded-xl py-2 px-4 shadow-[2px_2px_0px_#5C4033] focus:outline-none focus:ring-0 font-bold text-sm"
+                                        disabled={processing}
+                                        required
+                                    />
+                                </div>
+
+                                {/* Calculated price block */}
+                                <div className="mb-8 border-t-2 border-dashed border-[#5C4033] pt-4 flex justify-between items-center">
+                                    <span className="font-black uppercase text-xs tracking-wider text-[#8B6C58]">
+                                        Total Amount:
+                                    </span>
+                                    <span className="text-2xl font-black text-[#E2725B] font-mono tracking-tight">
+                                        ₱{((selectedShell?.price || 0) * data.quantity).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
+                                </div>
+
+                                {/* Actions block */}
+                                <div className="flex justify-end gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsCheckoutOpen(false)}
+                                        className="px-5 py-2.5 text-xs font-bold text-[#8B6C58] hover:bg-[#F5EFCF] rounded-xl border-2 border-transparent transition-all uppercase"
+                                        disabled={processing}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={processing}
+                                        className="bg-[#E2725B] hover:bg-[#D45D43] disabled:bg-[#F5EFCF] text-white border-2 border-[#5C4033] font-black text-xs uppercase px-6 py-2.5 rounded-xl shadow-[3px_3px_0px_#5C4033] hover:translate-x-[-1px] hover:translate-y-[-1px] transition-all cursor-pointer"
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            </form>
+                        </>
+                    ) : (
+                        <>
+                            <span className="bubble-text text-3xl text-[#E2725B] tracking-tight block text-center mt-2 mb-6">
+                                YOU ARE ENROLLING
                             </span>
-                            <span className="text-2xl font-black text-[#E2725B] font-mono tracking-tight">
-                                ₱{((selectedShell?.price || 0) * data.quantity).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </span>
-                        </div>
 
-                        {/* Actions block */}
-                        <div className="flex justify-end gap-3">
-                            <button
-                                type="button"
-                                onClick={() => setIsCheckoutOpen(false)}
-                                className="px-5 py-2.5 text-xs font-bold text-[#8B6C58] hover:bg-[#F5EFCF] rounded-xl border-2 border-transparent transition-all uppercase"
-                                disabled={processing}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={processing}
-                                className="bg-[#E2725B] hover:bg-[#D45D43] disabled:bg-[#F5EFCF] text-white border-2 border-[#5C4033] font-black text-xs uppercase px-6 py-2.5 rounded-xl shadow-[3px_3px_0px_#5C4033] hover:translate-x-[-1px] hover:translate-y-[-1px] transition-all cursor-pointer"
-                            >
-                                {processing ? 'Redirecting to Gateway...' : 'Confirm Purchase'}
-                            </button>
-                        </div>
-                    </form>
+                            {selectedShell && (
+                                <div className="bg-[#5E7AE6] text-white border-2 border-[#5C4033] rounded-[24px] p-5 shadow-[4px_4px_0px_#5C4033] mb-8 text-center flex flex-col items-center justify-center relative min-h-[90px]">
+                                    <span className="font-black text-lg tracking-tight uppercase leading-tight">
+                                        {selectedShell.title} <span className="text-sm">✓</span>
+                                    </span>
+                                    <span className="text-[#D0D7FF] font-bold text-[10px] uppercase tracking-wider block mt-1">
+                                        Professional Certificate
+                                    </span>
+                                </div>
+                            )}
+
+                            <form onSubmit={handleConfirmPurchase}>
+                                <div className="space-y-5 mb-8">
+                                    {/* Checkbox 1 */}
+                                    <label className="flex items-start gap-4 cursor-pointer select-none group text-xs text-[#5C4033] font-semibold leading-relaxed">
+                                        <div className="relative mt-0.5 shrink-0">
+                                            <input
+                                                type="checkbox"
+                                                checked={refundsAccepted}
+                                                onChange={(e) => setRefundsAccepted(e.target.checked)}
+                                                className="sr-only"
+                                            />
+                                            <div className={`w-6 h-6 rounded border-2 border-[#5C4033] transition-all flex items-center justify-center font-black text-sm shadow-[2px_2px_0px_#5C4033] ${
+                                                refundsAccepted ? 'bg-[#77DD77] text-[#5C4033]' : 'bg-[#FFFDF6] text-transparent'
+                                            }`}>
+                                                ✓
+                                            </div>
+                                        </div>
+                                        <span className="pt-0.5">
+                                            Do you understand that this action is <strong className="font-black text-[#5C4033]">irreversible</strong> and <strong className="font-black text-[#5C4033]">refunds are not allowed</strong>?
+                                        </span>
+                                    </label>
+
+                                    {/* Checkbox 2 */}
+                                    <label className="flex items-start gap-4 cursor-pointer select-none group text-xs text-[#5C4033] font-semibold leading-relaxed">
+                                        <div className="relative mt-0.5 shrink-0">
+                                            <input
+                                                type="checkbox"
+                                                checked={termsAccepted}
+                                                onChange={(e) => setTermsAccepted(e.target.checked)}
+                                                className="sr-only"
+                                            />
+                                            <div className={`w-6 h-6 rounded border-2 border-[#5C4033] transition-all flex items-center justify-center font-black text-sm shadow-[2px_2px_0px_#5C4033] ${
+                                                termsAccepted ? 'bg-[#77DD77] text-[#5C4033]' : 'bg-[#FFFDF6] text-transparent'
+                                            }`}>
+                                                ✓
+                                            </div>
+                                        </div>
+                                        <span className="pt-0.5">
+                                            Do you accept the <strong className="font-black text-[#5C4033]">Terms of Service</strong> and you allow Sandbox to process your data with respect to the <strong className="font-black text-[#5C4033]">Data Privacy Act of 2012</strong>?
+                                        </span>
+                                    </label>
+                                </div>
+
+                                {/* Actions Block */}
+                                <div className="flex flex-col items-center">
+                                    <button
+                                        type="submit"
+                                        disabled={processing || !termsAccepted || !refundsAccepted}
+                                        className={`w-full max-w-[280px] py-3.5 rounded-full border-2 border-[#5C4033] font-black text-sm uppercase tracking-wider transition-all shadow-[4px_4px_0px_#5C4033] ${
+                                            termsAccepted && refundsAccepted
+                                                ? 'bg-[#5E7AE6] hover:bg-[#4C68D4] text-white hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-[0px] active:translate-y-[0px] active:shadow-[1px_1px_0px_#5C4033] cursor-pointer'
+                                                : 'bg-[#E2DCC8] text-[#8B6C58] opacity-50 cursor-not-allowed shadow-none'
+                                        }`}
+                                    >
+                                        {processing ? 'Redirecting...' : 'PROCEED'}
+                                    </button>
+                                </div>
+                            </form>
+                        </>
+                    )}
                 </div>
             </Modal>
         </TeacherLayout>

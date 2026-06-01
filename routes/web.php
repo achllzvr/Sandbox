@@ -221,6 +221,7 @@ Route::middleware(['auth', 'otp.verified', 'role:teacher'])
         Route::get('/dashboard', [\App\Http\Controllers\Teacher\TeacherDashboardController::class, 'index'])->name('dashboard');
         Route::get('/purchasing', [\App\Http\Controllers\Teacher\TeacherDashboardController::class, 'purchasing'])->name('purchasing');
         Route::post('/checkout/bulk', [\App\Http\Controllers\Teacher\VoucherCheckoutController::class, 'store'])->name('checkout.bulk');
+        Route::post('/checkout/{enrollmentRequest}/simulate-success', [\App\Http\Controllers\Teacher\VoucherCheckoutController::class, 'simulateSuccess'])->name('checkout.simulate-success');
         Route::get('/vouchers', [\App\Http\Controllers\Teacher\TeacherDashboardController::class, 'vouchers'])->name('vouchers');
         Route::get('/analytics', [\App\Http\Controllers\Teacher\TeacherDashboardController::class, 'analytics'])->name('analytics');
     });
