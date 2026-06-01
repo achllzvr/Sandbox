@@ -6286,3 +6286,670 @@
         justify-self: start;
     }
 }
+
+/* ── Teacher / affiliate portal ──────────────────────────────────────────── */
+.teacher-dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 8px 0 32px;
+}
+
+.teacher-dashboard__metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.teacher-dashboard__metric {
+    background: var(--student-cream);
+    border: 3px solid var(--student-nav-border);
+    border-radius: 18px;
+    padding: 20px 18px;
+    box-shadow: 0 5px 0 0 #c4ac7a;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+}
+
+.teacher-dashboard__metric-label {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--student-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.teacher-dashboard__metric-value {
+    font-family: var(--font-heading);
+    font-size: clamp(2rem, 5vw, 2.75rem);
+    color: var(--student-text);
+    line-height: 1;
+}
+
+.teacher-dashboard__logs {
+    background: var(--student-cream);
+    border: 3px solid var(--student-nav-border);
+    border-radius: 22px;
+    padding: 20px 18px 18px;
+    box-shadow: 0 6px 0 0 #c4ac7a;
+}
+
+.teacher-dashboard__logs-title {
+    font-family: var(--font-heading);
+    font-size: 1.125rem;
+    color: #b8654f;
+    margin: 0 0 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.teacher-claim-logs__header,
+.teacher-claim-logs__row {
+    display: grid;
+    grid-template-columns: 1.1fr 1.4fr 1.2fr 1fr;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 14px;
+}
+
+.teacher-claim-logs__header {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: #b8654f;
+    border-bottom: 2px solid rgba(196, 172, 122, 0.45);
+}
+
+.teacher-claim-logs__row {
+    background: rgba(255, 255, 255, 0.45);
+    border-radius: 14px;
+    margin-top: 8px;
+    font-size: 0.875rem;
+}
+
+.teacher-claim-logs__email {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.teacher-claim-logs__shell-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: var(--teacher-shell-accent, #60b0f0);
+    color: #fff;
+    font-size: 0.6875rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+}
+
+.teacher-claim-logs__empty {
+    padding: 24px 14px;
+    text-align: center;
+    color: var(--student-text-muted);
+}
+
+.teacher-shop-shell-page__batch-btn {
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 0.8125rem;
+}
+
+.teacher-shop-modal__lead {
+    margin: 0;
+    font-size: 0.875rem;
+    font-style: italic;
+    color: #9a4b45;
+    text-align: center;
+}
+
+.teacher-shop-modal__stepper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    background: var(--shop-accent, #5a8fc4);
+    border-radius: 16px;
+    padding: 10px;
+    border: 3px solid var(--shop-accent-dark, #4a7ab0);
+}
+
+.teacher-shop-modal__stepper-btn {
+    width: 42px;
+    height: 42px;
+    border: none;
+    border-radius: 10px;
+    background: #fff;
+    color: var(--shop-accent-dark, #4a7ab0);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.teacher-shop-modal__stepper-value {
+    min-width: 72px;
+    text-align: center;
+    font-family: var(--font-heading);
+    font-size: 1.75rem;
+    color: #fff;
+}
+
+.teacher-shop-modal__batch-name {
+    color: #5a6fd4;
+    font-style: italic;
+    font-weight: 700;
+}
+
+.teacher-shop-success__title {
+    font-family: var(--font-heading);
+    font-size: clamp(1.1rem, 3.5vw, 1.35rem);
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--student-text);
+    margin: 0 0 8px;
+    line-height: 1.25;
+}
+
+.teacher-shell-landing {
+    min-height: 100vh;
+}
+
+.teacher-shell-landing__stats {
+    margin-top: -4px;
+}
+
+.teacher-shell-landing__mock-note {
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--student-text-muted);
+    font-style: italic;
+}
+
+.teacher-batch-data {
+    background: var(--shop-info-bg, #6b7ad4);
+    border: 4px solid var(--shop-info-border, #5a69c4);
+    border-radius: 22px;
+    padding: 22px 20px;
+    box-shadow: 0 6px 0 0 var(--shop-info-border, #5a69c4);
+}
+
+.teacher-batch-data__title,
+.teacher-voucher-manager__title {
+    font-family: var(--font-heading);
+    font-size: clamp(1.25rem, 4vw, 1.6rem);
+    color: #fff;
+    margin: 0 0 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.teacher-batch-data__lead {
+    margin: 0 0 16px;
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 0.875rem;
+}
+
+.teacher-batch-data__controls {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+    flex-wrap: wrap;
+}
+
+.teacher-batch-data__select-wrap {
+    position: relative;
+    flex: 1 1 240px;
+}
+
+.teacher-batch-data__select-icon {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: var(--student-text-muted);
+}
+
+.teacher-batch-data__select {
+    width: 100%;
+    appearance: none;
+    border: 3px solid var(--student-nav-border);
+    border-radius: 14px;
+    background: #fff;
+    padding: 12px 40px 12px 14px;
+    font: inherit;
+    color: var(--student-text);
+}
+
+.teacher-batch-data__proceed {
+    flex: 0 0 auto;
+    min-width: 140px;
+    border: 3px solid var(--student-nav-border);
+    border-radius: 999px;
+    background: var(--shop-btn-soft-bg, #d4daf8);
+    color: var(--shop-btn-soft-text, #3d4fa8);
+    font-family: var(--font-heading);
+    font-size: 0.9375rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    box-shadow: 0 4px 0 0 #c4ac7a;
+}
+
+.teacher-voucher-manager {
+    background: var(--shop-stat-inner-bg, #5a69c4);
+    border: 4px solid var(--shop-stat-inner-border, #4a59b4);
+    border-radius: 22px;
+    padding: 22px 18px;
+    box-shadow: 0 6px 0 0 var(--shop-stat-inner-border, #4a59b4);
+}
+
+.teacher-voucher-manager__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 14px;
+}
+
+.teacher-voucher-manager__search {
+    flex: 1 1 220px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fff;
+    border: 3px solid var(--student-nav-border);
+    border-radius: 999px;
+    padding: 8px 14px;
+}
+
+.teacher-voucher-manager__search input {
+    border: none;
+    background: transparent;
+    width: 100%;
+    font: inherit;
+    outline: none;
+}
+
+.teacher-voucher-manager__filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #fff;
+    font-size: 0.8125rem;
+}
+
+.teacher-voucher-manager__sort-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.teacher-voucher-manager__sort-wrap select {
+    appearance: none;
+    border: 3px solid var(--student-nav-border);
+    border-radius: 999px;
+    background: #fff;
+    padding: 8px 34px 8px 14px;
+    font: inherit;
+}
+
+.teacher-voucher-manager__sort-wrap svg {
+    position: absolute;
+    right: 12px;
+    pointer-events: none;
+}
+
+.teacher-voucher-manager__bulk {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.teacher-voucher-manager__bulk-btn {
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
+    padding: 8px 16px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.teacher-voucher-manager__bulk-btn--ghost {
+    background: transparent;
+}
+
+.teacher-voucher-manager__table {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.teacher-voucher-manager__header,
+.teacher-voucher-manager__row {
+    display: grid;
+    grid-template-columns: 42px 1.1fr 1fr 1.1fr 1.2fr;
+    gap: 8px;
+    align-items: center;
+    padding: 12px 14px;
+    color: #fff;
+    font-size: 0.8125rem;
+}
+
+.teacher-voucher-manager__header {
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.88);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.teacher-voucher-manager__group-label {
+    padding: 10px 14px 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.75);
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.teacher-voucher-manager__group:first-child .teacher-voucher-manager__group-label {
+    border-top: none;
+}
+
+.teacher-voucher-manager__code {
+    font-weight: 800;
+    letter-spacing: 0.04em;
+}
+
+.teacher-voucher-manager__unclaimed {
+    color: #ffb347;
+    font-weight: 700;
+}
+
+.teacher-voucher-manager__send-btn {
+    border: none;
+    border-radius: 999px;
+    background: #fff;
+    color: var(--shop-accent-dark, #4a7ab0);
+    padding: 7px 12px;
+    font-size: 0.6875rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.teacher-voucher-manager__send-btn--sent {
+    background: rgba(255, 255, 255, 0.35);
+    color: rgba(255, 255, 255, 0.85);
+    cursor: not-allowed;
+}
+
+.teacher-voucher-manager__empty {
+    padding: 24px 14px;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.teacher-send-voucher-modal {
+    max-width: 460px;
+    background: var(--student-cream);
+}
+
+.teacher-send-voucher-modal__input {
+    width: 100%;
+    border: 3px solid var(--student-nav-border);
+    border-radius: 14px;
+    background: #fff;
+    padding: 12px 14px;
+    font: inherit;
+}
+
+.teacher-send-voucher-modal__success-title {
+    font-family: var(--font-heading);
+    font-size: clamp(1rem, 3.5vw, 1.25rem);
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--student-text);
+    margin: 0 0 12px;
+    line-height: 1.25;
+}
+
+.teacher-batch-page {
+    padding: 8px 0 32px;
+}
+
+.teacher-batch-page__back {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border: 2px solid var(--student-nav-border);
+    border-radius: 12px;
+    background: var(--student-cream);
+    color: var(--student-text);
+    margin-bottom: 16px;
+    box-shadow: 0 3px 0 0 #c4ac7a;
+}
+
+.teacher-batch-page__header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.teacher-batch-page__title {
+    font-family: var(--font-heading);
+    font-size: clamp(1.35rem, 4vw, 1.8rem);
+    color: #706fd3;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.teacher-batch-analytics {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.teacher-batch-analytics__charts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.teacher-batch-analytics__chart {
+    background: var(--student-cream);
+    border: 3px solid var(--student-nav-border);
+    border-radius: 18px;
+    padding: 16px;
+    box-shadow: 0 5px 0 0 #c4ac7a;
+    min-height: 220px;
+}
+
+.teacher-batch-analytics__chart-title,
+.teacher-batch-analytics__students-title {
+    font-family: var(--font-heading);
+    font-size: 0.9375rem;
+    color: #706fd3;
+    margin: 0 0 12px;
+    text-transform: uppercase;
+}
+
+.teacher-batch-analytics__donut {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 12px;
+    border-radius: 50%;
+    background: conic-gradient(#706fd3 0deg 48deg, #8896e8 48deg 72deg, #a5c9ff 72deg 360deg);
+}
+
+.teacher-batch-analytics__donut-hole {
+    position: absolute;
+    inset: 24px;
+    border-radius: 50%;
+    background: var(--student-cream);
+}
+
+.teacher-batch-analytics__legend {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 0.75rem;
+}
+
+.teacher-batch-analytics__legend li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.teacher-batch-analytics__legend span {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+.teacher-batch-analytics__bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    height: 140px;
+    padding-top: 8px;
+}
+
+.teacher-batch-analytics__bar-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    height: 100%;
+    justify-content: flex-end;
+}
+
+.teacher-batch-analytics__bar {
+    width: 100%;
+    background: #706fd3;
+    border-radius: 6px 6px 0 0;
+    min-height: 8px;
+}
+
+.teacher-batch-analytics__bar-wrap span {
+    font-size: 0.6875rem;
+    color: var(--student-text-muted);
+}
+
+.teacher-batch-analytics__line-chart {
+    width: 100%;
+    height: auto;
+}
+
+.teacher-batch-analytics__students {
+    background: var(--student-cream);
+    border: 3px solid var(--student-nav-border);
+    border-radius: 18px;
+    padding: 18px;
+    box-shadow: 0 5px 0 0 #c4ac7a;
+}
+
+.teacher-batch-analytics__search input {
+    width: 100%;
+    border: 3px solid var(--student-nav-border);
+    border-radius: 999px;
+    background: #fff;
+    padding: 10px 16px;
+    font: inherit;
+    margin-bottom: 12px;
+}
+
+.teacher-batch-analytics__table-header,
+.teacher-batch-analytics__table-row {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr 1fr 1fr 0.9fr;
+    gap: 10px;
+    padding: 10px 8px;
+    font-size: 0.8125rem;
+}
+
+.teacher-batch-analytics__table-header {
+    font-weight: 700;
+    color: #706fd3;
+    border-bottom: 2px solid rgba(196, 172, 122, 0.45);
+}
+
+.teacher-batch-analytics__table-row {
+    border-bottom: 1px solid rgba(196, 172, 122, 0.25);
+}
+
+.teacher-batch-analytics__pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: #a5c9ff;
+    color: #2d3540;
+    font-size: 0.6875rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.teacher-batch-analytics__pagination {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.teacher-batch-analytics__pagination button {
+    width: 34px;
+    height: 34px;
+    border: 2px solid var(--student-nav-border);
+    border-radius: 8px;
+    background: #fff;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.teacher-batch-analytics__pagination button.is-active {
+    background: var(--student-nav-border);
+    color: #fff;
+}
+
+.teacher-shell-card__cta {
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+@media (max-width: 900px) {
+    .teacher-dashboard__metrics,
+    .teacher-batch-analytics__charts {
+        grid-template-columns: 1fr;
+    }
+
+    .teacher-claim-logs__header,
+    .teacher-claim-logs__row,
+    .teacher-voucher-manager__header,
+    .teacher-voucher-manager__row,
+    .teacher-batch-analytics__table-header,
+    .teacher-batch-analytics__table-row {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+}

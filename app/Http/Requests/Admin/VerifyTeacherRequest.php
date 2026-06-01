@@ -6,12 +6,12 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class VerifyTeacherRequest extends FormRequest
 {
-    public function authorize()
+    public function authorize(): bool
     {
-        return true;
+        return $this->user()?->role === 'admin';
     }
 
-    public function rules()
+    public function rules(): array
     {
         return [
             'action' => ['required', 'string', 'in:approve,decline'],

@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Inertia\Inertia;
 use App\Http\Requests\Admin\InviteUserRequest;
 use App\Http\Requests\Admin\VerifyTeacherRequest;
+use App\Mail\TeacherAffiliateApprovedMail;
+use App\Models\User;
+use App\Services\AuditLogService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
+use Inertia\Inertia;
 
 class UserManagementController extends Controller
 {
@@ -82,26 +84,54 @@ class UserManagementController extends Controller
             ->with('success', 'Invitation sent successfully!');
     }
 
-    public function verifyTeacher(VerifyTeacherRequest $request, User $user)
+    public function verifyTeacher(VerifyTeacherRequest $request, User $user, AuditLogService $auditLog)
     {
         if ($user->role !== 'teacher') {
             abort(404);
         }
 
+        $isPending = in_array($user->status, ['pending_verification', 'pending'], true);
+
         if ($request->action === 'approve') {
+            if (! $isPending && $user->status === 'active') {
+                return redirect()->back()->with('error', 'This affiliate is already approved.');
+            }
+
             $user->update([
                 'status' => 'active',
+                'is_active' => true,
                 'verified_by' => auth()->id(),
                 'verified_at' => now(),
             ]);
-            $message = "Teacher {$user->first_name} has been approved.";
+
+            Mail::to($user->email)->send(new TeacherAffiliateApprovedMail($user));
+
+            $auditLog->log('teacher_approved', auth()->id(), [
+                'teacher_id' => $user->id,
+                'teacher_email' => $user->email,
+                'affiliation' => $user->affiliation,
+            ]);
+
+            $message = "{$user->first_name} {$user->last_name} has been approved and activated.";
         } else {
+            if (! $isPending && $user->status === 'declined') {
+                return redirect()->back()->with('error', 'This affiliate request was already declined.');
+            }
+
             $user->update([
                 'status' => 'declined',
+                'is_active' => false,
                 'verified_by' => auth()->id(),
                 'verified_at' => now(),
             ]);
-            $message = "Teacher {$user->first_name} has been declined.";
+
+            $auditLog->log('teacher_declined', auth()->id(), [
+                'teacher_id' => $user->id,
+                'teacher_email' => $user->email,
+                'affiliation' => $user->affiliation,
+            ]);
+
+            $message = "{$user->first_name} {$user->last_name}'s affiliate request has been declined.";
         }
 
         return redirect()->back()->with('success', $message);

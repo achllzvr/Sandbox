@@ -10,7 +10,6 @@ use Illuminate\Support\Facades\Route;
 
 // ── Guest only ────────────────────────────────────────────
 Route::middleware('guest')->group(function () {
-
     Route::get('register',
         [RegisteredUserController::class, 'create'])
         ->name('register');
@@ -63,7 +62,6 @@ Route::middleware('guest')->group(function () {
 
 // ── Authenticated only ─────────────────────────────────────
 Route::middleware('auth')->group(function () {
-
     // Keep route name 'verification.notice' exactly —
     // Laravel's 'verified' middleware depends on this name.
     Route::get('verification/notice',

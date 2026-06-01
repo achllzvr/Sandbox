@@ -12,7 +12,7 @@
  * - Admin role invite → CreateUserFlow UI-only success
  * - Affiliation dropdown → hardcoded list, needs institutions table/API
  */
-import { Head, Link, useForm, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import AdminModal from '@/Components/Admin/AdminModal';
 import AdminUserCard from '@/Components/Admin/AdminUserCard';
@@ -34,8 +34,7 @@ export default function UsersIndex({ users, filters, pending_approvals_count = 0
     const [search, setSearch] = useState(filters?.search || '');
     const [roleFilter, setRoleFilter] = useState(filters?.role || '');
     const [approvalFilter, setApprovalFilter] = useState(filters?.approval_status || '');
-
-    const verifyForm = useForm({ action: '' });
+    const [verifyProcessing, setVerifyProcessing] = useState(false);
 
     useEffect(() => {
         setActiveTab(filters?.tab === 'approvals' ? 'approvals' : 'management');
@@ -89,11 +88,21 @@ export default function UsersIndex({ users, filters, pending_approvals_count = 0
     }
 
     function handleVerify(action) {
-        verifyForm
-            .transform((data) => ({ ...data, action }))
-            .put(route('admin.users.verify-teacher', reviewUser.id), {
+        if (!reviewUser || verifyProcessing) {
+            return;
+        }
+
+        setVerifyProcessing(true);
+
+        router.put(
+            route('admin.users.verify-teacher', reviewUser.id),
+            { action },
+            {
+                preserveScroll: true,
                 onSuccess: () => setReviewUser(null),
-            });
+                onFinish: () => setVerifyProcessing(false),
+            }
+        );
     }
 
     // TODO: Replace placeholder modal with real suspend/view/archive API calls.
@@ -246,7 +255,7 @@ export default function UsersIndex({ users, filters, pending_approvals_count = 0
                             <button
                                 type="button"
                                 onClick={() => handleVerify('decline')}
-                                disabled={verifyForm.processing}
+                                disabled={verifyProcessing}
                                 className="admin-btn admin-btn--danger admin-btn--sm"
                             >
                                 Decline
@@ -254,10 +263,10 @@ export default function UsersIndex({ users, filters, pending_approvals_count = 0
                             <button
                                 type="button"
                                 onClick={() => handleVerify('approve')}
-                                disabled={verifyForm.processing}
+                                disabled={verifyProcessing}
                                 className="admin-btn admin-btn--success admin-btn--sm"
                             >
-                                Approve & activate
+                                {verifyProcessing ? 'Saving…' : 'Approve & activate'}
                             </button>
                         </div>
                     ) : (

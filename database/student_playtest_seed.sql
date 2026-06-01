@@ -1,13 +1,20 @@
 -- =============================================================================
 -- SANDBOX — Student playtest seed
--- mysql -u root sandbox_db < database/student_playtest_seed.sql
 --
--- ACCOUNTS (passwords unchanged):
---   educavrabina29@gmail.com  → user 9  — enrolled FULL DEMO (id 1), zero progress
---   roanbaral3@gmail.com      → user 13 — enrolled REACT BASICS (id 2), zero progress
---   ahmadpaguta2005@gmail.com → user 11 — shop only (buy JAVA/LARAVEL to test checkout)
---   busiavrabina29@gmail.com  → user 14 — shop only
---   cupscuddles@gmail.com     → user 12 — content creator (owns all shells)
+-- If the database was wiped (empty/wrong schema), use the all-in-one restore:
+--   database/sandbox_full_restore.sql   (phpMyAdmin SQL tab on blank sandbox_db)
+--   php artisan db:restore-playtest --force
+--
+-- Re-seed content only (users must already exist):
+--   mysql -h 127.0.0.1 -P 3308 -u root sandbox_db < database/student_playtest_seed.sql
+--
+-- ACCOUNTS:
+--   educavrabina29@gmail.com  → user 9  — Abcd1234! — enrolled FULL DEMO (id 1)
+--   roanbaral3@gmail.com      → user 13 — G!G1mu32 — enrolled REACT BASICS (id 2)
+--   ahmadpaguta2005@gmail.com → user 11 — password — shop only
+--   busiavrabina29@gmail.com  → user 14 — password — shop only
+--   cupscuddles@gmail.com     → user 12 — cupsandcuddles — content creator
+--   admin@gmail.com           → user 3  — admin123
 --
 -- COVER IMAGES → storage/app/public/shell-covers/
 --   Minimum 1280×720 (16:9). Filenames:

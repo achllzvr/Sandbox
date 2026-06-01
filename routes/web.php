@@ -221,9 +221,17 @@ Route::middleware(['auth', 'otp.verified', 'role:teacher'])
     ->name('teacher.')
     ->group(function () {
         Route::get('/dashboard', [\App\Http\Controllers\Teacher\TeacherDashboardController::class, 'index'])->name('dashboard');
-        Route::get('/purchasing', [\App\Http\Controllers\Teacher\TeacherDashboardController::class, 'purchasing'])->name('purchasing');
-        Route::get('/vouchers', [\App\Http\Controllers\Teacher\TeacherDashboardController::class, 'vouchers'])->name('vouchers');
-        Route::get('/analytics', [\App\Http\Controllers\Teacher\TeacherDashboardController::class, 'analytics'])->name('analytics');
+        Route::get('/shop', [\App\Http\Controllers\Teacher\TeacherShopController::class, 'index'])->name('shop.index');
+        Route::post('/checkout/bulk', [\App\Http\Controllers\Teacher\BulkCheckoutController::class, 'store'])->name('checkout.bulk');
+        Route::get('/shells', [\App\Http\Controllers\Teacher\TeacherShellController::class, 'index'])->name('shells.index');
+        Route::get('/shells/{certification}', [\App\Http\Controllers\Teacher\TeacherShellController::class, 'show'])->name('shells.show');
+        Route::get('/shells/{certification}/batches/{cohort}', [\App\Http\Controllers\Teacher\TeacherShellController::class, 'batch'])->name('shells.batch');
+
+        Route::post('/vouchers/{voucher}/send-email', [\App\Http\Controllers\Teacher\VoucherController::class, 'sendEmail'])->name('vouchers.send-email');
+
+        Route::redirect('/purchasing', '/teacher/shop')->name('purchasing');
+        Route::redirect('/vouchers', '/teacher/shells')->name('vouchers');
+        Route::redirect('/analytics', '/teacher/shells')->name('analytics');
     });
 
 require __DIR__.'/auth.php';

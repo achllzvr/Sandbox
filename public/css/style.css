@@ -897,6 +897,26 @@ textarea:focus {
     width: 100%;
 }
 
+.auth-step-panel {
+    width: 100%;
+}
+
+.auth-confirmation {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.auth-confirmation__actions {
+    width: 100%;
+    margin-top: var(--space-sm);
+}
+
+.auth-helper-text--center {
+    text-align: center;
+}
+
 .auth-footer {
     margin-top: var(--space-2xl);
     text-align: center;
