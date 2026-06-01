@@ -53,6 +53,9 @@ class RestorePlaytestDatabase extends Command
             $this->runSqlFile($seed);
         }
 
+        $this->info('Syncing shell accent colors from cover images…');
+        $this->call('certifications:sync-themes');
+
         $userCount = DB::table('users')->count();
         $certCount = DB::table('certifications')->count();
 

@@ -17,7 +17,9 @@
 --   admin@gmail.com           → user 3  — admin123
 --
 -- COVER IMAGES → storage/app/public/shell-covers/
---   full-demo.png | react-basics.png | java-basics.png | laravel-basics.png
+--   full-demo.jpg | react-basics.jpg | java-basics.jpg | laravel-basics.jpg
+--   php artisan storage:link
+-- After import, re-extract colors from covers (optional): php artisan certifications:sync-themes
 -- =============================================================================
 
 -- =============================================================================
@@ -551,14 +553,14 @@ UPDATE users SET default_certification_id = 1 WHERE id = 9;
 UPDATE users SET default_certification_id = 2 WHERE id = 13;
 
 INSERT INTO certifications (
-    id, title, description, category, difficulty, estimated_duration, thumbnail,
+    id, title, description, category, difficulty, estimated_duration, thumbnail, accent_color,
     learning_objectives, prerequisites, tags, price, pass_threshold, status,
     submitted_at, created_by_user_id, approved_by, approved_at, created_at, updated_at
 ) VALUES
-(1, 'FULL DEMO', '10 sandboxes, 4 units, quizzes on #3/#7/#10, final exam.', 'Demo', 'Beginner', '2 hours', 'shell-covers/full-demo.png', 'Full student journey.', 'None', '["demo"]', 0.00, 70, 'published', NOW(), 12, 3, NOW(), NOW(), NOW()),
-(2, 'REACT BASICS', 'React components, JSX, state, hooks.', 'Technology', 'Beginner', '4 hours', 'shell-covers/react-basics.png', 'Build UI with React.', 'HTML & JS', '["react"]', 0.00, 75, 'published', NOW(), 12, 3, NOW(), NOW(), NOW()),
-(3, 'JAVA BASICS', 'Java OOP and collections.', 'Technology', 'Intermediate', '6 hours', 'shell-covers/java-basics.png', 'Core Java skills.', 'Programming logic', '["java"]', 499.00, 75, 'published', NOW(), 12, 3, NOW(), NOW(), NOW()),
-(4, 'LARAVEL BASICS', 'Routes, Eloquent, Blade.', 'Technology', 'Intermediate', '5 hours', 'shell-covers/laravel-basics.png', 'Laravel MVC.', 'PHP basics', '["laravel"]', 799.00, 75, 'published', NOW(), 12, 3, NOW(), NOW(), NOW());
+(1, 'FULL DEMO', '10 sandboxes, 4 units, quizzes on #3/#7/#10, final exam.', 'Demo', 'Beginner', '2 hours', 'shell-covers/full-demo.jpg', '#f08070', 'Full student journey.', 'None', '["demo"]', 0.00, 70, 'published', NOW(), 12, 3, NOW(), NOW(), NOW()),
+(2, 'REACT BASICS', 'React components, JSX, state, hooks.', 'Technology', 'Beginner', '4 hours', 'shell-covers/react-basics.jpg', '#60b0f0', 'Build UI with React.', 'HTML & JS', '["react"]', 0.00, 75, 'published', NOW(), 12, 3, NOW(), NOW(), NOW()),
+(3, 'JAVA BASICS', 'Java OOP and collections.', 'Technology', 'Intermediate', '6 hours', 'shell-covers/java-basics.jpg', '#f07060', 'Core Java skills.', 'Programming logic', '["java"]', 499.00, 75, 'published', NOW(), 12, 3, NOW(), NOW(), NOW()),
+(4, 'LARAVEL BASICS', 'Routes, Eloquent, Blade.', 'Technology', 'Intermediate', '5 hours', 'shell-covers/laravel-basics.jpg', '#f02020', 'Laravel MVC.', 'PHP basics', '["laravel"]', 799.00, 75, 'published', NOW(), 12, 3, NOW(), NOW(), NOW());
 
 INSERT INTO enrollments (user_id, certification_id, access_type, status, enrolled_at, created_at, updated_at) VALUES
 (9, 1, 'admin_grant', 'active', NOW(), NOW(), NOW()),

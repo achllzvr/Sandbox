@@ -32,8 +32,8 @@ class CertificationCover
     {
         if (! empty($thumbnail)) {
             foreach (self::thumbnailCandidates($thumbnail) as $storageRelative) {
-                $fullPath = public_path($storageRelative);
-                if (is_file($fullPath)) {
+                $fullPath = self::resolveExistingPath($storageRelative);
+                if ($fullPath !== null) {
                     return $fullPath;
                 }
             }
@@ -57,13 +57,22 @@ class CertificationCover
         $normalized = ltrim($thumbnail, '/');
         $candidates = ['storage/'.$normalized];
 
-        if (str_ends_with($normalized, '.jpg')) {
-            $candidates[] = 'storage/'.substr($normalized, 0, -4).'.png';
-        } elseif (str_ends_with($normalized, '.jpeg')) {
-            $candidates[] = 'storage/'.substr($normalized, 0, -5).'.png';
+        $pathInfo = pathinfo($normalized);
+        $dirname = isset($pathInfo['dirname']) && $pathInfo['dirname'] !== '.'
+            ? $pathInfo['dirname'].'/'
+            : '';
+        $basename = $pathInfo['filename'] ?? '';
+        $extension = strtolower($pathInfo['extension'] ?? '');
+
+        if ($basename !== '') {
+            foreach (['png', 'jpg', 'jpeg', 'webp'] as $altExtension) {
+                if ($altExtension !== $extension) {
+                    $candidates[] = 'storage/'.$dirname.$basename.'.'.$altExtension;
+                }
+            }
         }
 
-        return $candidates;
+        return array_values(array_unique($candidates));
     }
 
     private static function defaultCoverRelative(?int $certificationId): ?string
@@ -88,7 +97,24 @@ class CertificationCover
 
     private static function publicFileExists(string $relativePath): bool
     {
-        return is_file(public_path($relativePath));
+        return self::resolveExistingPath($relativePath) !== null;
+    }
+
+    private static function resolveExistingPath(string $relativePath): ?string
+    {
+        $publicPath = public_path($relativePath);
+        if (is_file($publicPath)) {
+            return $publicPath;
+        }
+
+        if (str_starts_with($relativePath, 'storage/')) {
+            $diskPath = storage_path('app/public/'.substr($relativePath, strlen('storage/')));
+            if (is_file($diskPath)) {
+                return $diskPath;
+            }
+        }
+
+        return null;
     }
 
     private static function publicUrl(string $relativePath): string
