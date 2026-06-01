@@ -1,18 +1,23 @@
 import React, { useState } from 'react';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, usePage, useForm } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 
 export default function Dashboard({ gamification, myShells, recommendedShells }) {
     const { auth } = usePage().props;
     const firstName = auth.user.first_name;
 
-    const [voucherCode, setVoucherCode] = useState('');
-    const [redeeming, setRedeeming] = useState(false);
+    const { data, setData, post, processing, errors, reset } = useForm({
+        code: ''
+    });
 
     const handleRedeem = (e) => {
         e.preventDefault();
-        setRedeeming(true);
-        setTimeout(() => setRedeeming(false), 1500);
+        post(route('student.vouchers.redeem'), {
+            preserveScroll: true,
+            onSuccess: () => {
+                reset('code');
+            }
+        });
     };
 
     return (
@@ -120,20 +125,21 @@ export default function Dashboard({ gamification, myShells, recommendedShells })
                             <div className="relative">
                                 <input
                                     type="text"
-                                    value={voucherCode}
-                                    onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
+                                    value={data.code}
+                                    onChange={(e) => setData('code', e.target.value.toUpperCase())}
                                     placeholder="Enter Code..."
-                                    className="w-full bg-black/10 border border-white/20 rounded-xl py-3 px-4 text-white placeholder-cyan-200/70 focus:outline-none focus:ring-2 focus:ring-white/50 font-mono uppercase transition-all"
+                                    className={`w-full bg-black/10 border ${errors.code ? 'border-red-400' : 'border-white/20'} rounded-xl py-3 px-4 text-white placeholder-cyan-200/70 focus:outline-none focus:ring-2 focus:ring-white/50 font-mono uppercase transition-all`}
                                     maxLength={12}
                                 />
                                 <button
                                     type="submit"
-                                    disabled={!voucherCode.trim() || redeeming}
+                                    disabled={!data.code.trim() || processing}
                                     className="absolute right-1.5 top-1.5 bottom-1.5 bg-white text-blue-600 px-4 rounded-lg font-bold text-sm hover:bg-cyan-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm flex items-center"
                                 >
-                                    {redeeming ? 'Checking...' : 'Redeem'}
+                                    {processing ? 'Checking...' : 'Redeem'}
                                 </button>
                             </div>
+                            {errors.code && <div className="text-red-200 text-xs mt-1 font-semibold">{errors.code}</div>}
                         </form>
                     </div>
 
