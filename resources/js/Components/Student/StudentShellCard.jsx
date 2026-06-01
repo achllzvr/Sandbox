@@ -1,13 +1,13 @@
 import { Link, router } from '@inertiajs/react';
 import { CheckCircle2, Home } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { themeKeyForShell } from '@/utils/shellThemes';
+import { resolveShellCardTheme } from '@/utils/shellThemes';
 import { assetUrl } from '@/utils/assetUrl';
 
 const HERMYS_FALLBACK = 'images/Hermy.png';
 
 export default function StudentShellCard({ shell, index = 0, style, defaultShellId = null, showDefaultAction = false }) {
-    const theme = themeKeyForShell(shell, index);
+    const { className: theme, style: themeStyle } = resolveShellCardTheme(shell, index);
     const progressTone = shell.progress >= 50 ? 'green' : 'red';
     const [coverError, setCoverError] = useState(false);
     const [confirmOpen, setConfirmOpen] = useState(false);
@@ -67,7 +67,7 @@ export default function StudentShellCard({ shell, index = 0, style, defaultShell
     return (
         <div
             className={`student-shell-card student-shell-card--${theme} ${isDefault ? 'student-shell-card--default' : ''}`}
-            style={style}
+            style={{ ...themeStyle, ...style }}
         >
             {isDefault ? (
                 <span className="student-shell-card__default-badge">

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\CertificationCover;
 use Illuminate\Database\Eloquent\Model;
 
 class Certification extends Model
@@ -13,6 +14,7 @@ class Certification extends Model
         'difficulty',
         'estimated_duration',
         'thumbnail',
+        'accent_color',
         'learning_objectives',
         'prerequisites',
         'tags',
@@ -33,6 +35,15 @@ class Certification extends Model
         'price'       => 'decimal:2',
         'tags'        => 'array',
     ];
+
+    protected $appends = [
+        'thumbnail_url',
+    ];
+
+    public function getThumbnailUrlAttribute(): ?string
+    {
+        return CertificationCover::url($this->thumbnail, $this->id);
+    }
 
     // ── Relationships ──────────────────────────────────────
 

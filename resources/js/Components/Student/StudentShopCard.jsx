@@ -7,19 +7,19 @@ import {
     shopBadgeLabel,
     shopIsGithubVerified,
     shopProviderLine,
-    shopThemeForCert,
 } from '@/utils/shopCatalog';
+import { resolveShopTheme } from '@/utils/shellThemes';
 
 const HERMYS_FALLBACK = 'images/Hermy.png';
 
 export default function StudentShopCard({ cert, index = 0, isOwned = false, onOpenDetails }) {
-    const theme = shopThemeForCert(cert, index);
+    const { className: theme, style: themeStyle } = resolveShopTheme(cert, index);
     const provider = shopProviderLine(cert);
     const badgeLabel = shopBadgeLabel(cert);
     const githubVerified = shopIsGithubVerified(cert);
     const [coverError, setCoverError] = useState(false);
 
-    const coverSrc = !coverError && cert?.thumbnail ? assetUrl(`storage/${cert.thumbnail}`) : null;
+    const coverSrc = !coverError && (cert?.thumbnail_url ?? (cert?.thumbnail ? assetUrl(`storage/${cert.thumbnail}`) : null));
     const useCoverFill = Boolean(coverSrc);
 
     const cardBody = (
@@ -68,7 +68,7 @@ export default function StudentShopCard({ cert, index = 0, isOwned = false, onOp
     return (
         <article
             className={`student-shell-card student-shell-card--${theme} student-shell-card--shop ${isOwned ? 'student-shell-card--shop-owned' : ''} student-enter__item`}
-            style={{ '--student-enter-index': index }}
+            style={{ '--student-enter-index': index, ...themeStyle }}
         >
             {isOwned ? (
                 <div className="student-shell-card__shop-link student-shell-card__shop-link--owned">{cardBody}</div>

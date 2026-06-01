@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 import Modal from '@/Components/Modal';
 import { assetUrl } from '@/utils/assetUrl';
-import { shellThemeCssVars, themeKeyForShell } from '@/utils/shellThemes';
+import { resolveShellMapTheme } from '@/utils/shellThemes';
 
 const INTRO_POINTS = [
     {
@@ -50,8 +50,7 @@ export default function StudentExamDisclaimerModal({
     const points = useMemo(() => (isIntro ? INTRO_POINTS : EXIT_POINTS), [isIntro]);
     const [checked, setChecked] = useState(() => points.map(() => false));
 
-    const themeKey = themeKeyForShell(shellMeta);
-    const themeVars = shellThemeCssVars(themeKey);
+    const { className: themeKey, style: themeVars } = resolveShellMapTheme(shellMeta);
     const allAcknowledged = checked.every(Boolean);
 
     useEffect(() => {

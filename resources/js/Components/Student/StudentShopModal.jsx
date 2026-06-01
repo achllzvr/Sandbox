@@ -1,12 +1,12 @@
 import { Link, useForm } from '@inertiajs/react';
 import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { useEffect } from 'react';
+import { resolveShopTheme } from '@/utils/shellThemes';
 import {
     formatShopPrice,
     shopBadgeLabel,
     shopIsGithubVerified,
     shopProviderLine,
-    shopThemeForCert,
 } from '@/utils/shopCatalog';
 
 function ShopCertBadge({ cert, theme, className = '' }) {
@@ -42,7 +42,7 @@ export default function StudentShopModal({
     onOpenEnroll,
     onOpenVoucher,
 }) {
-    const theme = shopThemeForCert(cert, catalogIndex);
+    const { className: theme, style: themeStyle } = resolveShopTheme(cert, catalogIndex);
 
     const enrollForm = useForm({
         certification_id: cert?.id ?? null,
@@ -111,6 +111,7 @@ export default function StudentShopModal({
         <div className="student-shop-modal-overlay student-fade-in-up" role="dialog" aria-modal="true">
             <div
                 className={`student-shop-modal student-shop-modal--${theme} student-shop-modal--${view} student-fade-in-up student-fade-in-up--delay-1`}
+                style={themeStyle}
             >
                 {view !== 'success' ? (
                     <button type="button" className="student-shop-modal__back" onClick={handleHeaderBack} aria-label="Go back">

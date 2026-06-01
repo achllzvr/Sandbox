@@ -1,7 +1,7 @@
 import { Link } from '@inertiajs/react';
 import { CheckCircle2, X } from 'lucide-react';
 import Modal from '@/Components/Modal';
-import { shellThemeCssVars, themeKeyForShell } from '@/utils/shellThemes';
+import { resolveShellMapTheme } from '@/utils/shellThemes';
 import { assetUrl } from '@/utils/assetUrl';
 
 export default function StudentShellInfoModal({
@@ -16,7 +16,7 @@ export default function StudentShellInfoModal({
         return null;
     }
 
-    const themeKey = themeKeyForShell(shellMeta);
+    const { className: themeKey, style: themeStyle } = resolveShellMapTheme(shellMeta);
     const badgeType = shellMeta.badge_type ?? 'pro';
     const badgeLabel = shellMeta.badge_label ?? 'Professional Certificate';
     const githubVerified = shellMeta.github_verified ?? badgeType === 'github';
@@ -29,14 +29,14 @@ export default function StudentShellInfoModal({
         <Modal show={show} onClose={onClose} maxWidth="md">
             <div
                 className={`student-shell-modal student-shell-modal--${themeKey}`}
-                style={shellThemeCssVars(themeKey)}
+                style={themeStyle}
             >
                 <button type="button" className="student-shell-modal__close" onClick={onClose} aria-label="Close">
                     <X size={18} strokeWidth={2.5} />
                 </button>
 
                 {cover ? (
-                    <div className="student-shell-modal__cover">
+                    <div className="student-shell-modal__cover student-shell-modal__cover--photo">
                         <img src={cover} alt="" />
                     </div>
                 ) : (

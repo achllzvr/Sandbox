@@ -3,7 +3,7 @@ import { CheckCircle2, ChevronDown, ChevronUp, Home } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import StudentShellInfoModal from '@/Components/Student/StudentShellInfoModal';
 import scrollNodeIntoShellView from '@/utils/scrollNodeIntoShellView';
-import { shellThemeCssVars, themeKeyForShell } from '@/utils/shellThemes';
+import { resolveShellMapTheme } from '@/utils/shellThemes';
 import { assetUrl } from '@/utils/assetUrl';
 
 const CANVAS_WIDTH = 560;
@@ -277,7 +277,7 @@ export default function StudentShellMap({
     const badgeType = shellMeta.badge_type ?? 'pro';
     const badgeLabel = shellMeta.badge_label ?? 'Professional Certificate';
     const githubVerified = shellMeta.github_verified ?? badgeType === 'github';
-    const themeKey = themeKeyForShell(shellMeta);
+    const { className: themeKey, style: themeStyle } = resolveShellMapTheme(shellMeta);
 
     let globalModuleIndex = 0;
     const lessonOffsets = certification.lessons.map((lesson) => {
@@ -301,7 +301,7 @@ export default function StudentShellMap({
     return (
         <div
             className={`student-shell-map student-shell-map--${themeKey} ${mapEntered ? 'student-shell-map--entered' : ''}`}
-            style={shellThemeCssVars(themeKey)}
+            style={themeStyle}
         >
             <div className="student-shell-map__header">
                 <Link href={selectHref} className="student-shell-map__home" title="My Shells home">

@@ -1,3 +1,11 @@
+import {
+    normalizeHex,
+    shellCardCssVarsFromAccent,
+    shellThemeCssVarsFromAccent,
+    shopThemeCssVarsFromAccent,
+} from '@/utils/shellThemeFromAccent';
+import { shopThemeForCert } from '@/utils/shopCatalog';
+
 export const SHELL_THEME_KEYS = ['pink', 'blue', 'green'];
 
 const POPUP_LOCKED = {
@@ -121,5 +129,54 @@ export function shellThemeCssVars(themeKey) {
         '--shell-popup-locked-bg': theme.popupLockedBg,
         '--shell-popup-locked-border': theme.popupLockedBorder,
         '--shell-popup-locked-surface': theme.popupLockedSurface,
+    };
+}
+
+export { normalizeHex, shellCardCssVarsFromAccent, shellThemeCssVarsFromAccent, shopThemeCssVarsFromAccent };
+
+export function resolveShellMapTheme(shell, fallbackIndex = 0) {
+    const accent = normalizeHex(shell?.accent_color);
+    if (accent) {
+        return {
+            className: 'dynamic',
+            style: shellThemeCssVarsFromAccent(accent),
+        };
+    }
+
+    const themeKey = themeKeyForShell(shell, fallbackIndex);
+
+    return {
+        className: themeKey,
+        style: shellThemeCssVars(themeKey),
+    };
+}
+
+export function resolveShellCardTheme(shell, fallbackIndex = 0) {
+    const accent = normalizeHex(shell?.accent_color);
+    if (accent) {
+        return {
+            className: 'dynamic',
+            style: shellCardCssVarsFromAccent(accent),
+        };
+    }
+
+    return {
+        className: themeKeyForShell(shell, fallbackIndex),
+        style: {},
+    };
+}
+
+export function resolveShopTheme(cert, fallbackIndex = 0) {
+    const accent = normalizeHex(cert?.accent_color);
+    if (accent) {
+        return {
+            className: 'dynamic',
+            style: shopThemeCssVarsFromAccent(accent),
+        };
+    }
+
+    return {
+        className: shopThemeForCert(cert, fallbackIndex),
+        style: {},
     };
 }

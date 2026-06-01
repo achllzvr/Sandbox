@@ -7,7 +7,7 @@ import StudentSandboxQuiz from '@/Components/Student/StudentSandboxQuiz';
 import StudentShellMap from '@/Components/Student/StudentShellMap';
 import StudentLayout from '@/Layouts/StudentLayout';
 import { clearExamDraft, hasExamDraft, loadExamDraft, saveExamDraft } from '@/utils/examProgressStorage';
-import { shellThemeCssVars, themeKeyForShell } from '@/utils/shellThemes';
+import { resolveShellMapTheme } from '@/utils/shellThemes';
 import { assetUrl } from '@/utils/assetUrl';
 
 export default function Show() {
@@ -58,8 +58,7 @@ export default function Show() {
         total_modules: progress.total_modules,
         theme: 'pink',
     };
-    const themeKey = themeKeyForShell(shellMeta);
-    const themeVars = shellThemeCssVars(themeKey);
+    const { className: themeKey, style: themeVars } = resolveShellMapTheme(shellMeta);
 
     const resetSession = useCallback(() => {
         setViewingModule(null);

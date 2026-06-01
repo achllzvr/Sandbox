@@ -94,7 +94,8 @@ class MyShellController extends Controller
             'progress' => $progress['percentage'],
             'completed_modules' => $progress['completed_modules'],
             'total_modules' => $progress['total_modules'],
-            'cover_image' => $certification->thumbnail ? asset('storage/'.$certification->thumbnail) : null,
+            'cover_image' => \App\Support\CertificationCover::url($certification->thumbnail, (int) $certification->id),
+            'accent_color' => $certification->accent_color,
             'theme' => ['pink', 'blue', 'green'][((int) $id - 1) % 3],
         ];
 

@@ -1,27 +1,27 @@
 import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { useState } from 'react';
 import { assetUrl } from '@/utils/assetUrl';
+import { resolveShopTheme } from '@/utils/shellThemes';
 import {
     formatShopPrice,
     shopBadgeLabel,
     shopDifficultyLabel,
     shopDurationLabel,
     shopProviderLine,
-    shopThemeForCert,
 } from '@/utils/shopCatalog';
 
 const HERMYS_FALLBACK = 'images/Hermy.png';
 
 export default function StudentShopShellPage({ cert, catalogIndex = 0, onBack, onOpenEnroll, onOpenVoucher }) {
-    const theme = shopThemeForCert(cert, catalogIndex);
+    const { className: theme, style: themeStyle } = resolveShopTheme(cert, catalogIndex);
     const provider = shopProviderLine(cert);
     const badgeLabel = shopBadgeLabel(cert);
     const [coverError, setCoverError] = useState(false);
 
-    const coverSrc = !coverError && cert?.thumbnail ? assetUrl(`storage/${cert.thumbnail}`) : null;
+    const coverSrc = !coverError && (cert?.thumbnail_url ?? (cert?.thumbnail ? assetUrl(`storage/${cert.thumbnail}`) : null));
 
     return (
-        <div className={`student-shop-shell-page student-shop-shell-page--${theme} student-fade-in-up`}>
+        <div className={`student-shop-shell-page student-shop-shell-page--${theme} student-fade-in-up`} style={themeStyle}>
             <div className="student-shop-shell-page__hero">
                 <button type="button" className="student-shop-shell-page__back" onClick={onBack} aria-label="Back to shop">
                     <ArrowLeft size={20} strokeWidth={2.25} aria-hidden="true" />
