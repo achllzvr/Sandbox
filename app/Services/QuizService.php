@@ -9,10 +9,6 @@ class QuizService
 {
     /**
      * Calculate the score based on the submitted answers.
-     * 
-     * @param Module $module
-     * @param array $submittedAnswers
-     * @return int
      */
     public function calculateScore(Module $module, array $submittedAnswers): int
     {
@@ -20,7 +16,7 @@ class QuizService
 
         foreach ($submittedAnswers as $submission) {
             $question = Question::with('answers')->find($submission['question_id']);
-            if (!$question || $question->module_id !== $module->id) {
+            if (! $question || $question->module_id !== $module->id) {
                 continue; // Skip invalid questions
             }
 
@@ -34,11 +30,23 @@ class QuizService
     }
 
     /**
+     * Check a single answer without revealing which option is correct.
+     */
+    public function isAnswerCorrect(int $questionId, int $selectedOptionId, Module $module): bool
+    {
+        $question = Question::with('answers')->find($questionId);
+
+        if (! $question || $question->module_id !== $module->id) {
+            return false;
+        }
+
+        $selectedAnswer = $question->answers->firstWhere('id', $selectedOptionId);
+
+        return $selectedAnswer && $selectedAnswer->is_correct;
+    }
+
+    /**
      * Calculate gamification rewards (Sand Dollars).
-     * 
-     * @param int $score
-     * @param int $totalQuestions
-     * @return int
      */
     public function calculateSandDollars(int $score, int $totalQuestions): int
     {
@@ -47,7 +55,7 @@ class QuizService
         }
 
         $percentage = ($score / $totalQuestions) * 100;
-        
+
         // Award logic: 50 Sand Dollars for a perfect score, otherwise proportional.
         if ($percentage == 100) {
             return 50;

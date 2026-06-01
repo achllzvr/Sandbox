@@ -5,8 +5,9 @@ namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
 use App\Models\Certification;
 use App\Models\Enrollment;
-use Inertia\Inertia;
+use App\Support\StudentQuizPayload;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class MyShellController extends Controller
 {
@@ -26,10 +27,10 @@ class MyShellController extends Controller
         // Load the certification with its nested lessons and modules (and their contents/questions/answers)
         // Also load final exam questions (certifications level)
         $certification = Certification::with([
-            'lessons.modules.contents', 
+            'lessons.modules.contents',
             'lessons.modules.questions.answers',
             'examQuestions.answers',
-            'creator'
+            'creator',
         ])->findOrFail($id);
 
         // Get the IDs of all modules the user has completed
@@ -103,7 +104,7 @@ class MyShellController extends Controller
         ];
 
         return Inertia::render('Student/Shells/Show', [
-            'certification' => $certification,
+            'certification' => StudentQuizPayload::certification($certification),
             'progress' => $progress,
             'moduleProgress' => $moduleProgress,
             'shellMeta' => $shellMeta,

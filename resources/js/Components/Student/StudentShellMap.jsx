@@ -2,6 +2,7 @@ import { Link } from '@inertiajs/react';
 import { CheckCircle2, ChevronDown, ChevronUp, Home } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import StudentShellInfoModal from '@/Components/Student/StudentShellInfoModal';
+import scrollNodeIntoShellView from '@/utils/scrollNodeIntoShellView';
 import { shellThemeCssVars, themeKeyForShell } from '@/utils/shellThemes';
 import { assetUrl } from '@/utils/assetUrl';
 
@@ -227,21 +228,10 @@ export default function StudentShellMap({
     }, []);
 
     const scrollToNode = useCallback(
-        (nodeId) => {
+        (nodeId, { behavior = 'smooth' } = {}) => {
             const container = getScrollContainer();
             const node = document.querySelector(`[data-shell-node="${nodeId}"]`);
-            if (!container || !node) {
-                return;
-            }
-
-            const containerTop = container.getBoundingClientRect().top;
-            const nodeTop = node.getBoundingClientRect().top;
-            const offset = nodeTop - containerTop + container.scrollTop - 100;
-
-            container.scrollTo({
-                top: Math.max(0, offset),
-                behavior: 'smooth',
-            });
+            scrollNodeIntoShellView(container, node, { behavior });
         },
         [getScrollContainer],
     );
@@ -264,8 +254,20 @@ export default function StudentShellMap({
         }
 
         hasAutoScrolledRef.current = true;
-        const timer = window.setTimeout(() => scrollToNode(currentNodeId), 520);
-        return () => window.clearTimeout(timer);
+
+        let frame2;
+        const frame1 = requestAnimationFrame(() => {
+            frame2 = requestAnimationFrame(() => {
+                scrollToNode(currentNodeId, { behavior: 'auto' });
+            });
+        });
+
+        return () => {
+            cancelAnimationFrame(frame1);
+            if (frame2) {
+                cancelAnimationFrame(frame2);
+            }
+        };
     }, [mapEntered, currentNodeId, scrollToNode]);
 
     function toggleNode(nodeId) {

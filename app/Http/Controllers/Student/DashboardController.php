@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
-use App\Models\Certification;
 use App\Models\Enrollment;
 use App\Models\UserModuleProgress;
 use Illuminate\Http\Request;
@@ -179,8 +178,8 @@ class DashboardController extends Controller
             ],
             'examQuestions' => [
                 ['id' => 1, 'question_text' => 'Sample final exam question?', 'answers' => [
-                    ['id' => 1, 'answer_text' => 'Correct answer', 'is_correct' => true],
-                    ['id' => 2, 'answer_text' => 'Wrong answer', 'is_correct' => false],
+                    ['id' => 1, 'answer_text' => 'Correct answer'],
+                    ['id' => 2, 'answer_text' => 'Wrong answer'],
                 ]],
             ],
         ];

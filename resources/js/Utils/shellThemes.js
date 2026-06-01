@@ -103,6 +103,8 @@ export function shellThemeCssVars(themeKey) {
         '--shell-header': theme.header,
         '--shell-header-border': theme.headerBorder,
         '--shell-header-shadow': theme.headerShadow,
+        '--shell-body': theme.body,
+        '--shell-cta': theme.cta,
         '--shell-bubble-bg': theme.bubbleBg,
         '--shell-bubble-border': theme.bubbleBorder,
         '--shell-bubble-title': theme.bubbleTitle,

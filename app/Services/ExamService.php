@@ -11,11 +11,6 @@ class ExamService
 {
     /**
      * Grade the exam and save the attempt.
-     * 
-     * @param int $userId
-     * @param Certification $certification
-     * @param array $submittedAnswers
-     * @return array
      */
     public function gradeAndSaveAttempt(int $userId, Certification $certification, array $submittedAnswers): array
     {
@@ -25,13 +20,13 @@ class ExamService
 
         foreach ($submittedAnswers as $submission) {
             $question = Question::with('answers')->find($submission['question_id']);
-            if (!$question) {
+            if (! $question) {
                 continue;
             }
 
             $selectedAnswer = collect($question->answers)->firstWhere('id', $submission['selected_option']);
             $isCorrect = $selectedAnswer && $selectedAnswer->is_correct ? 1 : 0;
-            
+
             if ($isCorrect) {
                 $score++;
             }
@@ -92,5 +87,23 @@ class ExamService
             'total_questions' => $totalQuestions,
             'passed' => $passed,
         ];
+    }
+
+    /**
+     * Check a single exam answer without revealing which option is correct.
+     */
+    public function isAnswerCorrect(int $questionId, int $selectedOptionId, Certification $certification): bool
+    {
+        $question = Question::with('answers')->find($questionId);
+
+        if (! $question
+            || $question->certification_id !== $certification->id
+            || $question->question_type !== 'final_exam') {
+            return false;
+        }
+
+        $selectedAnswer = $question->answers->firstWhere('id', $selectedOptionId);
+
+        return $selectedAnswer && $selectedAnswer->is_correct;
     }
 }

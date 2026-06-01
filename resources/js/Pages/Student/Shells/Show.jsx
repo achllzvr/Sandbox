@@ -40,6 +40,8 @@ export default function Show() {
     const [examIntroOpen, setExamIntroOpen] = useState(false);
     const [examExitOpen, setExamExitOpen] = useState(false);
     const [examDraftAvailable, setExamDraftAvailable] = useState(() => hasExamDraft(certification.id, userId));
+    const [isCheckingAnswer, setIsCheckingAnswer] = useState(false);
+    const [flowKey, setFlowKey] = useState('map');
 
     const allModules = certification.lessons.flatMap((lesson) => lesson.modules);
     const isCompleted = (moduleId) => progress.completed_module_ids?.includes(moduleId);
@@ -111,27 +113,32 @@ export default function Show() {
         [certification.id, userId, resetSession],
     );
 
-    const returnToShellMap = useCallback(
-        (moduleId = viewingModule?.id) => {
-            const alreadyDone = moduleId && progress.completed_module_ids?.includes(moduleId);
+    const exitToShellMap = useCallback(() => {
+        resetSession();
+        setFlowKey('map');
+        router.get(route('student.shells.show', certification.id), {}, {
+            preserveScroll: true,
+        });
+    }, [resetSession, certification.id]);
 
-            const goToMap = () => {
-                router.get(route('student.shells.show', certification.id), {}, {
-                    preserveScroll: true,
-                });
-            };
-
-            if (!moduleId || alreadyDone) {
-                goToMap();
-                return;
+    const markModuleComplete = useCallback(
+        (moduleId) => {
+            if (!moduleId || progress.completed_module_ids?.includes(moduleId)) {
+                return Promise.resolve();
             }
 
-            router.post(route('student.shells.modules.complete', moduleId), {}, {
-                preserveScroll: true,
-                onFinish: goToMap,
+            return new Promise((resolve) => {
+                router.post(route('student.shells.modules.complete', moduleId), {}, {
+                    preserveScroll: true,
+                    preserveState: true,
+                    onFinish: () => {
+                        reloadShellProgress();
+                        resolve();
+                    },
+                });
             });
         },
-        [viewingModule?.id, progress.completed_module_ids, certification.id],
+        [progress.completed_module_ids, reloadShellProgress],
     );
 
     const openModule = useCallback(
@@ -139,6 +146,7 @@ export default function Show() {
             resetSession();
             setViewingModule(module);
             setIsReviewMode(review);
+            setFlowKey(`module-${module.id}-${review ? 'review' : 'play'}`);
 
             if (review) {
                 const saved = moduleProgress[module.id];
@@ -148,6 +156,7 @@ export default function Show() {
                 if (hasQuiz && !hasContent) {
                     setScore(saved?.score ?? 0);
                     setIsViewingResults(true);
+                    setFlowKey(`results-${module.id}`);
                 } else if (hasContent) {
                     setContentFinished(true);
                 }
@@ -171,10 +180,16 @@ export default function Show() {
     if (isViewingCertificate) {
         return (
             <StudentCertificateView
+                key="certificate"
                 certification={certification}
                 user={auth?.user}
                 certificate={certificate}
-                onClose={() => router.get(route('student.shells.show', certification.id))}
+                themeVars={themeVars}
+                onClose={() => {
+                    setIsViewingCertificate(false);
+                    setFlowKey('map');
+                    resetSession();
+                }}
             />
         );
     }
@@ -187,17 +202,18 @@ export default function Show() {
         const questionsCount = viewingModule.questions?.length || 0;
 
         return (
-            <div className="student-finish">
+            <div key={flowKey} className="student-finish" style={themeVars}>
                 <Head title="Sandbox Finished" />
-                <div className="student-finish__icon">
+                <div className="student-enter-stagger">
+                <div className="student-finish__icon student-enter__item" style={{ '--student-enter-index': 0 }}>
                     <img src={assetUrl('images/shells/shell_var1.png')} alt="" />
                 </div>
-                <h1 className="student-finish__title">
+                <h1 className="student-finish__title student-enter__item" style={{ '--student-enter-index': 1 }}>
                     Sandbox
                     <br />
                     Finished!
                 </h1>
-                <div className="student-finish__stats">
+                <div className="student-finish__stats student-enter__item" style={{ '--student-enter-index': 2 }}>
                     {videosCount > 0 && (
                         <div className="student-finish__stat">
                             <p className="student-finish__stat-label">Videos completed</p>
@@ -223,7 +239,7 @@ export default function Show() {
                         </div>
                     )}
                 </div>
-                <div className="student-finish__progress">
+                <div className="student-finish__progress student-enter__item" style={{ '--student-enter-index': 3 }}>
                     <p className="student-finish__progress-title">Shell progress</p>
                     <div className="student-finish__progress-icons">
                         {allModules.map((module) => (
@@ -247,11 +263,13 @@ export default function Show() {
                 </div>
                 <button
                     type="button"
-                    className="student-sandbox__action student-sandbox__action--primary student-finish__back"
-                    onClick={() => returnToShellMap(viewingModule.id)}
+                    className="student-sandbox__action student-sandbox__action--primary student-finish__back student-enter__item"
+                    style={{ '--student-enter-index': 4 }}
+                    onClick={exitToShellMap}
                 >
                     Back to shell map
                 </button>
+                </div>
             </div>
         );
     }
@@ -261,13 +279,13 @@ export default function Show() {
         return (
             <>
                 <Head title={`${viewingModule.title} — Results`} />
-                <div style={themeVars}>
+                <div key={flowKey} style={themeVars}>
                     <StudentQuizResults
                         module={viewingModule}
                         score={saved?.score ?? score}
                         total={viewingModule.questions?.length ?? 0}
                         reviewOnly
-                        onBack={() => returnToShellMap(viewingModule.id)}
+                        onBack={exitToShellMap}
                     />
                 </div>
             </>
@@ -280,11 +298,11 @@ export default function Show() {
 
         if (questions.length === 0) {
             return (
-                <div className="student-sandbox" style={themeVars}>
+                <div key={flowKey} className="student-sandbox" style={themeVars}>
                     <Head title="Quiz" />
-                    <div className="student-sandbox__content">
-                        <p className="student-quiz__empty">No questions available for this sandbox.</p>
-                        <button type="button" className="student-sandbox__action student-sandbox__action--primary" onClick={returnToShellMap}>
+                    <div className="student-sandbox__content student-enter-stagger">
+                        <p className="student-quiz__empty student-enter__item" style={{ '--student-enter-index': 0 }}>No questions available for this sandbox.</p>
+                        <button type="button" className="student-sandbox__action student-sandbox__action--primary student-enter__item" style={{ '--student-enter-index': 1 }} onClick={exitToShellMap}>
                             Back to shell map
                         </button>
                     </div>
@@ -301,8 +319,14 @@ export default function Show() {
                         clearExamDraft(certification.id, userId);
                         setExamDraftAvailable(false);
                         resetSession();
-                        reloadShellProgress();
-                        setIsViewingCertificate(true);
+                        router.reload({
+                            only: ['progress', 'moduleProgress', 'examStatus', 'certificate'],
+                            preserveScroll: true,
+                            onSuccess: () => {
+                                setFlowKey('certificate');
+                                setIsViewingCertificate(true);
+                            },
+                        });
                     },
                     onError: () => {
                         clearExamDraft(certification.id, userId);
@@ -321,24 +345,45 @@ export default function Show() {
                 onSuccess: () => {
                     setIsViewingQuiz(false);
                     setUserAnswers([]);
+                    setFlowKey(`summary-${viewingModule.id}`);
                     setIsViewingSummary(true);
                     reloadShellProgress();
                 },
             });
         };
 
-        const handleCheckAnswer = () => {
+        const handleCheckAnswer = async () => {
             const current = questions[quizIndex];
-            const answer = current.answers.find((a) => a.id === selectedAnswer);
-            if (answer?.is_correct) {
-                setAnswerStatus('correct');
-                setUserAnswers(buildSubmission(questions));
-                const alreadyRecorded = userAnswers.some((a) => a.question_id === current.id);
-                if (!alreadyRecorded) {
-                    setScore((s) => s + 1);
+            if (!selectedAnswer || isCheckingAnswer) {
+                return;
+            }
+
+            const checkRoute = isTakingFinalExam
+                ? route('student.certifications.exam.check', certification.id)
+                : route('student.modules.quiz.check', viewingModule.id);
+
+            setIsCheckingAnswer(true);
+
+            try {
+                const { data } = await window.axios.post(checkRoute, {
+                    question_id: current.id,
+                    selected_option: selectedAnswer,
+                });
+
+                if (data.correct) {
+                    setAnswerStatus('correct');
+                    setUserAnswers(buildSubmission(questions));
+                    const alreadyRecorded = userAnswers.some((a) => a.question_id === current.id);
+                    if (!alreadyRecorded) {
+                        setScore((s) => s + 1);
+                    }
+                } else {
+                    setAnswerStatus('incorrect');
                 }
-            } else {
-                setAnswerStatus('incorrect');
+            } catch {
+                alert('Could not check your answer. Please try again.');
+            } finally {
+                setIsCheckingAnswer(false);
             }
         };
 
@@ -371,7 +416,7 @@ export default function Show() {
                 setExamExitOpen(true);
                 return;
             }
-            returnToShellMap(viewingModule?.id);
+            exitToShellMap();
         };
 
         const confirmExamExit = () => {
@@ -381,13 +426,14 @@ export default function Show() {
             }
             setExamExitOpen(false);
             resetSession();
+            setFlowKey('map');
             router.get(route('student.shells.show', certification.id), {}, { preserveScroll: true });
         };
 
         return (
             <>
                 <Head title={isTakingFinalExam ? 'Final Exam' : viewingModule?.title} />
-                <div style={themeVars}>
+                <div key={flowKey} style={themeVars}>
                     <StudentSandboxQuiz
                         title={viewingModule?.title}
                         questions={questions}
@@ -396,6 +442,7 @@ export default function Show() {
                         answerStatus={answerStatus}
                         onSelectAnswer={setSelectedAnswer}
                         onCheckAnswer={handleCheckAnswer}
+                        isCheckingAnswer={isCheckingAnswer}
                         onNext={handleNext}
                         onRetry={() => {
                             setAnswerStatus('unanswered');
@@ -420,7 +467,7 @@ export default function Show() {
         const contents = viewingModule.contents || [];
         const hasQuiz = viewingModule.questions?.length > 0;
 
-        const closeViewer = () => returnToShellMap(viewingModule.id);
+        const closeViewer = () => exitToShellMap();
 
         const proceedFromContent = () => {
             const atEnd = contents.length === 0 || contentIndex === contents.length - 1;
@@ -431,7 +478,7 @@ export default function Show() {
                     return;
                 }
                 if (isReviewMode) {
-                    returnToShellMap(viewingModule.id);
+                    exitToShellMap();
                     return;
                 }
                 setScore(0);
@@ -440,14 +487,19 @@ export default function Show() {
                 setAnswerStatus('unanswered');
                 setUserAnswers([]);
                 if (hasQuiz) {
+                    setFlowKey(`quiz-${viewingModule.id}`);
                     setIsViewingQuiz(true);
                 } else {
-                    setIsViewingSummary(true);
+                    markModuleComplete(viewingModule.id).then(() => {
+                        setFlowKey(`summary-${viewingModule.id}`);
+                        setIsViewingSummary(true);
+                    });
                 }
                 return;
             }
 
             setContentIndex(contentIndex + 1);
+            setFlowKey(`module-${viewingModule.id}-content-${contentIndex + 1}`);
             if (!isReviewMode) {
                 setContentFinished(false);
             }
@@ -455,6 +507,8 @@ export default function Show() {
 
         const currentContent = contents[contentIndex];
         const isLastContent = contentIndex === contents.length - 1;
+        const iframeContentTypes = ['youtube_embed', 'presentation', 'document'];
+        const usesIframeGate = currentContent && iframeContentTypes.includes(currentContent.content_type);
 
         let actionLabel = 'Next material';
         if (contents.length === 0) {
@@ -472,7 +526,7 @@ export default function Show() {
         const actionDisabled = !isReviewMode && contents.length > 0 && !contentFinished;
 
         return (
-            <div className="student-sandbox student-sandbox--material" style={themeVars}>
+            <div key={flowKey} className="student-sandbox student-sandbox--material" style={themeVars}>
                 <Head title={`${viewingModule.title} — Sandbox`} />
                 <header className="student-sandbox__header">
                     <button type="button" className="student-sandbox__header-btn" onClick={closeViewer} aria-label="Close">
@@ -482,32 +536,46 @@ export default function Show() {
                     <div className="student-sandbox__header-spacer" aria-hidden="true" />
                 </header>
 
-                <div className="student-sandbox__content student-sandbox__content--material">
+                <div className="student-sandbox__content student-sandbox__content--material student-enter-stagger">
                     {isReviewMode && (
-                        <p className="student-sandbox__review-banner">Review mode — quiz results are saved and cannot be retaken.</p>
+                        <p className="student-sandbox__review-banner student-enter__item" style={{ '--student-enter-index': 0 }}>
+                            Review mode — quiz results are saved and cannot be retaken.
+                        </p>
                     )}
 
                     {contents.length === 0 ? (
                         <div className="student-sandbox__empty-state">
-                            <p>{hasQuiz ? 'This sandbox is a quiz only.' : 'No materials in this sandbox yet.'}</p>
-                            <button type="button" className="student-sandbox__action student-sandbox__action--primary" onClick={proceedFromContent}>
+                            <p className="student-enter__item" style={{ '--student-enter-index': isReviewMode ? 1 : 0 }}>
+                                {hasQuiz ? 'This sandbox is a quiz only.' : 'No materials in this sandbox yet.'}
+                            </p>
+                            <button
+                                type="button"
+                                className="student-sandbox__action student-sandbox__action--primary student-enter__item"
+                                style={{ '--student-enter-index': isReviewMode ? 2 : 1 }}
+                                onClick={proceedFromContent}
+                            >
                                 {isReviewMode && hasQuiz ? 'View quiz results' : hasQuiz ? 'Proceed to quiz' : 'Finish sandbox'}
                             </button>
                         </div>
                     ) : (
                         <div className="student-sandbox__material-layout">
                             <div className="student-sandbox__viewer-wrap">
-                                <p className="student-sandbox__viewer-label">
+                                <p
+                                    className="student-sandbox__viewer-label student-enter__item"
+                                    style={{ '--student-enter-index': isReviewMode ? 1 : 0 }}
+                                >
                                     {currentContent?.title || `Material ${contentIndex + 1} of ${contents.length}`}
                                 </p>
-                                <div className="student-sandbox__viewer">
+                                <div
+                                    className="student-sandbox__viewer student-enter__item"
+                                    style={{ '--student-enter-index': isReviewMode ? 2 : 1 }}
+                                >
                                     {currentContent.content_type === 'youtube_embed' ? (
                                         <iframe
                                             src={currentContent.file_url}
                                             title={viewingModule.title}
                                             className="student-sandbox__iframe"
                                             allowFullScreen
-                                            onLoad={() => !isReviewMode && setContentFinished(true)}
                                         />
                                     ) : currentContent.content_type === 'video' ? (
                                         <video
@@ -521,23 +589,31 @@ export default function Show() {
                                             src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(`${window.location.origin}/storage/${currentContent.file_url}`)}`}
                                             title={viewingModule.title}
                                             className="student-sandbox__iframe"
-                                            onLoad={() => !isReviewMode && setContentFinished(true)}
                                         />
                                     ) : currentContent.content_type === 'document' && currentContent.file_url ? (
                                         <iframe
                                             src={`/storage/${currentContent.file_url}`}
                                             title={viewingModule.title}
                                             className="student-sandbox__iframe"
-                                            onLoad={() => !isReviewMode && setContentFinished(true)}
                                         />
                                     ) : (
                                         <div className="student-sandbox__viewer-fallback">Unsupported content type.</div>
                                     )}
                                 </div>
+                                {usesIframeGate && !isReviewMode && !contentFinished ? (
+                                    <button
+                                        type="button"
+                                        className="student-sandbox__mark-complete student-enter__item"
+                                        style={{ '--student-enter-index': 3 }}
+                                        onClick={() => setContentFinished(true)}
+                                    >
+                                        I've finished this material
+                                    </button>
+                                ) : null}
                             </div>
 
                             {contents.length > 1 && (
-                                <div className="student-sandbox__dots">
+                                <div className="student-sandbox__dots student-enter__item" style={{ '--student-enter-index': 3 }}>
                                     {contents.map((_, i) => (
                                         <span
                                             key={i}
@@ -551,7 +627,8 @@ export default function Show() {
                                 type="button"
                                 disabled={actionDisabled}
                                 onClick={proceedFromContent}
-                                className={`student-sandbox__action ${actionDisabled ? 'student-sandbox__action--disabled' : 'student-sandbox__action--primary'}`}
+                                className={`student-sandbox__action student-enter__item ${actionDisabled ? 'student-sandbox__action--disabled' : 'student-sandbox__action--primary'}`}
+                                style={{ '--student-enter-index': 4 }}
                             >
                                 {actionDisabled
                                     ? currentContent?.content_type === 'video' || currentContent?.content_type === 'youtube_embed'
@@ -584,6 +661,7 @@ export default function Show() {
                 onTakeFinalExam={() => setExamIntroOpen(true)}
                 onViewCertificate={() => {
                     resetSession();
+                    setFlowKey('certificate');
                     setIsViewingCertificate(true);
                 }}
             />

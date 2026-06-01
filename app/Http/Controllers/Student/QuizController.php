@@ -26,7 +26,7 @@ class QuizController extends Controller
         ]);
 
         $user = $request->user();
-        
+
         // Ensure user hasn't already completed this module?
         // Let's allow retakes of the sandbox quiz if they want, but typically progress is linear.
         // The instructions say "Grades the assessment... Updates score, calculates gamification".
@@ -64,9 +64,25 @@ class QuizController extends Controller
         // which allows the frontend to show the "Sandbox Finished" screen first!
         // Wait, Sandbox Docs Template 2 says:
         // return redirect()->route('shells.map', $module->certification_id)->with('success', 'Sandbox Passed!');
-        // If we redirect, it goes back to the map immediately. 
+        // If we redirect, it goes back to the map immediately.
         // Let's do back() so the React component can transition to the Sandbox Finished screen.
-        
+
         return back()->with('success', "Sandbox Completed! +{$sandDollars} Sand Dollars");
+    }
+
+    public function check(Request $request, Module $module)
+    {
+        $validated = $request->validate([
+            'question_id' => 'required|integer|exists:questions,id',
+            'selected_option' => 'required|integer|exists:answers,id',
+        ]);
+
+        $correct = $this->quizService->isAnswerCorrect(
+            (int) $validated['question_id'],
+            (int) $validated['selected_option'],
+            $module,
+        );
+
+        return response()->json(['correct' => $correct]);
     }
 }

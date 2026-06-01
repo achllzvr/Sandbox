@@ -21,20 +21,14 @@ export default function StudentQuizResults({ module, score, total, onBack, revie
 
                     {module?.questions?.length > 0 && (
                         <ul className="student-quiz-results__list">
-                            {module.questions.map((question, index) => {
-                                const correct = question.answers?.find((a) => a.is_correct);
-                                return (
-                                    <li key={question.id} className="student-quiz-results__item">
-                                        <span className="student-quiz-results__item-num">Q{index + 1}</span>
-                                        <div>
-                                            <p className="student-quiz-results__question">{question.question_text}</p>
-                                            {correct && (
-                                                <p className="student-quiz-results__answer">Answer: {correct.answer_text}</p>
-                                            )}
-                                        </div>
-                                    </li>
-                                );
-                            })}
+                            {module.questions.map((question, index) => (
+                                <li key={question.id} className="student-quiz-results__item" style={{ '--student-enter-index': index }}>
+                                    <span className="student-quiz-results__item-num">Q{index + 1}</span>
+                                    <div>
+                                        <p className="student-quiz-results__question">{question.question_text}</p>
+                                    </div>
+                                </li>
+                            ))}
                         </ul>
                     )}
 

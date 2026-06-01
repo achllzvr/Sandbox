@@ -1,14 +1,12 @@
 <?php
 
-use App\Http\Controllers\AffiliationController;
 use App\Http\Controllers\Admin\AdminDashboardController;
-use App\Http\Controllers\Admin\CertificationApprovalController;
-use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Admin\AuditLogController;
+use App\Http\Controllers\Admin\CertificationApprovalController;
 use App\Http\Controllers\Admin\FinanceController;
+use App\Http\Controllers\AffiliationController;
 use App\Http\Controllers\Creator\CertificationController;
 use App\Http\Controllers\Creator\CreatorDashboardController;
-use App\Http\Controllers\Creator\LessonController;
 use App\Http\Controllers\Creator\LearningMaterialController;
 use App\Http\Controllers\Creator\ModuleContentController;
 use App\Http\Controllers\Creator\ModuleController;
@@ -16,7 +14,6 @@ use App\Http\Controllers\Creator\QuestionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Student\DashboardController as StudentDashboardController;
 use App\Http\Controllers\Student\MarketplaceController;
-use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -48,7 +45,7 @@ Route::get('/certificates/{code}', [\App\Http\Controllers\CertificateController:
 Route::get('/dashboard', function () {
     $user = auth()->user();
 
-    \Illuminate\Support\Facades\Log::info('Dashboard route hit by: ' . $user->email . ' with role: ' . $user->role);
+    \Illuminate\Support\Facades\Log::info('Dashboard route hit by: '.$user->email.' with role: '.$user->role);
 
     return match ($user->role) {
         'admin' => redirect()->route('admin.dashboard'),
@@ -96,10 +93,10 @@ Route::middleware(['auth', 'otp.verified', 'role:content_creator'])
 
         Route::post('certifications/{certification}/materials', [LearningMaterialController::class, 'store'])
             ->name('certifications.materials.store');
-            
+
         Route::post('certifications/{certification}/materials/reorder', [LearningMaterialController::class, 'reorder'])
             ->name('certifications.materials.reorder');
-            
+
         Route::delete('certifications/{certification}/materials/{material}', [LearningMaterialController::class, 'destroy'])
             ->name('certifications.materials.destroy');
 
@@ -146,12 +143,12 @@ Route::middleware(['auth', 'otp.verified', 'role:admin'])
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])
             ->name('dashboard');
 
-    // User Management
-    Route::prefix('users')->name('users.')->group(function () {
-        Route::get('/', [\App\Http\Controllers\Admin\UserManagementController::class, 'index'])->name('index');
-        Route::post('/invite', [\App\Http\Controllers\Admin\UserManagementController::class, 'invite'])->name('invite');
-        Route::put('/{user}/verify-teacher', [\App\Http\Controllers\Admin\UserManagementController::class, 'verifyTeacher'])->name('verify-teacher');
-    });
+        // User Management
+        Route::prefix('users')->name('users.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\UserManagementController::class, 'index'])->name('index');
+            Route::post('/invite', [\App\Http\Controllers\Admin\UserManagementController::class, 'invite'])->name('invite');
+            Route::put('/{user}/verify-teacher', [\App\Http\Controllers\Admin\UserManagementController::class, 'verifyTeacher'])->name('verify-teacher');
+        });
 
         // Certification Approval
         Route::get('/certifications', [CertificationApprovalController::class, 'index'])
@@ -189,21 +186,23 @@ Route::middleware(['auth', 'otp.verified', 'role:user'])
             ->name('preferences.default-shell');
         Route::get('/leaderboard', [\App\Http\Controllers\Student\LeaderboardController::class, 'index'])->name('leaderboard');
         Route::get('/cast', [\App\Http\Controllers\Student\CastController::class, 'index'])->name('cast');
-        
+
         // Sandbox Enrollment & Voucher Flow
         Route::post('/enrollments/checkout', [\App\Http\Controllers\Student\EnrollmentController::class, 'checkout'])->name('enrollments.checkout');
         Route::post('/vouchers/redeem', [\App\Http\Controllers\Student\VoucherController::class, 'redeem'])->name('vouchers.redeem');
-        
+
         // View a specific Shell (certification) - student view
         Route::get('/shells/{id}', [\App\Http\Controllers\Student\MyShellController::class, 'show'])->name('shells.show');
-        
+
         // Mark a module as complete (video/ppt progress)
         Route::post('/shells/modules/{module}/complete', [\App\Http\Controllers\Student\MyShellController::class, 'completeModule'])->name('shells.modules.complete');
-        
+
         // Quiz Submission
+        Route::post('/modules/{module}/quiz/check', [\App\Http\Controllers\Student\QuizController::class, 'check'])->name('modules.quiz.check');
         Route::post('/modules/{module}/quiz/submit', [\App\Http\Controllers\Student\QuizController::class, 'submit'])->name('modules.quiz.submit');
-        
+
         // Exam Submission
+        Route::post('/certifications/{certification}/exam/check', [\App\Http\Controllers\Student\ExamController::class, 'check'])->name('certifications.exam.check');
         Route::post('/certifications/{certification}/exam/submit', [\App\Http\Controllers\Student\ExamController::class, 'submit'])->name('certifications.exam.submit');
     });
 
@@ -227,7 +226,7 @@ Route::middleware(['auth', 'otp.verified', 'role:teacher'])
         Route::get('/analytics', [\App\Http\Controllers\Teacher\TeacherDashboardController::class, 'analytics'])->name('analytics');
     });
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';
 
 // Accept Invitation Routes
 Route::middleware('guest')->group(function () {
