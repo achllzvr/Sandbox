@@ -85,11 +85,6 @@ class MyShellController extends Controller
             'latest_passed' => (bool) ($latestAttempt?->passed ?? false),
         ];
 
-        $enrollmentIndex = Enrollment::where('user_id', $user->id)
-            ->orderBy('id')
-            ->pluck('certification_id')
-            ->search((int) $id);
-
         $shellMeta = [
             'id' => (int) $id,
             'title' => strtoupper($certification->title),
@@ -100,7 +95,7 @@ class MyShellController extends Controller
             'completed_modules' => $progress['completed_modules'],
             'total_modules' => $progress['total_modules'],
             'cover_image' => $certification->thumbnail ? asset('storage/'.$certification->thumbnail) : null,
-            'theme' => ['pink', 'blue', 'green'][($enrollmentIndex !== false ? $enrollmentIndex : 0) % 3],
+            'theme' => ['pink', 'blue', 'green'][((int) $id - 1) % 3],
         ];
 
         return Inertia::render('Student/Shells/Show', [

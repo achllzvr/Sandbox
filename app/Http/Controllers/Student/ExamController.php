@@ -32,7 +32,7 @@ class ExamController extends Controller
 
         // Check if passed and unlock certificate
         if ($result['passed']) {
-            return back()->with('success', "Final Exam Passed! ({$result['score']}/{$result['total_questions']})");
+            return back();
         }
 
         return back()->withErrors(['exam' => "Final Exam Failed. You scored {$result['score']}/{$result['total_questions']}. Please review the Sandboxes and try again."]);

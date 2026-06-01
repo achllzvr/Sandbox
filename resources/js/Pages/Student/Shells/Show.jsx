@@ -34,6 +34,8 @@ export default function Show() {
     const [score, setScore] = useState(0);
     const [userAnswers, setUserAnswers] = useState([]);
     const [isViewingSummary, setIsViewingSummary] = useState(false);
+    const [isViewingExamFinish, setIsViewingExamFinish] = useState(false);
+    const [examFinishScore, setExamFinishScore] = useState(null);
     const [isTakingFinalExam, setIsTakingFinalExam] = useState(false);
     const [isViewingCertificate, setIsViewingCertificate] = useState(false);
     const [contentFinished, setContentFinished] = useState(false);
@@ -56,7 +58,8 @@ export default function Show() {
         total_modules: progress.total_modules,
         theme: 'pink',
     };
-    const themeVars = shellThemeCssVars(themeKeyForShell(shellMeta));
+    const themeKey = themeKeyForShell(shellMeta);
+    const themeVars = shellThemeCssVars(themeKey);
 
     const resetSession = useCallback(() => {
         setViewingModule(null);
@@ -70,6 +73,8 @@ export default function Show() {
         setScore(0);
         setUserAnswers([]);
         setIsViewingSummary(false);
+        setIsViewingExamFinish(false);
+        setExamFinishScore(null);
         setIsTakingFinalExam(false);
         setContentFinished(false);
     }, []);
@@ -120,6 +125,14 @@ export default function Show() {
             preserveScroll: true,
         });
     }, [resetSession, certification.id]);
+
+    const openCertificate = useCallback(() => {
+        setIsViewingExamFinish(false);
+        setExamFinishScore(null);
+        resetSession();
+        setFlowKey('certificate');
+        setIsViewingCertificate(true);
+    }, [resetSession]);
 
     const markModuleComplete = useCallback(
         (moduleId) => {
@@ -194,24 +207,42 @@ export default function Show() {
         );
     }
 
-    if (isViewingSummary && viewingModule) {
-        const videosCount =
-            viewingModule.contents?.filter((c) => c.content_type === 'video' || c.content_type === 'youtube_embed').length || 0;
-        const presentationsCount =
-            viewingModule.contents?.filter((c) => c.content_type === 'presentation' || c.content_type === 'document').length || 0;
-        const questionsCount = viewingModule.questions?.length || 0;
+    if ((isViewingSummary && viewingModule) || isViewingExamFinish) {
+        const isExamFinish = isViewingExamFinish;
+        const videosCount = isExamFinish
+            ? 0
+            : viewingModule.contents?.filter((c) => c.content_type === 'video' || c.content_type === 'youtube_embed').length || 0;
+        const presentationsCount = isExamFinish
+            ? 0
+            : viewingModule.contents?.filter((c) => c.content_type === 'presentation' || c.content_type === 'document').length || 0;
+        const questionsCount = isExamFinish
+            ? examFinishScore?.total ?? examStatus.latest_total ?? certification.exam_questions?.length ?? 0
+            : viewingModule.questions?.length || 0;
+        const displayScore = isExamFinish
+            ? examFinishScore?.score ?? examStatus.latest_score ?? score
+            : moduleProgress[viewingModule.id]?.score ?? score;
 
         return (
-            <div key={flowKey} className="student-finish" style={themeVars}>
-                <Head title="Sandbox Finished" />
-                <div className="student-enter-stagger">
+            <div key={flowKey} className={`student-finish student-finish--${themeKey}`} style={themeVars}>
+                <Head title={isExamFinish ? 'Final Exam Finished' : 'Sandbox Finished'} />
+                <div className="student-finish__content student-enter-stagger">
                 <div className="student-finish__icon student-enter__item" style={{ '--student-enter-index': 0 }}>
                     <img src={assetUrl('images/shells/shell_var1.png')} alt="" />
                 </div>
                 <h1 className="student-finish__title student-enter__item" style={{ '--student-enter-index': 1 }}>
-                    Sandbox
-                    <br />
-                    Finished!
+                    {isExamFinish ? (
+                        <>
+                            Final Exam
+                            <br />
+                            Finished!
+                        </>
+                    ) : (
+                        <>
+                            Sandbox
+                            <br />
+                            Finished!
+                        </>
+                    )}
                 </h1>
                 <div className="student-finish__stats student-enter__item" style={{ '--student-enter-index': 2 }}>
                     {videosCount > 0 && (
@@ -232,9 +263,9 @@ export default function Show() {
                     )}
                     {questionsCount > 0 && (
                         <div className="student-finish__stat">
-                            <p className="student-finish__stat-label">Test score</p>
+                            <p className="student-finish__stat-label">{isExamFinish ? 'Final exam score' : 'Test score'}</p>
                             <p className="student-finish__stat-value">
-                                {(moduleProgress[viewingModule.id]?.score ?? score)}/{questionsCount}
+                                {displayScore}/{questionsCount}
                             </p>
                         </div>
                     )}
@@ -265,9 +296,9 @@ export default function Show() {
                     type="button"
                     className="student-sandbox__action student-sandbox__action--primary student-finish__back student-enter__item"
                     style={{ '--student-enter-index': 4 }}
-                    onClick={exitToShellMap}
+                    onClick={isExamFinish ? openCertificate : exitToShellMap}
                 >
-                    Back to shell map
+                    {isExamFinish ? 'View Hermit certificate' : 'Back to shell map'}
                 </button>
                 </div>
             </div>
@@ -318,14 +349,14 @@ export default function Show() {
                     onSuccess: () => {
                         clearExamDraft(certification.id, userId);
                         setExamDraftAvailable(false);
-                        resetSession();
+                        setExamFinishScore({ score, total: questions.length });
+                        setIsTakingFinalExam(false);
+                        setIsViewingQuiz(false);
+                        setFlowKey('exam-finish');
+                        setIsViewingExamFinish(true);
                         router.reload({
                             only: ['progress', 'moduleProgress', 'examStatus', 'certificate'],
                             preserveScroll: true,
-                            onSuccess: () => {
-                                setFlowKey('certificate');
-                                setIsViewingCertificate(true);
-                            },
                         });
                     },
                     onError: () => {

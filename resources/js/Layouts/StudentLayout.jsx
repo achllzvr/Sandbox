@@ -10,7 +10,7 @@ const NAV_ITEMS = [
     { label: 'My Cast', routeName: 'student.cast', key: 'cast', Icon: Users },
 ];
 
-export default function StudentLayout({ children, activeNav, layoutMode = 'standard' }) {
+export default function StudentLayout({ children, activeNav, layoutMode = 'standard', workspaceModifier }) {
     const { flash } = usePage().props;
     const usesWorkspace = layoutMode === 'shell' || layoutMode === 'select';
     const isShellPage = layoutMode === 'shell';
@@ -65,7 +65,9 @@ export default function StudentLayout({ children, activeNav, layoutMode = 'stand
 
             <main className="student-main student-content--animated">
                 {usesWorkspace ? (
-                    <StudentWorkspace layoutMode={layoutMode}>{children}</StudentWorkspace>
+                    <StudentWorkspace layoutMode={layoutMode} modifier={workspaceModifier}>
+                        {children}
+                    </StudentWorkspace>
                 ) : (
                     children
                 )}

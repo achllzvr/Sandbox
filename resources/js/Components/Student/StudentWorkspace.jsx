@@ -20,7 +20,7 @@ function readProfileCollapsed(fallback) {
     return fallback;
 }
 
-export default function StudentWorkspace({ layoutMode = 'standard', children }) {
+export default function StudentWorkspace({ layoutMode = 'standard', modifier, children }) {
     const shellActive = layoutMode === 'shell';
     const [profileCollapsed, setProfileCollapsed] = useState(() => readProfileCollapsed(!shellActive));
 
@@ -55,7 +55,7 @@ export default function StudentWorkspace({ layoutMode = 'standard', children }) 
 
     return (
         <div
-            className={`student-workspace ${shellActive ? 'student-workspace--shell' : 'student-workspace--select'} ${profileCollapsed ? 'student-workspace--profile-collapsed' : ''}`}
+            className={`student-workspace ${shellActive ? 'student-workspace--shell' : 'student-workspace--select'} ${profileCollapsed ? 'student-workspace--profile-collapsed' : ''}${modifier ? ` student-workspace--${modifier}` : ''}`}
         >
             <div
                 id={shellActive ? 'student-shell-scroll' : undefined}

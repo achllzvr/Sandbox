@@ -199,7 +199,7 @@ class DashboardController extends Controller
             'badge_type' => $githubVerified ? 'github' : 'pro',
             'badge_label' => $githubVerified ? 'GITHUB VERIFIED CERTIFICATE' : 'Professional Certificate',
             'github_verified' => $githubVerified,
-            'theme' => $this->themeForIndex($index),
+            'theme' => $this->themeForIndex($cert->id - 1),
         ];
     }
 
