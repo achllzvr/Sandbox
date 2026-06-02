@@ -5,6 +5,7 @@ import StudentExamDisclaimerModal from '@/Components/Student/StudentExamDisclaim
 import StudentQuizResults from '@/Components/Student/StudentQuizResults';
 import StudentSandboxQuiz from '@/Components/Student/StudentSandboxQuiz';
 import StudentShellMap from '@/Components/Student/StudentShellMap';
+import ModuleContentPreview from '@/Components/ModuleContentPreview';
 import StudentLayout from '@/Layouts/StudentLayout';
 import { clearExamDraft, hasExamDraft, loadExamDraft, saveExamDraft } from '@/utils/examProgressStorage';
 import { resolveShellMapTheme } from '@/utils/shellThemes';
@@ -600,31 +601,19 @@ export default function Show() {
                                     className="student-sandbox__viewer student-enter__item"
                                     style={{ '--student-enter-index': isReviewMode ? 2 : 1 }}
                                 >
-                                    {currentContent.content_type === 'youtube_embed' ? (
-                                        <iframe
-                                            src={currentContent.file_url}
-                                            title={viewingModule.title}
-                                            className="student-sandbox__iframe"
-                                            allowFullScreen
-                                        />
-                                    ) : currentContent.content_type === 'video' ? (
-                                        <video
-                                            src={`/storage/${currentContent.file_url}`}
-                                            controls
-                                            className="student-sandbox__iframe"
-                                            onEnded={() => !isReviewMode && setContentFinished(true)}
-                                        />
-                                    ) : currentContent.content_type === 'presentation' && currentContent.file_url ? (
-                                        <iframe
-                                            src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(`${window.location.origin}/storage/${currentContent.file_url}`)}`}
-                                            title={viewingModule.title}
-                                            className="student-sandbox__iframe"
-                                        />
-                                    ) : currentContent.content_type === 'document' && currentContent.file_url ? (
-                                        <iframe
-                                            src={`/storage/${currentContent.file_url}`}
-                                            title={viewingModule.title}
-                                            className="student-sandbox__iframe"
+                                    {currentContent ? (
+                                        <ModuleContentPreview
+                                            item={{
+                                                type: currentContent.content_type,
+                                                title: currentContent.title,
+                                                file_url: currentContent.file_url,
+                                            }}
+                                            iframeClassName="student-sandbox__iframe"
+                                            videoClassName="student-sandbox__iframe"
+                                            pptxClassName="student-sandbox__pptx"
+                                            videoProps={{
+                                                onEnded: () => !isReviewMode && setContentFinished(true),
+                                            }}
                                         />
                                     ) : (
                                         <div className="student-sandbox__viewer-fallback">Unsupported content type.</div>

@@ -726,6 +726,57 @@ button.admin-nav-link {
     color: var(--admin-danger-text);
 }
 
+.admin-flash--warning {
+    background: var(--admin-warning-bg, #fff8e6);
+    border-color: var(--admin-warning-border, #e6c200);
+    color: var(--admin-warning-text, #7a5c00);
+}
+
+.admin-preview-iframe {
+    width: 100%;
+    border: none;
+    border-radius: var(--admin-radius-md);
+    background: var(--admin-surface-subtle);
+}
+
+.admin-preview-iframe--video {
+    aspect-ratio: 16 / 9;
+    min-height: 240px;
+}
+
+.admin-preview-iframe--doc {
+    height: min(70vh, 560px);
+}
+
+.admin-preview-pdf__fallback {
+    margin-top: 10px;
+    font-size: 0.8125rem;
+    text-align: center;
+}
+
+.admin-preview-pdf__fallback a {
+    color: var(--admin-accent-hover);
+    font-weight: 600;
+}
+
+.admin-preview-quiz__title {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    margin: 0 0 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--admin-chrome-divider);
+}
+
+.admin-preview-quiz__question + .admin-preview-quiz__question {
+    margin-top: 16px;
+}
+
+.admin-preview-quiz__prompt {
+    font-weight: 700;
+    font-size: 0.875rem;
+    margin: 0 0 8px;
+}
+
 .admin-content {
     flex: 1;
     padding: 24px 32px 48px;
@@ -1179,17 +1230,17 @@ a.admin-btn {
 
 button.admin-btn--primary,
 a.admin-btn--primary {
-    --btn-stroke: var(--admin-accent);
+    --btn-stroke: var(--admin-accent-muted);
     background: var(--admin-accent);
     color: var(--admin-on-accent);
-    border: 2px solid var(--btn-stroke);
+    border: 2px solid var(--admin-accent);
     box-shadow: 0 5px 0 0 var(--btn-stroke);
 }
 
 button.admin-btn--primary:hover:not(:disabled),
 a.admin-btn--primary:hover {
     background: var(--admin-accent-hover);
-    --btn-stroke: var(--admin-accent-hover);
+    --btn-stroke: var(--admin-sidebar-stroke, var(--admin-accent-muted));
 }
 
 button.admin-btn--primary:active:not(:disabled),

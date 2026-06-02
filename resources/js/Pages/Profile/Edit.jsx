@@ -1,6 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import AdminLayout from '@/Layouts/AdminLayout';
 import AdminAppearanceSettings from '@/Components/Admin/AdminAppearanceSettings';
+import CreatorLayout from '@/Layouts/CreatorLayout';
 import TeacherLayout from '@/Layouts/TeacherLayout';
 import DeleteUserForm from './Partials/DeleteUserForm';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm';
@@ -16,6 +17,7 @@ export default function Edit({ mustVerifyEmail, status }) {
     const role = auth.user?.role;
     const isAdmin = role === 'admin';
     const isTeacher = role === 'teacher';
+    const isCreator = role === 'content_creator';
 
     if (isAdmin) {
         return (
@@ -72,6 +74,30 @@ export default function Edit({ mustVerifyEmail, status }) {
                     </div>
                 </div>
             </TeacherLayout>
+        );
+    }
+
+    if (isCreator) {
+        return (
+            <CreatorLayout pageTitle="Profile settings">
+                <Head title="Profile settings" />
+                <div className="admin-profile-stack">
+                    <div className="admin-card admin-card--chunky admin-profile-card">
+                        <AdminAppearanceSettings />
+                    </div>
+                    <div className="admin-card admin-card--chunky admin-profile-card">
+                        <UpdateProfileInformationForm
+                            mustVerifyEmail={mustVerifyEmail}
+                            status={status}
+                            className="max-w-xl"
+                            variant="admin"
+                        />
+                    </div>
+                    <div className="admin-card admin-card--chunky admin-profile-card">
+                        <UpdatePasswordForm className="max-w-xl" variant="admin" />
+                    </div>
+                </div>
+            </CreatorLayout>
         );
     }
 

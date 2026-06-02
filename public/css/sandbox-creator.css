@@ -1,0 +1,452 @@
+/* Creator Studio — admin-light shell extensions */
+
+.creator-studio-shell .admin-main {
+    min-width: 0;
+}
+
+.creator-toast-stack {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 120;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: min(420px, calc(100vw - 32px));
+    pointer-events: none;
+}
+
+.creator-toast {
+    pointer-events: auto;
+    margin: 0;
+    padding: 14px 18px;
+    border-radius: var(--admin-radius-lg);
+    border: 2px solid transparent;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.45;
+    box-shadow: 0 4px 0 0 var(--admin-shadow-hard);
+}
+
+.creator-toast--success {
+    background: var(--admin-success-bg);
+    border-color: var(--admin-success-border);
+    color: var(--admin-success-text);
+    box-shadow: 0 4px 0 0 var(--admin-success-border);
+}
+
+.creator-toast--error {
+    background: var(--admin-danger-bg);
+    border-color: var(--admin-danger-border);
+    color: var(--admin-danger-text);
+    box-shadow: 0 4px 0 0 var(--admin-danger-border);
+}
+
+.creator-toast--warning {
+    background: var(--admin-warning-bg);
+    border-color: var(--admin-warning-border);
+    color: var(--admin-warning-text);
+    box-shadow: 0 4px 0 0 var(--admin-warning-border);
+}
+
+.creator-section {
+    margin-top: 28px;
+}
+
+.creator-progress-bar {
+    height: 8px;
+    border-radius: 999px;
+    background: var(--admin-surface-subtle);
+    border: 1px solid var(--admin-chrome-divider);
+    overflow: hidden;
+}
+
+.creator-progress-bar__fill {
+    height: 100%;
+    background: var(--admin-accent);
+    border-radius: inherit;
+    transition: width 0.25s ease;
+}
+
+.creator-shell-status {
+    font-size: 0.875rem;
+    padding: 8px 14px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+.creator-shell-status.admin-badge {
+    border-width: 2px;
+    box-shadow: 0 3px 0 0 var(--admin-shadow-hard);
+}
+
+.admin-btn--back {
+    background: var(--admin-surface-elevated);
+    color: var(--admin-text-heading);
+    border: 2px solid var(--admin-border-strong);
+    box-shadow: 0 4px 0 0 var(--admin-shadow-hard);
+    font-weight: 700;
+}
+
+.admin-btn--back:hover {
+    background: var(--admin-surface-muted);
+    border-color: var(--admin-accent-muted);
+}
+
+.admin-btn--back:active {
+    transform: translateY(4px);
+    box-shadow: 0 0 0 0 var(--admin-shadow-hard);
+}
+
+.creator-toast-stack .creator-toast {
+    animation: creator-toast-in 0.25s var(--admin-ease-out, ease);
+}
+
+.creator-toast-stack .creator-toast--leaving {
+    animation: creator-toast-out 0.25s var(--admin-ease-out, ease) forwards;
+}
+
+@keyframes creator-toast-in {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes creator-toast-out {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+}
+
+.admin-section-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--admin-text-heading);
+    margin: 0;
+}
+
+.admin-text-muted {
+    color: var(--admin-text-muted);
+    font-size: 0.875rem;
+    margin: 0;
+}
+
+/* ── Shell list table ─────────────────────────────────────────────────────── */
+
+.creator-shells-table {
+    overflow: hidden;
+}
+
+.creator-shells-table.admin-card {
+    padding: 0;
+}
+
+.creator-shells-table__head {
+    display: grid;
+    grid-template-columns: 96px 1fr 140px;
+    gap: 12px;
+    padding: 14px 20px;
+    background: var(--admin-surface-subtle);
+    border-bottom: 2px solid var(--admin-chrome-divider);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--admin-text-muted);
+}
+
+.creator-shells-table__body {
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.creator-shell-row {
+    display: grid;
+    grid-template-columns: 96px 1fr 140px;
+    gap: 16px;
+    align-items: center;
+    padding: 14px 16px;
+    border-radius: var(--admin-radius-lg);
+    border: 2px solid var(--creator-row-border, var(--admin-border-strong));
+    background: var(--creator-row-bg, var(--admin-surface-subtle));
+    color: var(--creator-row-text, var(--admin-text-heading));
+    box-shadow: 0 4px 0 0 var(--creator-row-shadow, var(--admin-shadow-hard));
+    text-decoration: none;
+    transition:
+        transform 0.15s var(--admin-ease-out, ease),
+        filter 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+.creator-shell-row:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.02);
+    color: var(--creator-row-text, var(--admin-text-heading));
+}
+
+.creator-shell-row--dynamic {
+    background: var(--creator-row-bg, var(--shop-info-bg, #6373c3));
+    border-color: var(--creator-row-border, var(--shop-info-border, #4f5da8));
+    color: var(--creator-row-text, var(--shop-on-info, #fff));
+    box-shadow: 0 4px 0 0 var(--creator-row-shadow, var(--shop-accent-dark, #3d4788));
+}
+
+.creator-shell-row--pink {
+    --creator-row-bg: #f4a5a0;
+    --creator-row-border: #e8877f;
+    --creator-row-shadow: #c96a62;
+    --creator-row-text: #6b2e28;
+    --creator-row-text-muted: rgba(107, 46, 40, 0.78);
+}
+
+.creator-shell-row--blue {
+    --creator-row-bg: #9ec5e8;
+    --creator-row-border: #7eb0e0;
+    --creator-row-shadow: #5a8fc4;
+    --creator-row-text: #1e4466;
+    --creator-row-text-muted: rgba(30, 68, 102, 0.78);
+}
+
+.creator-shell-row--green {
+    --creator-row-bg: #a8d5a2;
+    --creator-row-border: #8ecf86;
+    --creator-row-shadow: #6aab62;
+    --creator-row-text: #2d4a28;
+    --creator-row-text-muted: rgba(45, 74, 40, 0.78);
+}
+
+.creator-shell-row__preview {
+    width: 72px;
+    height: 72px;
+    border-radius: var(--admin-radius-md);
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.15);
+    border: 2px solid rgba(255, 255, 255, 0.35);
+}
+
+.creator-shell-row__preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.creator-shell-row__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: inherit;
+}
+
+.creator-shell-row__desc {
+    margin-top: 6px;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: var(--creator-row-text-muted, var(--admin-text-muted));
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.creator-shell-row__status {
+    justify-self: end;
+}
+
+/* ── Status pills on colored rows (theme-independent contrast) ──────────── */
+
+.creator-shell-row .creator-status-pill.admin-badge,
+.creator-shell-row .creator-status-pill {
+    border-width: 2px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    box-shadow: 0 2px 0 0 rgba(0, 0, 0, 0.18);
+}
+
+.creator-shell-row .creator-status-pill.admin-badge--published,
+.creator-shell-row .creator-status-pill.admin-badge--approved,
+.creator-shell-row .creator-status-pill.admin-badge--active {
+    background: #ffffff;
+    border-color: #1a6b38;
+    color: #1a6b38;
+    box-shadow: 0 2px 0 0 #1a6b38;
+}
+
+.creator-shell-row .creator-status-pill.admin-badge--draft {
+    background: #ffffff;
+    border-color: #4a4a4a;
+    color: #2d2d2d;
+    box-shadow: 0 2px 0 0 #4a4a4a;
+}
+
+.creator-shell-row .creator-status-pill.admin-badge--pending,
+.creator-shell-row .creator-status-pill.admin-badge--pending_review,
+.creator-shell-row .creator-status-pill.admin-badge--pending_verification,
+.creator-shell-row .creator-status-pill.admin-badge--revision_required {
+    background: #fff8e6;
+    border-color: #b8860b;
+    color: #6b4500;
+    box-shadow: 0 2px 0 0 #b8860b;
+}
+
+.creator-shell-row .creator-status-pill.admin-badge--denied,
+.creator-shell-row .creator-status-pill.admin-badge--declined,
+.creator-shell-row .creator-status-pill.admin-badge--inactive {
+    background: #ffffff;
+    border-color: #b83028;
+    color: #7a1810;
+    box-shadow: 0 2px 0 0 #b83028;
+}
+
+/* ── Creator editor utilities ───────────────────────────────────────────── */
+
+.admin-checklist {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 8px;
+    font-size: 0.875rem;
+}
+
+.admin-checklist__done {
+    color: var(--admin-success-text);
+    font-weight: 600;
+}
+
+.admin-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+@media (max-width: 640px) {
+    .admin-form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.admin-field {
+    display: block;
+    margin-bottom: 14px;
+}
+
+.admin-field__label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--admin-text-muted);
+    margin-bottom: 6px;
+}
+
+.admin-field__hint {
+    margin-top: 6px;
+    font-size: 0.8125rem;
+    color: var(--admin-text-muted);
+}
+
+.admin-checkbox {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 0.875rem;
+    margin-top: 8px;
+}
+
+.admin-list-row__title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.admin-list-row__grip {
+    color: var(--admin-text-muted);
+    flex-shrink: 0;
+}
+
+.admin-card__footer {
+    padding: 16px 20px;
+    border-top: 2px solid var(--admin-chrome-divider);
+    display: flex;
+    justify-content: center;
+}
+
+.admin-question-block {
+    padding: 14px;
+    border: 2px solid var(--admin-chrome-divider);
+    border-radius: var(--admin-radius-md);
+    margin-bottom: 12px;
+    background: var(--admin-surface-subtle);
+}
+
+.admin-inline-choice {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.admin-inline-choice .input-field {
+    flex: 1;
+}
+
+.creator-editor-grid {
+    display: grid;
+    gap: 20px;
+}
+
+.creator-editor-grid--overview {
+    grid-template-columns: 2fr 1fr;
+}
+
+.creator-editor-grid--studio {
+    grid-template-columns: minmax(280px, 1fr) minmax(0, 2fr);
+}
+
+@media (max-width: 900px) {
+    .creator-editor-grid--overview,
+    .creator-editor-grid--studio {
+        grid-template-columns: 1fr;
+    }
+
+    .creator-shells-table__head,
+    .creator-shell-row {
+        grid-template-columns: 72px 1fr;
+    }
+
+    .creator-shell-row__status {
+        grid-column: 1 / -1;
+        justify-self: start;
+    }
+}
+
+@media (max-width: 768px) {
+    .creator-toast-stack {
+        top: 16px;
+        right: 16px;
+        left: 16px;
+        max-width: none;
+    }
+}

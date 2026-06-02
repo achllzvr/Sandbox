@@ -13,6 +13,7 @@ import { Head, router, useForm, Link } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import AdminBadge from '@/Components/Admin/AdminBadge';
 import AdminModal from '@/Components/Admin/AdminModal';
+import ModuleContentPreview from '@/Components/ModuleContentPreview';
 import { useState } from 'react';
 
 const ChevronIcon = ({ open }) => (
@@ -383,72 +384,7 @@ export default function Show({ certification }) {
                 }
             >
                 <div className="admin-modal__body--preview">
-                    {previewItem?.type === 'youtube_embed' ? (
-                        <iframe
-                            src={previewItem.file_url}
-                            style={{ width: '100%', aspectRatio: '16/9', border: 'none', borderRadius: '12px' }}
-                            allowFullScreen
-                            title="YouTube preview"
-                        />
-                    ) : previewItem?.type === 'video' ? (
-                        <video
-                            src={`/storage/${previewItem.file_url}`}
-                            controls
-                            style={{ width: '100%', maxHeight: '60vh', borderRadius: '12px' }}
-                        />
-                    ) : previewItem?.type === 'presentation' && previewItem.file_url ? (
-                        <iframe
-                            src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(window.location.origin + '/storage/' + previewItem.file_url)}`}
-                            style={{ width: '100%', height: '500px', border: 'none', borderRadius: '12px' }}
-                            title="Presentation preview"
-                        />
-                    ) : previewItem?.type === 'document' && previewItem.file_url ? (
-                        <iframe
-                            src={`/storage/${previewItem.file_url}`}
-                            style={{ width: '100%', height: '500px', border: 'none', borderRadius: '12px' }}
-                            title="Document preview"
-                        />
-                    ) : previewItem?.type === 'quiz' ? (
-                        <div style={{ width: '100%' }}>
-                            <h4
-                                style={{
-                                    fontWeight: 700,
-                                    marginBottom: '16px',
-                                    borderBottom: '2px solid var(--color-nav-border)',
-                                    paddingBottom: '8px',
-                                }}
-                            >
-                                Practice Quiz Questions
-                            </h4>
-                            {(previewItem.questions || []).map((q, qIdx) => (
-                                <div key={q.id || qIdx} style={{ marginBottom: '16px' }}>
-                                    <p style={{ fontWeight: 700, fontSize: '0.875rem' }}>
-                                        Q{qIdx + 1}. {q.question_text}
-                                    </p>
-                                    <div className="admin-answer-grid" style={{ marginTop: '8px' }}>
-                                        {(q.answers || []).map((ans, aIdx) => (
-                                            <div
-                                                key={ans.id || aIdx}
-                                                className={`admin-answer ${ans.is_correct ? 'admin-answer--correct' : ''}`}
-                                            >
-                                                {ans.answer_text} {ans.is_correct && '✓'}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="admin-empty">
-                            <div className="admin-empty__icon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden="true">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16v10H4V7z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 11h8" />
-                                </svg>
-                            </div>
-                            <p>Preview not available for this file type</p>
-                        </div>
-                    )}
+                    <ModuleContentPreview item={previewItem} />
                 </div>
             </AdminModal>
 

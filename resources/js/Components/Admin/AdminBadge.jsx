@@ -18,14 +18,14 @@ const ROLE_MAP = {
     user: 'role-user',
 };
 
-export default function AdminBadge({ type = 'status', value, label }) {
+export default function AdminBadge({ type = 'status', value, label, className = '' }) {
     const normalized = String(value || '').toLowerCase().replace(/\s+/g, '_');
     const modifier =
         type === 'role'
             ? ROLE_MAP[normalized] || ''
             : STATUS_MAP[normalized] || normalized.replace(/_/g, '_');
 
-    const className = ['admin-badge', modifier && `admin-badge--${modifier}`]
+    const badgeClassName = ['admin-badge', modifier && `admin-badge--${modifier}`, className]
         .filter(Boolean)
         .join(' ');
 
@@ -35,5 +35,5 @@ export default function AdminBadge({ type = 'status', value, label }) {
             .replace(/_/g, ' ')
             .replace(/\b\w/g, (c) => c.toUpperCase());
 
-    return <span className={className}>{display}</span>;
+    return <span className={badgeClassName}>{display}</span>;
 }

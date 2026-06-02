@@ -3,7 +3,7 @@
     "scripts": {
         "dev": "vite",
         "build": "vite build && npm run sync:css",
-        "sync:css": "cp resources/css/sandbox-components.css public/css/sandbox-components.css && cp resources/css/sandbox-admin.css public/css/sandbox-admin.css && cp resources/css/sandbox-student.css public/css/sandbox-student.css"
+        "sync:css": "cp resources/css/sandbox-components.css public/css/sandbox-components.css && cp resources/css/sandbox-admin.css public/css/sandbox-admin.css && cp resources/css/sandbox-student.css public/css/sandbox-student.css && cp resources/css/sandbox-creator.css public/css/sandbox-creator.css"
     },
     "devDependencies": {
         "@headlessui/react": "^1.4.2",

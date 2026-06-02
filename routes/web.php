@@ -5,12 +5,14 @@ use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\CertificationApprovalController;
 use App\Http\Controllers\Admin\FinanceController;
 use App\Http\Controllers\AffiliationController;
+use App\Http\Controllers\Creator\AnalyticsController;
 use App\Http\Controllers\Creator\CertificationController;
 use App\Http\Controllers\Creator\CreatorDashboardController;
 use App\Http\Controllers\Creator\LearningMaterialController;
 use App\Http\Controllers\Creator\ModuleContentController;
 use App\Http\Controllers\Creator\ModuleController;
 use App\Http\Controllers\Creator\QuestionController;
+use App\Http\Controllers\Creator\WithdrawalController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Student\DashboardController as StudentDashboardController;
 use App\Http\Controllers\Student\MarketplaceController;
@@ -84,6 +86,15 @@ Route::middleware(['auth', 'otp.verified', 'role:content_creator'])
     ->group(function () {
         Route::get('/dashboard', [CreatorDashboardController::class, 'index'])
             ->name('dashboard');
+
+        Route::get('/auditor', [AnalyticsController::class, 'index'])
+            ->name('auditor.index');
+
+        Route::get('/wallet', [WithdrawalController::class, 'index'])
+            ->name('wallet.index');
+
+        Route::post('/wallet/withdraw', [WithdrawalController::class, 'store'])
+            ->name('wallet.withdraw');
 
         Route::resource('certifications', CertificationController::class)
             ->except(['show', 'destroy']);

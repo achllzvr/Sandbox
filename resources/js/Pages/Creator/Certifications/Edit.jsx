@@ -1,20 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import CreatorLayout from '@/Layouts/CreatorLayout';
+import AdminBadge from '@/Components/Admin/AdminBadge';
+import AdminModal from '@/Components/Admin/AdminModal';
+import ModuleContentPreview from '@/Components/ModuleContentPreview';
+import GenerateQuizModal from '@/Components/Creator/GenerateQuizModal';
+import CreatorStatusPill from '@/Components/Creator/CreatorStatusPill';
+import {
+    estimatedDurationForStore,
+    formatEstimatedDurationLabel,
+    parseEstimatedDurationFromStored,
+} from '@/utils/estimatedDuration';
 import { Head, useForm, router } from '@inertiajs/react';
+import {
+    ArrowLeft,
+    ChevronDown,
+    ChevronUp,
+    Eye,
+    GripVertical,
+    Pencil,
+    Plus,
+    Sparkles,
+    X,
+} from 'lucide-react';
 
-const STATUS_STYLE = {
-    draft:              { border: 'border-emerald-400', bg: 'bg-emerald-50', badge: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500' },
-    revision_required:  { border: 'border-amber-400',   bg: 'bg-amber-50',   badge: 'bg-amber-100 text-amber-700',   dot: 'bg-amber-500' },
-    denied:             { border: 'border-red-400',      bg: 'bg-red-50',     badge: 'bg-red-100 text-red-700',       dot: 'bg-red-500' },
-    pending:            { border: 'border-sky-400',      bg: 'bg-sky-50',     badge: 'bg-sky-100 text-sky-700',       dot: 'bg-sky-500' },
-    approved:           { border: 'border-violet-400',   bg: 'bg-violet-50',  badge: 'bg-violet-100 text-violet-700', dot: 'bg-violet-500' },
-};
+const MIN_MODULES = 10;
+const MIN_QUIZ_ONLY_SANDBOXES = 2;
+const MIN_QUIZ_ONLY_FOR_EXAM = 3;
 
-const COMPONENT_TYPE_META = {
-    video: { icon: '🎬', label: 'Video' },
-    presentation: { icon: '📄', label: 'Presentation (PPT)' },
-    document: { icon: '📋', label: 'Document (PDF)' },
-    youtube_embed: { icon: '🎥', label: 'YouTube Embed' },
+function isQuizOnlySandbox(mod) {
+    return (mod.contents || []).length === 0 && (mod.questions || []).length >= 5;
+}
+
+const COMPONENT_TYPE_LABELS = {
+    video: 'Video',
+    presentation: 'Presentation (PPT)',
+    document: 'Document (PDF)',
+    youtube_embed: 'YouTube embed',
 };
 
 export default function Edit({ certification }) {
@@ -35,7 +56,13 @@ export default function Edit({ certification }) {
     const [showAddComponentModal, setShowAddComponentModal] = useState(false);
     const [showQuizModal, setShowQuizModal] = useState(false);
     const [showExamModal, setShowExamModal] = useState(false);
-    const [previewItem, setPreviewItem] = useState(null); // { type, title, file_url, questions }
+    const [showSubmitModal, setShowSubmitModal] = useState(false);
+    const [pendingDeleteModuleId, setPendingDeleteModuleId] = useState(null);
+    const [pendingDeleteComponentId, setPendingDeleteComponentId] = useState(null);
+    const [previewItem, setPreviewItem] = useState(null);
+    const [showGenerateShortTestModal, setShowGenerateShortTestModal] = useState(false);
+    const [showGenerateExamModal, setShowGenerateExamModal] = useState(false);
+    const [showExamRequirementsModal, setShowExamRequirementsModal] = useState(false);
 
     // ── Forms ──────────────────────────────────────────────
     const addSandboxForm = useForm({
@@ -62,10 +89,38 @@ export default function Edit({ certification }) {
 
     const addComponentForm = useForm({
         title: '',
-        type: 'ppt', // 'ppt', 'video', 'pdf', 'youtube_embed'
+        type: 'ppt',
         file: null,
-        youtube_url: ''
+        youtube_url: '',
     });
+
+    const shellSettingsForm = useForm({
+        title: certification.title ?? '',
+        description: certification.description ?? '',
+        category: certification.category ?? '',
+        difficulty: certification.difficulty ?? 'Beginner',
+        estimated_duration: parseEstimatedDurationFromStored(certification.estimated_duration),
+        learning_objectives: certification.learning_objectives ?? '',
+        price: certification.price != null ? String(certification.price) : '',
+        cover_image: null,
+    });
+
+    const [coverPreview, setCoverPreview] = useState(certification.thumbnail_url ?? null);
+    const durationPreview = formatEstimatedDurationLabel(shellSettingsForm.data.estimated_duration);
+
+    useEffect(() => {
+        shellSettingsForm.setData({
+            title: certification.title ?? '',
+            description: certification.description ?? '',
+            category: certification.category ?? '',
+            difficulty: certification.difficulty ?? 'Beginner',
+            estimated_duration: parseEstimatedDurationFromStored(certification.estimated_duration),
+            learning_objectives: certification.learning_objectives ?? '',
+            price: certification.price != null ? String(certification.price) : '',
+            cover_image: null,
+        });
+        setCoverPreview(certification.thumbnail_url ?? null);
+    }, [certification.id, certification.updated_at]);
 
     const [questionsList, setQuestionsList] = useState([]);
     const [examQuestionsList, setExamQuestionsList] = useState([]);
@@ -91,16 +146,23 @@ export default function Edit({ certification }) {
     };
 
     const deleteModule = (modId) => {
-        if (confirm('Are you sure you want to delete this Sandbox and all of its components?')) {
-            router.delete(route('creator.modules.destroy', modId), {
-                onSuccess: () => {
-                    if (activeModuleId === modId) {
-                        setActiveModuleId(null);
-                    }
-                },
-                preserveScroll: true
-            });
+        setPendingDeleteModuleId(modId);
+    };
+
+    const confirmDeleteModule = () => {
+        if (!pendingDeleteModuleId) {
+            return;
         }
+
+        router.delete(route('creator.modules.destroy', pendingDeleteModuleId), {
+            onSuccess: () => {
+                if (activeModuleId === pendingDeleteModuleId) {
+                    setActiveModuleId(null);
+                }
+                setPendingDeleteModuleId(null);
+            },
+            preserveScroll: true,
+        });
     };
 
     const moveModule = (index, direction) => {
@@ -133,11 +195,18 @@ export default function Edit({ certification }) {
     };
 
     const deleteComponent = (contentId) => {
-        if (confirm('Are you sure you want to delete this learning material?')) {
-            router.delete(route('creator.modules.contents.destroy', [activeModule.id, contentId]), {
-                preserveScroll: true
-            });
+        setPendingDeleteComponentId(contentId);
+    };
+
+    const confirmDeleteComponent = () => {
+        if (!pendingDeleteComponentId || !activeModule) {
+            return;
         }
+
+        router.delete(route('creator.modules.contents.destroy', [activeModule.id, pendingDeleteComponentId]), {
+            onSuccess: () => setPendingDeleteComponentId(null),
+            preserveScroll: true,
+        });
     };
 
     const moveComponent = (index, direction) => {
@@ -356,14 +425,90 @@ export default function Edit({ certification }) {
         setExamQuestionsList(list);
     };
 
-    // ── Submission validation ──────────────────────────────
-    const submitForReview = () => {
-        if (sortedModules.length === 0) {
-            alert('Please configure at least one Sandbox module before submitting.');
+    const submitShellSettings = (e) => {
+        e.preventDefault();
+
+        const payload = {
+            title: shellSettingsForm.data.title,
+            description: shellSettingsForm.data.description,
+            category: shellSettingsForm.data.category,
+            difficulty: shellSettingsForm.data.difficulty,
+            estimated_duration: estimatedDurationForStore(shellSettingsForm.data.estimated_duration),
+            learning_objectives: shellSettingsForm.data.learning_objectives,
+            price: shellSettingsForm.data.price === '' ? 0 : shellSettingsForm.data.price,
+        };
+
+        if (shellSettingsForm.data.cover_image) {
+            router.post(route('creator.certifications.update', certification.id), {
+                ...payload,
+                cover_image: shellSettingsForm.data.cover_image,
+                _method: 'put',
+            }, {
+                forceFormData: true,
+                preserveScroll: true,
+                onSuccess: () => shellSettingsForm.setData('cover_image', null),
+                onError: (errors) => {
+                    Object.entries(errors).forEach(([key, message]) => {
+                        shellSettingsForm.setError(key, message);
+                    });
+                },
+            });
             return;
         }
 
-        for (let mod of sortedModules) {
+        router.put(route('creator.certifications.update', certification.id), payload, {
+            preserveScroll: true,
+            onError: (errors) => {
+                Object.entries(errors).forEach(([key, message]) => {
+                    shellSettingsForm.setError(key, message);
+                });
+            },
+        });
+    };
+
+    const handleCoverChange = (e) => {
+        const file = e.target.files?.[0] ?? null;
+        shellSettingsForm.setData('cover_image', file);
+        if (file) {
+            setCoverPreview(URL.createObjectURL(file));
+        }
+    };
+
+    // ── Submission validation ──────────────────────────────
+    const quizOnlySandboxCount = sortedModules.filter(isQuizOnlySandbox).length;
+    const canGenerateFinalExam = sortedModules.length >= MIN_MODULES && quizOnlySandboxCount >= MIN_QUIZ_ONLY_FOR_EXAM;
+
+    const openGenerateFinalExam = () => {
+        if (!canGenerateFinalExam) {
+            setShowExamRequirementsModal(true);
+            return;
+        }
+
+        setShowGenerateExamModal(true);
+    };
+
+    const applyGeneratedShortTest = (mockQuestions) => {
+        setQuestionsList(mockQuestions);
+        setShowQuizModal(true);
+    };
+
+    const applyGeneratedExam = (mockQuestions) => {
+        setExamQuestionsList(mockQuestions);
+        setShowExamModal(true);
+    };
+
+    const submitForReview = () => {
+        if (sortedModules.length < MIN_MODULES) {
+            alert(`Please configure at least ${MIN_MODULES} sandbox modules before submitting.`);
+            return;
+        }
+
+        if (quizOnlySandboxCount < MIN_QUIZ_ONLY_SANDBOXES) {
+            alert(`Please configure at least ${MIN_QUIZ_ONLY_SANDBOXES} quiz-only sandboxes (short test only, no uploaded materials).`);
+            return;
+        }
+
+        for (const mod of sortedModules) {
             const totalComponents = (mod.contents || []).length + ((mod.questions || []).length > 0 ? 1 : 0);
             if (totalComponents === 0) {
                 alert(`Sandbox "${mod.title}" must have at least one component (file or practice quiz) before submitting.`);
@@ -382,18 +527,24 @@ export default function Edit({ certification }) {
             return;
         }
 
-        if (confirm('Submit this certification for approval? You will not be able to edit it until review is complete.')) {
-            setIsSubmitting(true);
-            router.post(route('creator.certifications.submit', certification.id), {}, {
-                onFinish: () => setIsSubmitting(false)
-            });
-        }
+        setShowSubmitModal(true);
+    };
+
+    const confirmSubmitForReview = () => {
+        setShowSubmitModal(false);
+        setIsSubmitting(true);
+        router.post(route('creator.certifications.submit', certification.id), {}, {
+            onFinish: () => setIsSubmitting(false),
+        });
     };
 
     // ── UI States & Metadata ───────────────────────────────
     const isEditable = ['draft', 'revision_required'].includes(certification.status);
-    const ss = STATUS_STYLE[certification.status] || STATUS_STYLE.draft;
     const examQuestionsCount = (certification.exam_questions || []).length;
+    const modulesReady = sortedModules.length >= MIN_MODULES;
+    const quizOnlyReady = quizOnlySandboxCount >= MIN_QUIZ_ONLY_SANDBOXES;
+    const examReady = examQuestionsCount >= 5;
+    const canSubmit = isEditable && modulesReady && quizOnlyReady && examReady;
 
     // Component sorting helpers
     const activeModuleComponents = activeModule
@@ -401,816 +552,649 @@ export default function Edit({ certification }) {
         : [];
 
     return (
-        <CreatorLayout pageTitle={activeModule ? `Creator Studio: ${activeModule.title}` : `Edit Shell: ${certification.title}`}>
+        <CreatorLayout activeNav="shells" pageTitle={activeModule ? `Sandbox ${sortedModules.findIndex((m) => m.id === activeModuleId) + 1}` : certification.title}>
             <Head title={activeModule ? `Studio - ${activeModule.title}` : `Edit - ${certification.title}`} />
 
-            <div className="space-y-6 flex-grow flex flex-col pb-12">
-                {/* ── Status Header Card ── */}
-                <div className={`rounded-2xl border-l-4 ${ss.border} bg-white shadow-sm shadow-slate-200/60 p-6`}>
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                        <div className="space-y-1">
-                            <h2 className="text-xl font-bold text-slate-800 tracking-tight">{certification.title}</h2>
-                            <div className="flex items-center gap-2 text-sm text-stone-500">
-                                <span>Status:</span>
-                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${ss.badge}`}>
-                                    <span className={`w-1.5 h-1.5 rounded-full ${ss.dot}`} />
-                                    {certification.status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
-                                </span>
-                            </div>
-                        </div>
+            {!activeModule ? (
+                <>
+                    <div className="admin-toolbar">
+                        <CreatorStatusPill status={certification.status} className="creator-shell-status" />
                     </div>
 
-                    {certification.status === 'revision_required' && certification.remarks && (
-                        <div className="mt-5 rounded-xl bg-amber-50 border border-amber-200/80 p-4">
-                            <p className="text-sm font-semibold text-amber-800 flex items-center gap-1.5">
-                                ⚠️ Admin Remarks for Revision
-                            </p>
-                            <p className="text-sm text-amber-700 mt-1.5 leading-relaxed">{certification.remarks}</p>
+                    {certification.status === 'revision_required' && certification.remarks ? (
+                        <div className="admin-flash admin-flash--warning" style={{ marginBottom: '16px' }}>
+                            <strong>Admin remarks:</strong> {certification.remarks}
                         </div>
-                    )}
+                    ) : null}
 
-                    {certification.status === 'denied' && certification.decline_reason && (
-                        <div className="mt-5 rounded-xl bg-red-50 border border-red-200/80 p-4">
-                            <p className="text-sm font-semibold text-red-800 flex items-center gap-1.5">
-                                🚫 Reason for Denial
-                            </p>
-                            <p className="text-sm text-red-700 mt-1.5 leading-relaxed">{certification.decline_reason}</p>
+                    {certification.status === 'denied' && certification.decline_reason ? (
+                        <div className="admin-flash admin-flash--error" style={{ marginBottom: '16px' }}>
+                            <strong>Reason for denial:</strong> {certification.decline_reason}
                         </div>
-                    )}
-                </div>
+                    ) : null}
 
-                {/* ── Main View (Sandboxes list) ────────────────────── */}
-                {!activeModule ? (
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        {/* Sandboxes Panel */}
-                        <div className="lg:col-span-2 rounded-2xl bg-white border border-slate-200/60 shadow-sm shadow-slate-200/60 p-6 flex flex-col">
-                            <div className="flex items-center justify-between mb-5 pb-3 border-b border-slate-100">
-                                <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
-                                    🏝️ Course Sandboxes (Modules)
-                                </h3>
-                                {isEditable && (
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowAddSandboxModal(true)}
-                                        className="px-3.5 py-1.5 bg-violet-600 hover:bg-violet-750 text-white rounded-xl text-xs font-bold transition-all shadow-sm"
-                                    >
-                                        + ADD SANDBOX
-                                    </button>
-                                )}
+                    {isEditable ? (
+                        <div className="admin-card admin-card--chunky" style={{ marginBottom: '20px' }}>
+                            <div className="admin-card__header">
+                                <h3>Shell details</h3>
                             </div>
+                            <form onSubmit={submitShellSettings} className="admin-card__body">
+                                <label className="admin-field">
+                                    <span className="admin-field__label">Shell title *</span>
+                                    <input
+                                        type="text"
+                                        className="input-field"
+                                        value={shellSettingsForm.data.title}
+                                        onChange={(e) => shellSettingsForm.setData('title', e.target.value)}
+                                        required
+                                    />
+                                    {shellSettingsForm.errors.title ? (
+                                        <p className="admin-field__hint" style={{ color: 'var(--admin-danger-text)' }}>{shellSettingsForm.errors.title}</p>
+                                    ) : null}
+                                </label>
 
-                            {sortedModules.length > 0 ? (
-                                <div className="space-y-3">
-                                    {sortedModules.map((mod, index) => {
+                                <label className="admin-field">
+                                    <span className="admin-field__label">Description *</span>
+                                    <textarea
+                                        rows={3}
+                                        className="input-field"
+                                        value={shellSettingsForm.data.description}
+                                        onChange={(e) => shellSettingsForm.setData('description', e.target.value)}
+                                        required
+                                    />
+                                    {shellSettingsForm.errors.description ? (
+                                        <p className="admin-field__hint" style={{ color: 'var(--admin-danger-text)' }}>{shellSettingsForm.errors.description}</p>
+                                    ) : null}
+                                </label>
+
+                                <div className="admin-form-grid">
+                                    <label className="admin-field">
+                                        <span className="admin-field__label">Category *</span>
+                                        <select
+                                            className="input-field"
+                                            value={shellSettingsForm.data.category}
+                                            onChange={(e) => shellSettingsForm.setData('category', e.target.value)}
+                                            required
+                                        >
+                                            <option value="">Select category</option>
+                                            <option value="Technology">Technology</option>
+                                            <option value="Business">Business</option>
+                                            <option value="Design">Design</option>
+                                            <option value="Marketing">Marketing</option>
+                                            <option value="Demo">Demo</option>
+                                        </select>
+                                    </label>
+                                    <label className="admin-field">
+                                        <span className="admin-field__label">Difficulty *</span>
+                                        <select
+                                            className="input-field"
+                                            value={shellSettingsForm.data.difficulty}
+                                            onChange={(e) => shellSettingsForm.setData('difficulty', e.target.value)}
+                                            required
+                                        >
+                                            <option value="Beginner">Beginner</option>
+                                            <option value="Intermediate">Intermediate</option>
+                                            <option value="Advanced">Advanced</option>
+                                        </select>
+                                    </label>
+                                </div>
+
+                                <label className="admin-field">
+                                    <span className="admin-field__label">Estimated time (hours)</span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        step="0.5"
+                                        className="input-field"
+                                        value={shellSettingsForm.data.estimated_duration}
+                                        onChange={(e) => shellSettingsForm.setData('estimated_duration', e.target.value)}
+                                        placeholder="e.g. 120"
+                                    />
+                                    {durationPreview ? (
+                                        <p className="admin-field__hint">Displays as: <strong>{durationPreview}</strong></p>
+                                    ) : null}
+                                </label>
+
+                                <label className="admin-field">
+                                    <span className="admin-field__label">Learning objectives</span>
+                                    <textarea
+                                        rows={2}
+                                        className="input-field"
+                                        value={shellSettingsForm.data.learning_objectives}
+                                        onChange={(e) => shellSettingsForm.setData('learning_objectives', e.target.value)}
+                                        placeholder="What will students learn?"
+                                    />
+                                </label>
+
+                                <div className="admin-form-grid">
+                                    <label className="admin-field">
+                                        <span className="admin-field__label">Price (PHP)</span>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            className="input-field"
+                                            value={shellSettingsForm.data.price}
+                                            onChange={(e) => shellSettingsForm.setData('price', e.target.value)}
+                                        />
+                                    </label>
+                                    <label className="admin-field">
+                                        <span className="admin-field__label">Cover image</span>
+                                        <input type="file" accept="image/*" className="input-field" onChange={handleCoverChange} />
+                                    </label>
+                                </div>
+                                {coverPreview ? (
+                                    <div style={{ marginTop: '12px' }}>
+                                        <img src={coverPreview} alt="Shell cover preview" style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '12px', border: '2px solid var(--admin-chrome-divider)' }} />
+                                    </div>
+                                ) : certification.thumbnail_url ? (
+                                    <div style={{ marginTop: '12px' }}>
+                                        <img src={certification.thumbnail_url} alt="Current shell cover" style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '12px', border: '2px solid var(--admin-chrome-divider)' }} />
+                                    </div>
+                                ) : null}
+                                {shellSettingsForm.errors.price ? (
+                                    <p className="admin-field__hint" style={{ color: 'var(--admin-danger-text)' }}>{shellSettingsForm.errors.price}</p>
+                                ) : null}
+                                {shellSettingsForm.errors.cover_image ? (
+                                    <p className="admin-field__hint" style={{ color: 'var(--admin-danger-text)' }}>{shellSettingsForm.errors.cover_image}</p>
+                                ) : null}
+                                <div style={{ marginTop: '16px' }}>
+                                    <button type="submit" disabled={shellSettingsForm.processing} className="admin-btn admin-btn--primary">
+                                        {shellSettingsForm.processing ? 'Saving…' : 'Save shell details'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    ) : null}
+
+                    <div className="creator-editor-grid creator-editor-grid--overview">
+                        <div className="admin-card admin-card--chunky">
+                            <div className="admin-card__header">
+                                <h3>Course sandboxes</h3>
+                                {isEditable ? (
+                                    <button type="button" onClick={() => setShowAddSandboxModal(true)} className="admin-btn admin-btn--primary admin-btn--sm">
+                                        <Plus size={16} strokeWidth={2.25} aria-hidden="true" />
+                                        Add sandbox
+                                    </button>
+                                ) : null}
+                            </div>
+                            <div className="admin-card__body admin-card__body--flush">
+                                {sortedModules.length > 0 ? (
+                                    sortedModules.map((mod, index) => {
                                         const componentCount = (mod.contents || []).length;
                                         const hasQuiz = (mod.questions || []).length > 0;
                                         return (
-                                            <div
-                                                key={mod.id}
-                                                className="group flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:border-violet-200 hover:bg-violet-50/10 transition-all duration-200"
-                                            >
-                                                <div className="flex items-center gap-4 min-w-0 flex-grow">
-                                                    <span className="text-xs font-bold text-violet-500 bg-violet-50 px-2.5 py-1 rounded-lg w-10 text-center flex-shrink-0">
-                                                        #{index + 1}
-                                                    </span>
-                                                    <div className="min-w-0 flex-grow">
-                                                        <h4 className="font-bold text-slate-800 text-sm leading-tight group-hover:text-violet-600 transition-colors">
-                                                            {mod.title}
-                                                        </h4>
-                                                        <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-400">
-                                                            <span>📁 {componentCount} Materials</span>
-                                                            <span>•</span>
-                                                            <span>📝 {hasQuiz ? `${(mod.questions || []).length} Quiz Qs` : 'No Quiz'}</span>
-                                                        </div>
-                                                    </div>
+                                            <div key={mod.id} className="admin-list-row">
+                                                <div>
+                                                    <p className="admin-list-row__title">#{index + 1} {mod.title}</p>
+                                                    <p className="admin-list-row__meta">
+                                                        {componentCount} materials · {hasQuiz ? `${(mod.questions || []).length} quiz Qs` : 'No quiz'}
+                                                        {isQuizOnlySandbox(mod) ? ' · Quiz-only' : ''}
+                                                    </p>
                                                 </div>
-
-                                                <div className="flex items-center gap-1.5 ml-4 flex-shrink-0">
-                                                    {isEditable && (
+                                                <div className="admin-btn-group">
+                                                    {isEditable ? (
                                                         <>
-                                                            <button
-                                                                type="button"
-                                                                disabled={index === 0}
-                                                                onClick={() => moveModule(index, 'up')}
-                                                                className="p-2 rounded-lg border border-slate-200 bg-white text-slate-650 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm"
-                                                            >
-                                                                ▲
+                                                            <button type="button" disabled={index === 0} onClick={() => moveModule(index, 'up')} className="admin-btn admin-btn--ghost admin-btn--sm" aria-label="Move up">
+                                                                <ChevronUp size={16} strokeWidth={2.25} />
                                                             </button>
-                                                            <button
-                                                                type="button"
-                                                                disabled={index === sortedModules.length - 1}
-                                                                onClick={() => moveModule(index, 'down')}
-                                                                className="p-2 rounded-lg border border-slate-200 bg-white text-slate-650 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm"
-                                                            >
-                                                                ▼
+                                                            <button type="button" disabled={index === sortedModules.length - 1} onClick={() => moveModule(index, 'down')} className="admin-btn admin-btn--ghost admin-btn--sm" aria-label="Move down">
+                                                                <ChevronDown size={16} strokeWidth={2.25} />
                                                             </button>
                                                         </>
-                                                    )}
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setActiveModuleId(mod.id)}
-                                                        className="px-3 py-2 rounded-xl text-xs font-bold text-violet-600 hover:bg-violet-50 border border-violet-100 hover:border-violet-200 transition-colors"
-                                                    >
-                                                        Edit Sandbox ✎
+                                                    ) : null}
+                                                    <button type="button" onClick={() => setActiveModuleId(mod.id)} className="admin-btn admin-btn--secondary admin-btn--sm">
+                                                        Edit sandbox
                                                     </button>
-                                                    {isEditable && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => deleteModule(mod.id)}
-                                                            className="p-2 rounded-xl text-red-500 hover:bg-red-50 transition-colors"
-                                                        >
-                                                            ✕
+                                                    {isEditable ? (
+                                                        <button type="button" onClick={() => deleteModule(mod.id)} className="admin-btn admin-btn--danger admin-btn--sm" aria-label="Delete">
+                                                            <X size={16} strokeWidth={2.25} />
                                                         </button>
-                                                    )}
+                                                    ) : null}
                                                 </div>
                                             </div>
                                         );
-                                    })}
-                                </div>
-                            ) : (
-                                <div className="flex flex-col items-center justify-center py-16 text-center">
-                                    <span className="text-4xl mb-3">🏖️</span>
-                                    <p className="text-sm text-slate-400 max-w-xs">
-                                        No Sandboxes created yet. Click "+ ADD SANDBOX" to begin crafting this shell.
-                                    </p>
-                                </div>
-                            )}
-
-                            {/* Final Exam Section at Bottom */}
-                            <div className="mt-8 border-t border-slate-100 pt-6">
-                                <div className="rounded-2xl border border-violet-100 bg-violet-50/10 p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                                    <div className="space-y-1">
-                                        <h4 className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
-                                            🏆 FINAL EXAM (Sandcastle Exam)
-                                        </h4>
-                                        <p className="text-xs text-slate-500 max-w-md">
-                                            A comprehensive assessment required for certification approval. Min 5 questions.
-                                        </p>
+                                    })
+                                ) : (
+                                    <div className="admin-empty">
+                                        <p>No sandboxes yet. Add your first sandbox to begin.</p>
                                     </div>
-                                    <div className="flex items-center gap-3">
-                                        <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${
-                                            examQuestionsCount >= 5
-                                                ? 'bg-violet-100 text-violet-700 border-violet-200'
-                                                : 'bg-amber-50 text-amber-700 border-amber-200'
-                                        }`}>
-                                            {examQuestionsCount > 0 ? `${examQuestionsCount} Questions` : 'Not Configured'}
-                                        </span>
-                                        <button
-                                            type="button"
-                                            onClick={openExamEditor}
-                                            className="px-3.5 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl text-xs font-bold shadow-md shadow-violet-500/15 hover:brightness-110 transition-all"
-                                        >
-                                            {examQuestionsCount > 0 ? 'Edit Exam' : 'Configure Exam'}
+                                )}
+                            </div>
+                            <div className="admin-card__header" style={{ borderTop: '2px solid var(--admin-chrome-divider)' }}>
+                                <div>
+                                    <h3>Final exam</h3>
+                                    <p className="admin-list-row__meta">Minimum 5 questions required for approval.</p>
+                                </div>
+                                <div className="admin-btn-group">
+                                    <AdminBadge type="status" value={examReady ? 'published' : 'draft'} label={examQuestionsCount > 0 ? `${examQuestionsCount} Qs` : 'Not configured'} />
+                                    {isEditable ? (
+                                        <button type="button" onClick={openGenerateFinalExam} className="admin-btn admin-btn--secondary admin-btn--sm">
+                                            <Sparkles size={16} strokeWidth={2.25} aria-hidden="true" />
+                                            Generate final exam
                                         </button>
-                                    </div>
+                                    ) : null}
+                                    <button type="button" onClick={openExamEditor} className="admin-btn admin-btn--primary admin-btn--sm">
+                                        {examQuestionsCount > 0 ? 'Edit exam' : 'Configure exam'}
+                                    </button>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Right Details / Submission Panel */}
-                        <div className="flex flex-col gap-4 h-fit">
-                            <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-5 space-y-4">
-                                <div>
-                                    <h3 className="text-sm font-bold text-slate-800">Submit for Approval</h3>
-                                    <p className="text-xs text-slate-500 mt-0.5">Please fulfill the following checklist items.</p>
-                                </div>
-
-                                <div className="flex flex-col gap-2 text-[11px] font-medium">
-                                    <span className={`flex items-center gap-2 ${
-                                        sortedModules.length > 0 ? 'text-emerald-600' : 'text-slate-400'
-                                    }`}>
-                                        {sortedModules.length > 0 ? '✅' : '⚪'} At least 1 Sandbox Created
-                                    </span>
-                                    <span className={`flex items-center gap-2 ${
-                                        examQuestionsCount >= 5 ? 'text-emerald-600' : 'text-slate-400'
-                                    }`}>
-                                        {examQuestionsCount >= 5 ? '✅' : '⚪'} Final Exam Configured (Min 5 Qs)
-                                    </span>
-                                </div>
-
-                                <button
-                                    onClick={submitForReview}
-                                    disabled={!isEditable || isSubmitting || !sortedModules.length || examQuestionsCount < 5}
-                                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-bold shadow-md shadow-violet-500/25 hover:brightness-110 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:from-slate-400 disabled:to-slate-400 disabled:shadow-none"
-                                >
-                                    {isSubmitting ? 'Submitting…' : 'Submit for Review'}
+                        <div className="admin-card admin-card--chunky">
+                            <div className="admin-card__header">
+                                <h3>Submit for approval</h3>
+                            </div>
+                            <div className="admin-card__body">
+                                <p className="admin-text-muted">Complete the checklist before submitting.</p>
+                                <ul className="admin-checklist" style={{ margin: '16px 0' }}>
+                                    <li className={modulesReady ? 'admin-checklist__done' : ''}>
+                                        {modulesReady ? '✓' : '○'} At least {MIN_MODULES} sandboxes ({sortedModules.length}/{MIN_MODULES})
+                                    </li>
+                                    <li className={quizOnlyReady ? 'admin-checklist__done' : ''}>
+                                        {quizOnlyReady ? '✓' : '○'} At least {MIN_QUIZ_ONLY_SANDBOXES} quiz-only sandboxes ({quizOnlySandboxCount}/{MIN_QUIZ_ONLY_SANDBOXES})
+                                    </li>
+                                    <li className={examReady ? 'admin-checklist__done' : ''}>
+                                        {examReady ? '✓' : '○'} Final exam configured (min 5 Qs)
+                                    </li>
+                                </ul>
+                                <button type="button" onClick={submitForReview} disabled={!canSubmit || isSubmitting} className="admin-btn admin-btn--primary admin-btn--block">
+                                    {isSubmitting ? 'Submitting…' : 'Submit for review'}
                                 </button>
                             </div>
                         </div>
                     </div>
-                ) : (
-                    // ── Sandbox Editor / Studio View (Picture 2) ───────────
-                    <div className="space-y-6">
-                        {/* Back Arrow Header */}
-                        <div>
-                            <button
-                                type="button"
-                                onClick={() => setActiveModuleId(null)}
-                                className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors"
-                            >
-                                🏢 Back to Certification List
-                            </button>
-                            <h3 className="text-lg font-bold text-slate-800 mt-2 flex items-center gap-2">
-                                🏖️ Sandbox creator studio
-                            </h3>
+                </>
+            ) : (
+                <>
+                    <div className="admin-toolbar">
+                        <button type="button" onClick={() => setActiveModuleId(null)} className="admin-btn admin-btn--back admin-btn--sm" aria-label="Back">
+                            <ArrowLeft size={18} strokeWidth={2.25} />
+                            Back to shell
+                        </button>
+                        <span className="admin-badge admin-badge--draft">
+                            {certification.title} · Sandbox {sortedModules.findIndex((m) => m.id === activeModuleId) + 1}: {activeModule?.title}
+                        </span>
+                    </div>
+
+                    <div className="creator-editor-grid creator-editor-grid--studio">
+                        <div className="admin-card admin-card--chunky">
+                            <div className="admin-card__header">
+                                <h3>Module information &amp; rules</h3>
+                            </div>
+                            <form onSubmit={isEditable ? submitUpdateModule : (e) => e.preventDefault()} className="admin-card__body">
+                                <label className="admin-field">
+                                    <span className="admin-field__label">Module title</span>
+                                    <input
+                                        type="text"
+                                        value={updateModuleForm.data.title}
+                                        onChange={(e) => updateModuleForm.setData('title', e.target.value)}
+                                        disabled={!isEditable}
+                                        required
+                                        className="input-field"
+                                    />
+                                </label>
+                                <label className="admin-field">
+                                    <span className="admin-field__label">Description</span>
+                                    <textarea
+                                        rows={3}
+                                        value={updateModuleForm.data.description}
+                                        onChange={(e) => updateModuleForm.setData('description', e.target.value)}
+                                        disabled={!isEditable}
+                                        className="input-field"
+                                        placeholder="Optional sandbox brief…"
+                                    />
+                                </label>
+                                <label className="admin-checkbox">
+                                    <input
+                                        type="checkbox"
+                                        checked={updateModuleForm.data.strict_completion}
+                                        onChange={(e) => updateModuleForm.setData('strict_completion', e.target.checked)}
+                                        disabled={!isEditable}
+                                    />
+                                    Strict completion of slides and video duration
+                                </label>
+                                {isEditable ? (
+                                    <button type="submit" disabled={updateModuleForm.processing} className="admin-btn admin-btn--primary" style={{ marginTop: '16px' }}>
+                                        {updateModuleForm.processing ? 'Saving…' : 'Save module changes'}
+                                    </button>
+                                ) : null}
+                            </form>
                         </div>
 
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                            {/* Left Panel: Module Info & Rules */}
-                            <div className="rounded-2xl bg-white border border-slate-200/60 shadow-sm p-6 space-y-5 h-fit">
-                                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider pb-2 border-b border-slate-100">
-                                    Module Information & Rules
-                                </h3>
-
-                                <form onSubmit={isEditable ? submitUpdateModule : e => e.preventDefault()} className="space-y-4">
-                                    <div>
-                                        <label className="block text-xs font-semibold text-stone-500 mb-1">MODULE TITLE</label>
-                                        <input
-                                            type="text"
-                                            value={updateModuleForm.data.title}
-                                            onChange={e => updateModuleForm.setData('title', e.target.value)}
-                                            disabled={!isEditable}
-                                            required
-                                            className="block w-full rounded-xl border-slate-200 text-sm text-slate-850 shadow-sm focus:border-violet-400 focus:ring-violet-400 transition-all disabled:opacity-60"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-xs font-semibold text-stone-500 mb-1">DESCRIPTION</label>
-                                        <textarea
-                                            rows="3"
-                                            value={updateModuleForm.data.description}
-                                            onChange={e => updateModuleForm.setData('description', e.target.value)}
-                                            disabled={!isEditable}
-                                            className="block w-full rounded-xl border-slate-200 text-sm text-slate-850 shadow-sm focus:border-violet-400 focus:ring-violet-400 transition-all disabled:opacity-60"
-                                            placeholder="Optional sandbox brief..."
-                                        />
-                                    </div>
-
-                                    <div className="flex items-start gap-2.5 pt-2">
-                                        <input
-                                            type="checkbox"
-                                            id="strict_completion"
-                                            checked={updateModuleForm.data.strict_completion}
-                                            onChange={e => updateModuleForm.setData('strict_completion', e.target.checked)}
-                                            disabled={!isEditable}
-                                            className="text-violet-600 focus:ring-violet-450 w-4 h-4 rounded mt-0.5"
-                                        />
-                                        <label htmlFor="strict_completion" className="text-xs text-slate-600 font-medium select-none cursor-pointer">
-                                            Strict Completion of Slides and Video duration
-                                        </label>
-                                    </div>
-
-                                    {isEditable && (
-                                        <button
-                                            type="submit"
-                                            disabled={updateModuleForm.processing}
-                                            className="w-full py-2 bg-violet-600 hover:bg-violet-750 text-white rounded-xl text-xs font-bold transition-all shadow-sm"
-                                        >
-                                            {updateModuleForm.processing ? 'Saving changes...' : 'SAVE MODULE CHANGES'}
-                                        </button>
-                                    )}
-                                </form>
+                        <div className="admin-card admin-card--chunky">
+                            <div className="admin-card__header">
+                                <h3>Module components</h3>
+                                {isEditable ? (
+                                    <button type="button" onClick={() => setShowAddComponentModal(true)} className="admin-btn admin-btn--primary admin-btn--sm">
+                                        <Plus size={16} strokeWidth={2.25} aria-hidden="true" />
+                                        Add component
+                                    </button>
+                                ) : null}
                             </div>
-
-                            {/* Right Panel: Module Components */}
-                            <div className="lg:col-span-2 rounded-2xl bg-white border border-slate-200/60 shadow-sm p-6 flex flex-col">
-                                <div className="flex items-center justify-between mb-5 pb-3 border-b border-slate-100">
-                                    <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
-                                        Module Components
-                                    </h3>
-                                    {isEditable && (
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowAddComponentModal(true)}
-                                            className="px-3 py-1.5 bg-violet-600 hover:bg-violet-750 text-white rounded-xl text-xs font-bold transition-all shadow-sm"
-                                        >
-                                            + ADD MODULE COMPONENT
-                                        </button>
-                                    )}
-                                </div>
-
-                                <div className="space-y-3 flex-grow">
-                                    {activeModuleComponents.map((comp, idx) => {
-                                        const meta = COMPONENT_TYPE_META[comp.content_type] || { icon: '📁', label: comp.content_type };
-                                        return (
-                                            <div
-                                                key={comp.id}
-                                                className="flex items-center justify-between p-3.5 rounded-xl border border-slate-100 hover:bg-slate-50/50 transition-colors"
-                                            >
-                                                <div className="flex items-center gap-3.5 min-w-0 flex-grow">
-                                                    <span className="text-xl flex-shrink-0">{meta.icon}</span>
-                                                    <div className="min-w-0 flex-grow">
-                                                        <h4 className="font-bold text-slate-800 text-sm leading-tight">{comp.title}</h4>
-                                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                                                            {meta.label}
-                                                        </span>
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex items-center gap-2.5 ml-4 flex-shrink-0">
-                                                    {isEditable && (
-                                                        <>
-                                                            <button
-                                                                type="button"
-                                                                disabled={idx === 0}
-                                                                onClick={() => moveComponent(idx, 'up')}
-                                                                className="p-1.5 rounded bg-white border border-slate-200 text-slate-650 hover:bg-slate-50 disabled:opacity-20"
-                                                            >
-                                                                ▲
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                disabled={idx === activeModuleComponents.length - 1}
-                                                                onClick={() => moveComponent(idx, 'down')}
-                                                                className="p-1.5 rounded bg-white border border-slate-200 text-slate-650 hover:bg-slate-50 disabled:opacity-20"
-                                                            >
-                                                                ▼
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                    
-                                                    {/* Eye / Preview icon */}
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setPreviewItem({
-                                                            type: comp.content_type,
-                                                            title: comp.title,
-                                                            file_url: comp.file_url
-                                                        })}
-                                                        className="p-2 rounded-lg border border-slate-100 bg-white text-slate-650 hover:bg-violet-50 hover:text-violet-600 hover:border-violet-200 transition-all shadow-sm"
-                                                        title="Preview Learning Material"
-                                                    >
-                                                        👁 Preview
-                                                    </button>
-
-                                                    {isEditable && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => deleteComponent(comp.id)}
-                                                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                                            title="Delete component"
-                                                        >
-                                                            ✕
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-
-                                    {/* Practice Quiz / Short Test component card */}
-                                    <div className="flex items-center justify-between p-3.5 rounded-xl border border-violet-100 bg-violet-50/10">
-                                        <div className="flex items-center gap-3.5 min-w-0 flex-grow">
-                                            <span className="text-xl flex-shrink-0">📝</span>
-                                            <div className="min-w-0 flex-grow">
-                                                <h4 className="font-bold text-slate-800 text-sm leading-tight">Short Test</h4>
-                                                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                                                    Practice Quiz
-                                                </span>
-                                            </div>
+                            <div className="admin-card__body admin-card__body--flush">
+                                {activeModuleComponents.map((comp, idx) => (
+                                    <div key={comp.id} className="admin-list-row">
+                                        <div className="admin-list-row__title-wrap">
+                                            <GripVertical size={16} strokeWidth={2} className="admin-list-row__grip" aria-hidden="true" />
+                                            <span className="admin-list-row__title">{comp.title || COMPONENT_TYPE_LABELS[comp.content_type] || comp.content_type}</span>
                                         </div>
-
-                                        <div className="flex items-center gap-2.5 ml-4 flex-shrink-0">
-                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
-                                                (activeModule.questions || []).length >= 5
-                                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                                    : (activeModule.questions || []).length > 0
-                                                        ? 'bg-amber-50 text-amber-700 border-amber-250'
-                                                        : 'bg-stone-150 text-slate-500 border-stone-200'
-                                            }`}>
-                                                {(activeModule.questions || []).length > 0 ? `${(activeModule.questions || []).length} Qs` : 'Empty (Min 5 Qs)'}
-                                            </span>
-
-                                            {/* Preview Quiz */}
-                                            {(activeModule.questions || []).length > 0 && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setPreviewItem({
-                                                        type: 'quiz',
-                                                        title: 'Short Test Practice Quiz',
-                                                        questions: activeModule.questions
-                                                    })}
-                                                    className="p-2 rounded-lg border border-slate-100 bg-white text-slate-650 hover:bg-violet-50 hover:text-violet-600 hover:border-violet-200 transition-all shadow-sm"
-                                                    title="Preview quiz questions"
-                                                >
-                                                    👁 Preview
-                                                </button>
-                                            )}
-
+                                        <div className="admin-btn-group">
+                                            {isEditable ? (
+                                                <>
+                                                    <button type="button" disabled={idx === 0} onClick={() => moveComponent(idx, 'up')} className="admin-btn admin-btn--ghost admin-btn--sm" aria-label="Move up">
+                                                        <ChevronUp size={16} strokeWidth={2.25} />
+                                                    </button>
+                                                    <button type="button" disabled={idx === activeModuleComponents.length - 1} onClick={() => moveComponent(idx, 'down')} className="admin-btn admin-btn--ghost admin-btn--sm" aria-label="Move down">
+                                                        <ChevronDown size={16} strokeWidth={2.25} />
+                                                    </button>
+                                                </>
+                                            ) : null}
                                             <button
                                                 type="button"
-                                                onClick={openQuizEditor}
-                                                className="px-3 py-2 bg-white hover:bg-violet-50 border border-violet-200 hover:border-violet-300 text-violet-650 rounded-xl text-xs font-bold transition-all shadow-sm"
+                                                onClick={() => setPreviewItem({ type: comp.content_type, title: comp.title, file_url: comp.file_url })}
+                                                className="admin-btn admin-btn--ghost admin-btn--sm"
+                                                aria-label="Preview"
                                             >
-                                                {isEditable ? '✎ Edit Quiz' : 'View Quiz'}
+                                                <Eye size={16} strokeWidth={2.25} />
                                             </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* ── Add Sandbox Modal ── */}
-                {showAddSandboxModal && (
-                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden border border-slate-100 animate-in fade-in zoom-in-95 duration-150">
-                            <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-                                <h3 className="font-bold text-slate-800 text-sm">🏝️ Add New Sandbox</h3>
-                                <button onClick={() => setShowAddSandboxModal(false)} className="text-slate-400 hover:text-slate-650 font-bold">✕</button>
-                            </div>
-                            <form onSubmit={submitAddSandbox} className="p-6 space-y-4">
-                                <div>
-                                    <label className="block text-xs font-semibold text-stone-500 mb-1">SANDBOX TITLE</label>
-                                    <input
-                                        type="text"
-                                        value={addSandboxForm.data.title}
-                                        onChange={e => addSandboxForm.setData('title', e.target.value)}
-                                        placeholder="e.g. Introduction to JSX"
-                                        required
-                                        className="w-full text-sm rounded-xl border-slate-200 focus:border-violet-400 focus:ring-violet-400"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-stone-500 mb-1">DESCRIPTION</label>
-                                    <textarea
-                                        rows="2"
-                                        value={addSandboxForm.data.description}
-                                        onChange={e => addSandboxForm.setData('description', e.target.value)}
-                                        placeholder="Briefly state the goal of this sandbox"
-                                        className="w-full text-sm rounded-xl border-slate-200 focus:border-violet-400 focus:ring-violet-400 resize-none"
-                                    />
-                                </div>
-                                <div className="flex justify-end gap-2 pt-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowAddSandboxModal(false)}
-                                        className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={addSandboxForm.processing}
-                                        className="px-5 py-2 bg-violet-600 hover:bg-violet-750 text-white text-xs font-bold rounded-xl transition-all shadow-sm"
-                                    >
-                                        {addSandboxForm.processing ? 'Creating...' : 'Create Sandbox'}
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                )}
-
-                {/* ── Add Component Modal ── */}
-                {showAddComponentModal && (
-                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden border border-slate-100 animate-in fade-in zoom-in-95 duration-150">
-                            <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-                                <h3 className="font-bold text-slate-800 text-sm">📁 Add Module Component</h3>
-                                <button onClick={() => setShowAddComponentModal(false)} className="text-slate-400 hover:text-slate-650 font-bold">✕</button>
-                            </div>
-                            <form onSubmit={submitAddComponent} className="p-6 space-y-4">
-                                <div>
-                                    <label className="block text-xs font-semibold text-stone-500 mb-1">COMPONENT TYPE</label>
-                                    <select
-                                        value={addComponentForm.data.type}
-                                        onChange={e => addComponentForm.setData('type', e.target.value)}
-                                        className="block w-full rounded-xl border-slate-250 text-sm bg-slate-50 focus:border-violet-400 focus:ring-violet-400"
-                                    >
-                                        <option value="ppt">📄 PowerPoint (PPT/PPTX)</option>
-                                        <option value="pdf">📋 Document (PDF)</option>
-                                        <option value="video">🎬 Local MP4 Video</option>
-                                        <option value="youtube_embed">🎥 YouTube Embed URL</option>
-                                    </select>
-                                    {addComponentForm.errors.type && <div className="text-red-500 text-xs mt-1 font-semibold">{addComponentForm.errors.type}</div>}
-                                </div>
-
-                                <div>
-                                    <label className="block text-xs font-semibold text-stone-500 mb-1">TITLE</label>
-                                    <input
-                                        type="text"
-                                        value={addComponentForm.data.title}
-                                        onChange={e => addComponentForm.setData('title', e.target.value)}
-                                        placeholder="e.g. Module 1.PPTX"
-                                        required
-                                        className="w-full text-sm rounded-xl border-slate-200 focus:border-violet-400 focus:ring-violet-400"
-                                    />
-                                    {addComponentForm.errors.title && <div className="text-red-500 text-xs mt-1 font-semibold">{addComponentForm.errors.title}</div>}
-                                </div>
-
-                                {addComponentForm.data.type === 'youtube_embed' ? (
-                                    <div>
-                                        <label className="block text-xs font-semibold text-stone-500 mb-1">YOUTUBE EMBED URL</label>
-                                        <input
-                                            type="url"
-                                            value={addComponentForm.data.youtube_url}
-                                            onChange={e => addComponentForm.setData('youtube_url', e.target.value)}
-                                            placeholder="https://www.youtube.com/embed/VIDEO_ID"
-                                            required
-                                            className="w-full text-sm rounded-xl border-slate-200 focus:border-violet-400 focus:ring-violet-400"
-                                        />
-                                        {addComponentForm.errors.youtube_url && <div className="text-red-500 text-xs mt-1 font-semibold">{addComponentForm.errors.youtube_url}</div>}
-                                    </div>
-                                ) : (
-                                    <div>
-                                        <label className="block text-xs font-semibold text-stone-500 mb-1">FILE ATTACHMENT</label>
-                                        <input
-                                            type="file"
-                                            onChange={e => addComponentForm.setData('file', e.target.files[0])}
-                                            required
-                                            className="block w-full text-sm text-stone-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-violet-50 file:text-violet-600 hover:file:bg-violet-100"
-                                        />
-                                        {addComponentForm.errors.file && <div className="text-red-500 text-xs mt-1 font-semibold">{addComponentForm.errors.file}</div>}
-                                    </div>
-                                )}
-                                
-                                {Object.keys(addComponentForm.errors).length > 0 && (
-                                    <div className="text-red-500 text-xs font-bold border border-red-200 bg-red-50 p-2 rounded-lg">
-                                        Check the form for errors above.
-                                    </div>
-                                )}
-
-                                <div className="flex justify-end gap-2 pt-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowAddComponentModal(false)}
-                                        className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={addComponentForm.processing}
-                                        className="px-5 py-2 bg-violet-600 hover:bg-violet-750 text-white text-xs font-bold rounded-xl transition-all shadow-sm"
-                                    >
-                                        {addComponentForm.processing ? 'Uploading...' : 'Add Component'}
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                )}
-
-                {/* ── Quiz Modal (Practice Quiz Builder) ── */}
-                {showQuizModal && (
-                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[85vh] shadow-2xl flex flex-col overflow-hidden border border-slate-100 animate-in fade-in duration-150">
-                            <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-                                <div>
-                                    <h3 className="font-bold text-slate-800 text-sm">Manage Practice Quiz for "{activeModule?.title}"</h3>
-                                    <p className="text-[10px] text-slate-400 font-medium">Add practice multiple-choice questions. Min 5 questions required.</p>
-                                </div>
-                                <button onClick={() => setShowQuizModal(false)} className="text-slate-400 hover:text-slate-650 font-bold">✕</button>
-                            </div>
-
-                            <form onSubmit={submitQuiz} className="flex-grow overflow-y-auto p-6 space-y-6">
-                                {questionsList.map((q, qIdx) => (
-                                    <div key={qIdx} className="p-4 bg-slate-50 border border-slate-250 rounded-xl space-y-3 relative">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-xs font-bold text-slate-750 bg-slate-200 px-2 py-0.5 rounded-md">Question {qIdx + 1}</span>
-                                            {questionsList.length > 5 && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removeQuizQuestion(qIdx)}
-                                                    className="text-xs text-red-500 hover:text-red-700 font-semibold"
-                                                >
-                                                    Remove Question
+                                            {isEditable ? (
+                                                <button type="button" onClick={() => deleteComponent(comp.id)} className="admin-btn admin-btn--danger admin-btn--sm" aria-label="Delete">
+                                                    <X size={16} strokeWidth={2.25} />
                                                 </button>
-                                            )}
-                                        </div>
-
-                                        <input
-                                            type="text"
-                                            value={q.question_text}
-                                            onChange={e => updateQuizQuestionText(qIdx, e.target.value)}
-                                            placeholder="Enter practice question text"
-                                            className="w-full text-sm rounded-xl border-slate-200 focus:border-violet-400 focus:ring-violet-400"
-                                            required
-                                        />
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
-                                            {q.answers.map((ans, aIdx) => (
-                                                <div key={aIdx} className="flex items-center gap-2.5 bg-white p-2.5 rounded-xl border border-slate-200">
-                                                    <input
-                                                        type="radio"
-                                                        name={`quiz-correct-${qIdx}`}
-                                                        checked={ans.is_correct}
-                                                        onChange={() => setQuizCorrectAnswer(qIdx, aIdx)}
-                                                        className="text-violet-600 focus:ring-violet-450 w-4 h-4"
-                                                    />
-                                                    <input
-                                                        type="text"
-                                                        value={ans.answer_text}
-                                                        onChange={e => updateQuizAnswerText(qIdx, aIdx, e.target.value)}
-                                                        placeholder={`Choice Option ${aIdx + 1}`}
-                                                        className="flex-grow text-xs border-0 p-0 focus:ring-0 focus:border-0"
-                                                        required
-                                                    />
-                                                </div>
-                                            ))}
+                                            ) : null}
                                         </div>
                                     </div>
                                 ))}
 
-                                <button
-                                    type="button"
-                                    onClick={addQuizQuestion}
-                                    className="w-full py-3 border border-dashed border-violet-300 text-violet-600 hover:bg-violet-50 rounded-xl text-xs font-bold transition-all"
-                                >
-                                    + Add Quiz Question
-                                </button>
-
-                                <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowQuizModal(false)}
-                                        className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        className="px-5 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-violet-500/15 hover:brightness-110"
-                                    >
-                                        Save Quiz
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                )}
-
-                {/* ── Final Exam Modal (Exam Builder) ── */}
-                {showExamModal && (
-                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[85vh] shadow-2xl flex flex-col overflow-hidden border border-slate-100 animate-in fade-in duration-150">
-                            <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-                                <div>
-                                    <h3 className="font-bold text-slate-800 text-sm">Manage Final Exam (Sandcastle Exam)</h3>
-                                    <p className="text-[10px] text-slate-400 font-medium">Add comprehensive exam options. Min 5 questions required.</p>
-                                </div>
-                                <button onClick={() => setShowExamModal(false)} className="text-slate-400 hover:text-slate-650 font-bold">✕</button>
-                            </div>
-
-                            <form onSubmit={submitExam} className="flex-grow overflow-y-auto p-6 space-y-6">
-                                {examQuestionsList.map((q, qIdx) => (
-                                    <div key={qIdx} className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3 relative">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-xs font-bold text-slate-750 bg-slate-200 px-2 py-0.5 rounded-md">Exam Question {qIdx + 1}</span>
-                                            {examQuestionsList.length > 5 && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removeExamQuestion(qIdx)}
-                                                    className="text-xs text-red-500 hover:text-red-700 font-semibold"
-                                                >
-                                                    Remove Question
-                                                </button>
-                                            )}
-                                        </div>
-
-                                        <input
-                                            type="text"
-                                            value={q.question_text}
-                                            onChange={e => updateExamQuestionText(qIdx, e.target.value)}
-                                            placeholder="Enter comprehensive question text"
-                                            className="w-full text-sm rounded-xl border-slate-200 focus:border-violet-400 focus:ring-violet-455"
-                                            required
+                                <div className="admin-list-row">
+                                    <div className="admin-list-row__title-wrap">
+                                        <GripVertical size={16} strokeWidth={2} className="admin-list-row__grip" aria-hidden="true" />
+                                        <span className="admin-list-row__title">Short test</span>
+                                    </div>
+                                    <div className="admin-btn-group">
+                                        <AdminBadge
+                                            type="status"
+                                            value={(activeModule.questions || []).length >= 5 ? 'published' : 'draft'}
+                                            label={(activeModule.questions || []).length > 0 ? `${(activeModule.questions || []).length} Qs` : 'Empty'}
                                         />
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
-                                            {q.answers.map((ans, aIdx) => (
-                                                <div key={aIdx} className="flex items-center gap-2.5 bg-white p-2.5 rounded-xl border border-slate-200">
-                                                    <input
-                                                        type="radio"
-                                                        name={`exam-correct-${qIdx}`}
-                                                        checked={ans.is_correct}
-                                                        onChange={() => setExamCorrectAnswer(qIdx, aIdx)}
-                                                        className="text-violet-600 focus:ring-violet-450 w-4 h-4"
-                                                    />
-                                                    <input
-                                                        type="text"
-                                                        value={ans.answer_text}
-                                                        onChange={e => updateExamAnswerText(qIdx, aIdx, e.target.value)}
-                                                        placeholder={`Choice Option ${aIdx + 1}`}
-                                                        className="flex-grow text-xs border-0 p-0 focus:ring-0 focus:border-0"
-                                                        required
-                                                    />
-                                                </div>
-                                            ))}
-                                        </div>
+                                        {(activeModule.questions || []).length > 0 ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => setPreviewItem({ type: 'quiz', title: 'Short test', questions: activeModule.questions })}
+                                                className="admin-btn admin-btn--ghost admin-btn--sm"
+                                                aria-label="Preview quiz"
+                                            >
+                                                <Eye size={16} strokeWidth={2.25} />
+                                            </button>
+                                        ) : null}
+                                        {isEditable ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowGenerateShortTestModal(true)}
+                                                className="admin-btn admin-btn--secondary admin-btn--sm"
+                                            >
+                                                <Sparkles size={16} strokeWidth={2.25} aria-hidden="true" />
+                                                Generate short test
+                                            </button>
+                                        ) : null}
+                                        <button type="button" onClick={openQuizEditor} className="admin-btn admin-btn--secondary admin-btn--sm" aria-label="Edit quiz">
+                                            <Pencil size={16} strokeWidth={2.25} />
+                                        </button>
                                     </div>
-                                ))}
-
-                                <button
-                                    type="button"
-                                    onClick={addExamQuestion}
-                                    className="w-full py-3 border border-dashed border-violet-300 text-violet-600 hover:bg-violet-50 rounded-xl text-xs font-bold transition-all"
-                                >
-                                    + Add Exam Question
-                                </button>
-
-                                <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowExamModal(false)}
-                                        className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        className="px-5 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-violet-500/15 hover:brightness-110"
-                                    >
-                                        Save Final Exam
+                                </div>
+                            </div>
+                            {isEditable ? (
+                                <div className="admin-card__footer">
+                                    <button type="button" onClick={() => setShowAddComponentModal(true)} className="admin-btn admin-btn--primary">
+                                        <Plus size={16} strokeWidth={2.25} aria-hidden="true" />
+                                        Add module component
                                     </button>
                                 </div>
-                            </form>
+                            ) : null}
                         </div>
                     </div>
+                </>
+            )}
+
+            <AdminModal
+                show={showAddSandboxModal}
+                onClose={() => setShowAddSandboxModal(false)}
+                title="Add new sandbox"
+                footer={(
+                    <>
+                        <button type="button" onClick={() => setShowAddSandboxModal(false)} className="admin-btn admin-btn--ghost">Cancel</button>
+                        <button type="submit" form="add-sandbox-form" disabled={addSandboxForm.processing} className="admin-btn admin-btn--primary">
+                            {addSandboxForm.processing ? 'Creating…' : 'Create sandbox'}
+                        </button>
+                    </>
                 )}
+            >
+                <form id="add-sandbox-form" onSubmit={submitAddSandbox}>
+                    <label className="admin-field">
+                        <span className="admin-field__label">Sandbox title</span>
+                        <input type="text" value={addSandboxForm.data.title} onChange={(e) => addSandboxForm.setData('title', e.target.value)} required className="input-field" placeholder="e.g. Introduction to JSX" />
+                    </label>
+                    <label className="admin-field">
+                        <span className="admin-field__label">Description</span>
+                        <textarea rows={2} value={addSandboxForm.data.description} onChange={(e) => addSandboxForm.setData('description', e.target.value)} className="input-field" placeholder="Briefly state the goal of this sandbox" />
+                    </label>
+                </form>
+            </AdminModal>
 
-                {/* ── Component Preview Modal ── */}
-                {previewItem && (
-                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[85vh] shadow-2xl flex flex-col overflow-hidden border border-slate-100 animate-in fade-in duration-150">
-                            <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-                                <h3 className="font-bold text-slate-800 text-sm">Preview Component: {previewItem.title}</h3>
-                                <button onClick={() => setPreviewItem(null)} className="text-slate-400 hover:text-slate-650 font-bold">✕</button>
+            <AdminModal
+                show={showAddComponentModal}
+                onClose={() => setShowAddComponentModal(false)}
+                title="Add a module component"
+                size="lg"
+                footer={(
+                    <>
+                        <button type="button" onClick={() => setShowAddComponentModal(false)} className="admin-btn admin-btn--ghost">Cancel</button>
+                        <button type="submit" form="add-component-form" disabled={addComponentForm.processing} className="admin-btn admin-btn--primary">
+                            {addComponentForm.processing ? 'Uploading…' : 'Proceed'}
+                        </button>
+                    </>
+                )}
+            >
+                <form id="add-component-form" onSubmit={submitAddComponent}>
+                    <label className="admin-field">
+                        <span className="admin-field__label">Component type</span>
+                        <select value={addComponentForm.data.type} onChange={(e) => addComponentForm.setData('type', e.target.value)} className="input-field">
+                            <option value="ppt">PowerPoint (PPT/PPTX)</option>
+                            <option value="pdf">Document (PDF)</option>
+                            <option value="video">Local MP4 video</option>
+                            <option value="youtube_embed">YouTube embed URL</option>
+                        </select>
+                    </label>
+                    <label className="admin-field">
+                        <span className="admin-field__label">Title</span>
+                        <input type="text" value={addComponentForm.data.title} onChange={(e) => addComponentForm.setData('title', e.target.value)} required className="input-field" placeholder="e.g. Module 1.PPTX" />
+                    </label>
+                    {addComponentForm.data.type === 'youtube_embed' ? (
+                        <label className="admin-field">
+                            <span className="admin-field__label">YouTube video link</span>
+                            <input type="url" value={addComponentForm.data.youtube_url} onChange={(e) => addComponentForm.setData('youtube_url', e.target.value)} required className="input-field" placeholder="Paste YouTube video link" />
+                        </label>
+                    ) : (
+                        <label className="admin-field">
+                            <span className="admin-field__label">File</span>
+                            <input type="file" onChange={(e) => addComponentForm.setData('file', e.target.files[0])} required className="input-field" />
+                            <p className="admin-field__hint">Accepted: PPTX, PDF, and video files.</p>
+                        </label>
+                    )}
+                </form>
+            </AdminModal>
+
+            <AdminModal
+                show={showSubmitModal}
+                onClose={() => setShowSubmitModal(false)}
+                title="Submit for approval"
+                footer={(
+                    <>
+                        <button type="button" onClick={() => setShowSubmitModal(false)} className="admin-btn admin-btn--ghost">Cancel</button>
+                        <button type="button" onClick={confirmSubmitForReview} className="admin-btn admin-btn--primary">Proceed</button>
+                    </>
+                )}
+            >
+                <p>Submit this certification for approval? You will not be able to edit it until review is complete.</p>
+            </AdminModal>
+
+            <AdminModal
+                show={!!pendingDeleteModuleId}
+                onClose={() => setPendingDeleteModuleId(null)}
+                title="Delete sandbox"
+                footer={(
+                    <>
+                        <button type="button" onClick={() => setPendingDeleteModuleId(null)} className="admin-btn admin-btn--ghost">Cancel</button>
+                        <button type="button" onClick={confirmDeleteModule} className="admin-btn admin-btn--danger">Delete</button>
+                    </>
+                )}
+            >
+                <p>Are you sure you want to delete this sandbox and all of its components?</p>
+            </AdminModal>
+
+            <AdminModal
+                show={!!pendingDeleteComponentId}
+                onClose={() => setPendingDeleteComponentId(null)}
+                title="Delete component"
+                footer={(
+                    <>
+                        <button type="button" onClick={() => setPendingDeleteComponentId(null)} className="admin-btn admin-btn--ghost">Cancel</button>
+                        <button type="button" onClick={confirmDeleteComponent} className="admin-btn admin-btn--danger">Delete</button>
+                    </>
+                )}
+            >
+                <p>Are you sure you want to delete this learning material?</p>
+            </AdminModal>
+
+            <GenerateQuizModal
+                show={showGenerateShortTestModal}
+                onClose={() => setShowGenerateShortTestModal(false)}
+                mode="short_test"
+                onApplyMock={applyGeneratedShortTest}
+            />
+
+            <GenerateQuizModal
+                show={showGenerateExamModal}
+                onClose={() => setShowGenerateExamModal(false)}
+                mode="final_exam"
+                onApplyMock={applyGeneratedExam}
+            />
+
+            <AdminModal
+                show={showExamRequirementsModal}
+                onClose={() => setShowExamRequirementsModal(false)}
+                title="Final exam requirements"
+                footer={(
+                    <button type="button" onClick={() => setShowExamRequirementsModal(false)} className="admin-btn admin-btn--primary">
+                        Got it
+                    </button>
+                )}
+            >
+                <p className="admin-text-muted">
+                    Before generating a final exam draft, complete the shell structure below.
+                </p>
+                <ul className="admin-checklist" style={{ marginTop: '16px' }}>
+                    <li className={sortedModules.length >= MIN_MODULES ? 'admin-checklist__done' : ''}>
+                        {sortedModules.length >= MIN_MODULES ? '✓' : '○'} At least {MIN_MODULES} sandboxes ({sortedModules.length}/{MIN_MODULES})
+                    </li>
+                    <li className={quizOnlySandboxCount >= MIN_QUIZ_ONLY_FOR_EXAM ? 'admin-checklist__done' : ''}>
+                        {quizOnlySandboxCount >= MIN_QUIZ_ONLY_FOR_EXAM ? '✓' : '○'} At least {MIN_QUIZ_ONLY_FOR_EXAM} quiz-only sandboxes ({quizOnlySandboxCount}/{MIN_QUIZ_ONLY_FOR_EXAM})
+                    </li>
+                </ul>
+            </AdminModal>
+
+            <AdminModal
+                show={!!previewItem}
+                onClose={() => setPreviewItem(null)}
+                title={previewItem ? `Preview: ${previewItem.title}` : ''}
+                size="xl"
+                footer={(
+                    <button type="button" onClick={() => setPreviewItem(null)} className="admin-btn admin-btn--primary">Close</button>
+                )}
+            >
+                <ModuleContentPreview item={previewItem} />
+            </AdminModal>
+
+            <AdminModal
+                show={showQuizModal}
+                onClose={() => setShowQuizModal(false)}
+                title="Modify short test"
+                size="xl"
+                footer={(
+                    <>
+                        <button type="button" onClick={() => setShowQuizModal(false)} className="admin-btn admin-btn--ghost">Cancel</button>
+                        <button type="submit" form="quiz-form" className="admin-btn admin-btn--primary">Finish</button>
+                    </>
+                )}
+            >
+                <form id="quiz-form" onSubmit={submitQuiz}>
+                    {questionsList.map((q, qIdx) => (
+                        <div key={qIdx} className="admin-question-block">
+                            <div className="admin-toolbar" style={{ marginBottom: '8px' }}>
+                                <strong>Question {qIdx + 1}</strong>
+                                {questionsList.length > 5 ? (
+                                    <button type="button" onClick={() => removeQuizQuestion(qIdx)} className="admin-btn admin-btn--ghost admin-btn--sm">Remove</button>
+                                ) : null}
                             </div>
-
-                            <div className="p-6 overflow-y-auto flex-grow bg-slate-50 flex items-center justify-center">
-                                {previewItem.type === 'youtube_embed' ? (
-                                    <iframe
-                                        src={previewItem.file_url}
-                                        className="w-full aspect-video rounded-xl shadow border border-slate-200"
-                                        allowFullScreen
-                                    />
-                                ) : previewItem.type === 'video' ? (
-                                    <video
-                                        src={`/storage/${previewItem.file_url}`}
-                                        controls
-                                        className="w-full rounded-xl shadow border border-slate-200 max-h-[60vh]"
-                                    />
-                                ) : previewItem.type === 'presentation' && previewItem.file_url ? (
-                                    <iframe
-                                        src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(window.location.origin + '/storage/' + previewItem.file_url)}`}
-                                        className="w-full h-[500px] rounded-xl shadow border border-slate-200"
-                                        frameBorder="0"
-                                    />
-                                ) : previewItem.type === 'document' && previewItem.file_url ? (
-                                    <iframe
-                                        src={`/storage/${previewItem.file_url}`}
-                                        className="w-full h-[500px] rounded-xl shadow border border-slate-200"
-                                    />
-                                ) : previewItem.type === 'quiz' ? (
-                                    <div className="w-full space-y-4 bg-white p-6 rounded-xl border border-slate-200 shadow">
-                                        <h4 className="font-bold text-sm text-slate-800 border-b border-slate-100 pb-2">Practice Quiz Questions</h4>
-                                        {(previewItem.questions || []).map((q, qIdx) => (
-                                            <div key={q.id || qIdx} className="space-y-1.5 pt-2">
-                                                <p className="text-sm font-semibold text-slate-800">
-                                                    Q{qIdx + 1}. {q.question_text}
-                                                </p>
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-4">
-                                                    {(q.answers || []).map((ans, aIdx) => (
-                                                        <div
-                                                            key={ans.id || aIdx}
-                                                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${
-                                                                ans.is_correct
-                                                                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                                                                    : 'bg-slate-50 border-slate-200 text-slate-600'
-                                                            }`}
-                                                        >
-                                                            {ans.answer_text} {ans.is_correct && '✓'}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        ))}
+                            <label className="admin-field">
+                                <span className="admin-field__label">Question</span>
+                                <input type="text" value={q.question_text} onChange={(e) => updateQuizQuestionText(qIdx, e.target.value)} className="input-field" required />
+                            </label>
+                            {[0, 1, 2, 3].map((aIdx) => (
+                                <label key={aIdx} className="admin-field">
+                                    <span className="admin-field__label">Choice {aIdx + 1}{q.answers[aIdx]?.is_correct ? ' (correct)' : ''}</span>
+                                    <div className="admin-inline-choice">
+                                        <input type="radio" name={`quiz-correct-${qIdx}`} checked={q.answers[aIdx]?.is_correct} onChange={() => setQuizCorrectAnswer(qIdx, aIdx)} />
+                                        <input type="text" value={q.answers[aIdx]?.answer_text ?? ''} onChange={(e) => updateQuizAnswerText(qIdx, aIdx, e.target.value)} className="input-field" required />
                                     </div>
-                                ) : (
-                                    <div className="text-center py-12">
-                                        <span className="text-4xl">📁</span>
-                                        <p className="text-xs font-semibold text-slate-450 mt-2">Preview not available for this file type</p>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end">
-                                <button
-                                    type="button"
-                                    onClick={() => setPreviewItem(null)}
-                                    className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-xl"
-                                >
-                                    Close Preview
-                                </button>
-                            </div>
+                                </label>
+                            ))}
                         </div>
-                    </div>
+                    ))}
+                    <button type="button" onClick={addQuizQuestion} className="admin-btn admin-btn--secondary admin-btn--block" style={{ marginTop: '12px' }}>+ Add question</button>
+                </form>
+            </AdminModal>
+
+            <AdminModal
+                show={showExamModal}
+                onClose={() => setShowExamModal(false)}
+                title="Final exam"
+                size="xl"
+                footer={(
+                    <>
+                        <button type="button" onClick={() => setShowExamModal(false)} className="admin-btn admin-btn--ghost">Cancel</button>
+                        <button type="submit" form="exam-form" className="admin-btn admin-btn--primary">Finish</button>
+                    </>
                 )}
-            </div>
+            >
+                <form id="exam-form" onSubmit={submitExam}>
+                    {examQuestionsList.map((q, qIdx) => (
+                        <div key={qIdx} className="admin-question-block">
+                            <div className="admin-toolbar" style={{ marginBottom: '8px' }}>
+                                <strong>Question {qIdx + 1}</strong>
+                                {examQuestionsList.length > 5 ? (
+                                    <button type="button" onClick={() => removeExamQuestion(qIdx)} className="admin-btn admin-btn--ghost admin-btn--sm">Remove</button>
+                                ) : null}
+                            </div>
+                            <label className="admin-field">
+                                <span className="admin-field__label">Question</span>
+                                <input type="text" value={q.question_text} onChange={(e) => updateExamQuestionText(qIdx, e.target.value)} className="input-field" required />
+                            </label>
+                            {q.answers.map((ans, aIdx) => (
+                                <label key={aIdx} className="admin-field">
+                                    <span className="admin-field__label">Choice {aIdx + 1}{ans.is_correct ? ' (correct)' : ''}</span>
+                                    <div className="admin-inline-choice">
+                                        <input type="radio" name={`exam-correct-${qIdx}`} checked={ans.is_correct} onChange={() => setExamCorrectAnswer(qIdx, aIdx)} />
+                                        <input type="text" value={ans.answer_text} onChange={(e) => updateExamAnswerText(qIdx, aIdx, e.target.value)} className="input-field" required />
+                                    </div>
+                                </label>
+                            ))}
+                        </div>
+                    ))}
+                    <button type="button" onClick={addExamQuestion} className="admin-btn admin-btn--secondary admin-btn--block" style={{ marginTop: '12px' }}>+ Add exam question</button>
+                </form>
+            </AdminModal>
         </CreatorLayout>
     );
 }

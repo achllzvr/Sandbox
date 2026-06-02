@@ -1,155 +1,281 @@
 import { Link, usePage } from '@inertiajs/react';
-import Dropdown from '@/Components/Dropdown';
+import {
+    ClipboardList,
+    LayoutDashboard,
+    LogOut,
+    PanelLeftClose,
+    PanelLeftOpen,
+    Shell,
+    Wallet,
+} from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import AdminCollapsedSidebarItem from '@/Components/Admin/AdminCollapsedSidebarItem';
+import { AdminThemeProvider, useAdminTheme } from '@/hooks/useAdminTheme';
+import { assetUrl } from '@/utils/assetUrl';
+
+const SIDEBAR_KEY = 'sandbox-creator-sidebar-collapsed';
+const TOAST_DURATION_MS = 3000;
 
 const NAV_ITEMS = [
-    { label: 'Dashboard',       icon: '🏠', routeName: 'creator.dashboard' },
-    { label: 'My Shells',       icon: '🐚', routeName: 'creator.certifications.index' },
-    { label: 'Create Shell',    icon: '✨', routeName: 'creator.certifications.create' },
+    { label: 'Dashboard', routeName: 'creator.dashboard', key: 'dashboard', Icon: LayoutDashboard },
+    { label: 'Shell Builder', routeName: 'creator.certifications.index', key: 'shells', Icon: Shell },
+    { label: 'Auditor', routeName: 'creator.auditor.index', key: 'auditor', Icon: ClipboardList },
+    { label: 'Wallet', routeName: 'creator.wallet.index', key: 'wallet', Icon: Wallet },
 ];
 
-export default function CreatorLayout({ children, pageTitle }) {
+function readSidebarCollapsed() {
+    if (typeof window === 'undefined') {
+        return false;
+    }
+
+    return window.localStorage.getItem(SIDEBAR_KEY) === '1';
+}
+
+export default function CreatorLayout({ children, activeNav, pageTitle }) {
+    return (
+        <AdminThemeProvider>
+            <CreatorLayoutShell activeNav={activeNav} pageTitle={pageTitle}>
+                {children}
+            </CreatorLayoutShell>
+        </AdminThemeProvider>
+    );
+}
+
+function CreatorLayoutShell({ children, activeNav, pageTitle }) {
     const { auth, flash } = usePage().props;
     const user = auth.user;
+    const { theme, highContrast } = useAdminTheme();
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
+    const [toasts, setToasts] = useState([]);
 
-    function isActive(routeName) {
+    useEffect(() => {
+        window.localStorage.setItem(SIDEBAR_KEY, sidebarCollapsed ? '1' : '0');
+    }, [sidebarCollapsed]);
+
+    useEffect(() => {
+        const next = [];
+
+        if (flash?.success) {
+            next.push({ id: `success-${Date.now()}`, type: 'success', message: flash.success });
+        }
+
+        if (flash?.error) {
+            next.push({ id: `error-${Date.now()}`, type: 'error', message: flash.error });
+        }
+
+        if (next.length === 0) {
+            return undefined;
+        }
+
+        setToasts(next);
+
+        const timer = window.setTimeout(() => {
+            setToasts((current) => current.map((toast) => ({ ...toast, leaving: true })));
+            window.setTimeout(() => setToasts([]), 250);
+        }, TOAST_DURATION_MS);
+
+        return () => window.clearTimeout(timer);
+    }, [flash?.success, flash?.error]);
+
+    const expandSidebar = useCallback(() => {
+        setSidebarCollapsed(false);
+    }, []);
+
+    const toggleSidebar = useCallback((event) => {
+        event.stopPropagation();
+        setSidebarCollapsed((current) => !current);
+    }, []);
+
+    function handleSidebarEmptyClick(event) {
+        if (!sidebarCollapsed) {
+            return;
+        }
+        if (event.target.closest('.admin-sidebar-collapsed-item, .admin-sidebar__collapse')) {
+            return;
+        }
+        expandSidebar();
+    }
+
+    function isNavActive(item) {
+        if (activeNav === item.key) {
+            return true;
+        }
         try {
-            return route().current(routeName) || route().current(routeName + '.*');
+            if (item.key === 'shells') {
+                return route().current('creator.certifications.*');
+            }
+            return route().current(item.routeName);
         } catch {
             return false;
         }
     }
 
+    function resolveRoute(routeName) {
+        try {
+            return route(routeName);
+        } catch {
+            return '#';
+        }
+    }
+
     return (
-        <div className="min-h-screen flex bg-slate-50">
-            {/* ── Sidebar ────────────────────────────────── */}
-            <aside className="w-64 bg-gradient-to-b from-slate-900 via-slate-900 to-indigo-950 text-slate-300 flex flex-col fixed inset-y-0 left-0 z-40">
-                {/* Logo */}
-                <div className="h-16 flex items-center gap-3 px-5 border-b border-white/10">
-                    <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-violet-500/25">
-                        S
-                    </div>
-                    <div>
-                        <span className="font-bold text-white text-sm tracking-tight">Sandbox</span>
-                        <span className="ml-2 text-[10px] bg-violet-500/20 text-violet-300 px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider">
-                            Creator
-                        </span>
-                    </div>
+        <div
+            className={`admin-shell creator-studio-shell ${sidebarCollapsed ? 'admin-shell--sidebar-collapsed' : ''}`}
+            data-admin-theme={theme}
+            data-admin-contrast={theme === 'light' && highContrast ? 'high' : undefined}
+        >
+            <aside
+                className={`admin-sidebar ${sidebarCollapsed ? 'admin-sidebar--collapsed' : ''}`}
+                onClick={handleSidebarEmptyClick}
+            >
+                <div className="admin-sidebar__brand">
+                    {sidebarCollapsed ? (
+                        <div className="admin-sidebar__brand-link admin-sidebar__brand-link--icon-only">
+                            <img
+                                src={assetUrl('images/Hermy.png')}
+                                alt="Sandbox"
+                                className="admin-sidebar__logo-img"
+                                width={36}
+                                height={36}
+                            />
+                        </div>
+                    ) : (
+                        <Link href={route('creator.dashboard')} className="admin-sidebar__brand-link">
+                            <img
+                                src={assetUrl('images/Hermy.png')}
+                                alt=""
+                                className="admin-sidebar__logo-img"
+                                width={36}
+                                height={36}
+                            />
+                            <div className="admin-sidebar__brand-text">
+                                <span className="admin-sidebar__logo-text">Sandbox</span>
+                                <span className="admin-sidebar__badge">Creator Studio</span>
+                            </div>
+                        </Link>
+                    )}
+                    <button
+                        type="button"
+                        className="admin-sidebar__collapse"
+                        onClick={toggleSidebar}
+                        aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                        aria-expanded={!sidebarCollapsed}
+                    >
+                        {sidebarCollapsed ? (
+                            <PanelLeftOpen className="admin-sidebar__collapse-icon" size={18} strokeWidth={2} aria-hidden="true" />
+                        ) : (
+                            <PanelLeftClose className="admin-sidebar__collapse-icon" size={18} strokeWidth={2} aria-hidden="true" />
+                        )}
+                    </button>
                 </div>
 
-                {/* Nav links */}
-                <nav className="flex-1 py-6 px-3 space-y-1 overflow-y-auto">
-                    <p className="px-3 mb-3 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
-                        Navigation
-                    </p>
+                <nav className="admin-sidebar__nav" aria-label="Creator navigation">
                     {NAV_ITEMS.map((item) => {
-                        const active = isActive(item.routeName);
-                        let href;
-                        try {
-                            href = route(item.routeName);
-                        } catch {
-                            href = '#';
+                        const active = isNavActive(item);
+                        const href = resolveRoute(item.routeName);
+                        const Icon = item.Icon;
+
+                        if (sidebarCollapsed) {
+                            return (
+                                <AdminCollapsedSidebarItem
+                                    key={item.key}
+                                    label={item.label}
+                                    href={href}
+                                    className={`admin-nav-link ${active ? 'admin-nav-link--active' : ''}`}
+                                >
+                                    <span className="admin-nav-link__icon">
+                                        <Icon size={20} strokeWidth={2} aria-hidden="true" />
+                                    </span>
+                                    <span className="admin-nav-link__label">{item.label}</span>
+                                </AdminCollapsedSidebarItem>
+                            );
                         }
+
                         return (
                             <Link
-                                key={item.routeName}
+                                key={item.key}
                                 href={href}
-                                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
-                                    active
-                                        ? 'bg-violet-500/15 text-violet-300 shadow-sm shadow-violet-500/10'
-                                        : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
-                                }`}
+                                className={`admin-nav-link ${active ? 'admin-nav-link--active' : ''}`}
                             >
-                                <span className="text-base">{item.icon}</span>
-                                {item.label}
-                                {active && (
-                                    <span className="ml-auto w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
-                                )}
+                                <span className="admin-nav-link__icon">
+                                    <Icon size={20} strokeWidth={2} aria-hidden="true" />
+                                </span>
+                                <span className="admin-nav-link__label">{item.label}</span>
                             </Link>
                         );
                     })}
                 </nav>
 
-                {/* Bottom user info + Logout */}
-                <div className="px-4 py-4 border-t border-white/10">
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-violet-500/25">
-                            {user.first_name?.charAt(0)}{user.last_name?.charAt(0)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-slate-200 truncate">
-                                {user.first_name} {user.last_name}
-                            </p>
-                            <p className="text-xs text-slate-500 truncate">{user.email}</p>
-                        </div>
-                    </div>
-                    <Link
-                        href={route('logout')}
-                        method="post"
-                        as="button"
-                        className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-colors"
-                    >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                        </svg>
-                        Log Out
-                    </Link>
+                <div className="admin-sidebar__footer">
+                    {sidebarCollapsed ? (
+                        <>
+                            <AdminCollapsedSidebarItem
+                                label="Profile settings"
+                                href={route('profile.edit')}
+                                className="admin-sidebar__user admin-sidebar__user-link admin-sidebar__user-link--icon-only"
+                            >
+                                <span className="admin-sidebar__avatar">
+                                    {user.first_name?.charAt(0)}
+                                    {user.last_name?.charAt(0)}
+                                </span>
+                            </AdminCollapsedSidebarItem>
+                            <AdminCollapsedSidebarItem
+                                label="Sign out"
+                                href={route('logout')}
+                                method="post"
+                                className="admin-sidebar__logout admin-sidebar__logout--icon-only"
+                            >
+                                <LogOut className="admin-sidebar__collapse-icon" size={18} strokeWidth={2} aria-hidden="true" />
+                            </AdminCollapsedSidebarItem>
+                        </>
+                    ) : (
+                        <>
+                            <Link href={route('profile.edit')} className="admin-sidebar__user admin-sidebar__user-link">
+                                <span className="admin-sidebar__avatar">
+                                    {user.first_name?.charAt(0)}
+                                    {user.last_name?.charAt(0)}
+                                </span>
+                                <div className="admin-sidebar__user-meta">
+                                    <p className="admin-sidebar__user-name">
+                                        {user.first_name} {user.last_name}
+                                    </p>
+                                    <p className="admin-sidebar__user-email">{user.email}</p>
+                                </div>
+                            </Link>
+                            <Link href={route('logout')} method="post" as="button" className="admin-sidebar__logout">
+                                <span className="admin-sidebar__logout-text">Sign out</span>
+                            </Link>
+                        </>
+                    )}
                 </div>
             </aside>
 
-            {/* ── Main content ───────────────────────────── */}
-            <div className="flex-1 ml-64 flex flex-col min-h-screen">
-                {/* Top bar */}
-                <header className="h-16 bg-white/80 backdrop-blur-md border-b border-slate-200/60 flex items-center justify-between px-6 sticky top-0 z-30">
-                    <h1 className="text-lg font-bold text-slate-900">
-                        {pageTitle || 'Creator Studio'}
-                    </h1>
-
-                    <Dropdown>
-                        <Dropdown.Trigger>
-                            <button className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900 transition-colors">
-                                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold">
-                                    {user.first_name?.charAt(0)}{user.last_name?.charAt(0)}
-                                </div>
-                                {user.first_name} {user.last_name}
-                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                                </svg>
-                            </button>
-                        </Dropdown.Trigger>
-                        <Dropdown.Content>
-                            <Dropdown.Link href={route('profile.edit')}>Profile</Dropdown.Link>
-                            <Dropdown.Link href={route('logout')} method="post" as="button">
-                                Log Out
-                            </Dropdown.Link>
-                        </Dropdown.Content>
-                    </Dropdown>
-                </header>
-
-                {/* Flash messages */}
-                <div className="px-6 pt-4">
-                    {flash?.success && (
-                        <div className="mb-4 rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-sm text-emerald-700 font-medium flex items-center gap-2">
-                            <svg className="w-5 h-5 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                            </svg>
-                            {flash.success}
+            <div className="admin-main">
+                {pageTitle ? (
+                    <header className="admin-topbar admin-fade-in-up">
+                        <div className="admin-topbar__heading">
+                            <p className="admin-topbar__eyebrow">Creator studio</p>
+                            <h1 className="admin-page-title">{pageTitle}</h1>
                         </div>
-                    )}
-                    {flash?.error && (
-                        <div className="mb-4 rounded-xl bg-red-50 border border-red-200 p-4 text-sm text-red-700 font-medium flex items-center gap-2">
-                            <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                            </svg>
-                            {flash.error}
-                        </div>
-                    )}
-                </div>
+                    </header>
+                ) : null}
 
-                {/* Page content */}
-                <main className="flex-1 px-6 pb-8 flex flex-col">
-                    {children}
-                </main>
+                <main className="admin-content admin-content--animated">{children}</main>
             </div>
+
+            {toasts.length > 0 ? (
+                <div className="creator-toast-stack admin-fade-in-up" role="status" aria-live="polite">
+                    {toasts.map((toast) => (
+                        <div
+                            key={toast.id}
+                            className={`creator-toast creator-toast--${toast.type} ${toast.leaving ? 'creator-toast--leaving' : ''}`}
+                            role="alert"
+                        >
+                            {toast.message}
+                        </div>
+                    ))}
+                </div>
+            ) : null}
         </div>
     );
 }

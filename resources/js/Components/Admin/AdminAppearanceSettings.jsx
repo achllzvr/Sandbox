@@ -9,7 +9,7 @@ export default function AdminAppearanceSettings() {
             <header className="admin-appearance-settings__header">
                 <h2 className="admin-profile-card__title">Appearance</h2>
                 <p className="admin-profile-card__subtitle">
-                    Choose dark or light mode for the admin console. In light mode, optionally enable
+                    Choose dark or light mode for the admin console and creator studio. In light mode, optionally enable
                     high contrast for stronger dark-gray lines and borders.
                 </p>
             </header>
