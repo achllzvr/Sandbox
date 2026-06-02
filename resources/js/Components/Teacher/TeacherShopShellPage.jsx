@@ -20,7 +20,7 @@ export default function TeacherShopShellPage({ cert, catalogIndex = 0, onBack, o
     const coverSrc = !coverError && (cert?.thumbnail_url ?? (cert?.thumbnail ? assetUrl(`storage/${cert.thumbnail}`) : null));
 
     return (
-        <div className={`student-shop-shell-page student-shop-shell-page--${theme} student-fade-in-up`} style={themeStyle}>
+        <div className={`student-shop-shell-page student-shop-shell-page--teacher student-shop-shell-page--${theme} student-fade-in-up`} style={themeStyle}>
             <div className="student-shop-shell-page__hero">
                 <button type="button" className="student-shop-shell-page__back" onClick={onBack} aria-label="Back to shop">
                     <ArrowLeft size={20} strokeWidth={2.25} aria-hidden="true" />

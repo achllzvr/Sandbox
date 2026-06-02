@@ -1,6 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import { LayoutDashboard, Shell, ShoppingBag } from 'lucide-react';
-import StudentWorkspace from '@/Components/Student/StudentWorkspace';
+import TeacherWorkspace from '@/Components/Teacher/TeacherWorkspace';
 import { assetUrl } from '@/utils/assetUrl';
 
 const NAV_ITEMS = [
@@ -64,20 +64,25 @@ export default function TeacherLayout({ children, activeNav, layoutMode = 'stand
 
             <main className="student-main student-content--animated">
                 {usesWorkspace ? (
-                    <StudentWorkspace layoutMode={layoutMode === 'shop-detail' ? 'shell' : layoutMode} modifier={workspaceModifier}>
+                    <TeacherWorkspace layoutMode={layoutMode} modifier={workspaceModifier}>
                         {children}
-                    </StudentWorkspace>
+                    </TeacherWorkspace>
                 ) : (
                     children
                 )}
             </main>
 
-            {flash?.success || flash?.error ? (
+            {flash?.success || flash?.error || flash?.teacher_purchase_success || flash?.voucher_email_sent ? (
                 <div
-                    className={`student-flash student-flash--floating ${flash.success ? 'student-flash--success' : 'student-flash--error'} student-fade-in-up`}
+                    className={`student-flash student-flash--floating ${flash.error ? 'student-flash--error' : 'student-flash--success'} student-fade-in-up`}
                     role="status"
                 >
-                    {flash.success || flash.error}
+                    {flash.error ||
+                        flash.success ||
+                        (flash.teacher_purchase_success
+                            ? `Purchase complete — ${flash.teacher_purchase_success.quantity} voucher${flash.teacher_purchase_success.quantity === 1 ? '' : 's'}.`
+                            : null) ||
+                        (flash.voucher_email_sent ? `Voucher sent to ${flash.voucher_email_sent.email}.` : null)}
                 </div>
             ) : null}
         </div>

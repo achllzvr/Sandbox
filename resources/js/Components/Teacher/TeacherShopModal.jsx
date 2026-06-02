@@ -120,7 +120,7 @@ export default function TeacherShopModal({ cert, view, catalogIndex = 0, quantit
                 <div className="student-shop-modal__content">
                     {view === 'enroll_tos' ? (
                         <form className="student-shop-flow" onSubmit={handleTosProceed}>
-                            <h3 className="student-shop-modal__title">You are enrolling</h3>
+                            <h3 className="student-shop-modal__title">You are purchasing a voucher batch</h3>
                             <ShopCertBadge cert={cert} theme={theme} />
 
                             <label className="student-shop-check">
@@ -159,7 +159,7 @@ export default function TeacherShopModal({ cert, view, catalogIndex = 0, quantit
 
                     {view === 'quantity' ? (
                         <form className="student-shop-flow teacher-shop-modal__quantity-flow" onSubmit={handleQuantityProceed}>
-                            <h3 className="student-shop-modal__title">You are enrolling</h3>
+                            <h3 className="student-shop-modal__title">Voucher batch quantity</h3>
                             <p className="teacher-shop-modal__lead">How many vouchers would you want to purchase for this batch?</p>
 
                             <div className="teacher-shop-modal__stepper">
@@ -194,7 +194,7 @@ export default function TeacherShopModal({ cert, view, catalogIndex = 0, quantit
 
                     {view === 'batch_confirm' ? (
                         <form className="student-shop-flow" onSubmit={handleConfirmSubmit}>
-                            <h3 className="student-shop-modal__title">You are enrolling</h3>
+                            <h3 className="student-shop-modal__title">Confirm voucher batch purchase</h3>
 
                             <label className="student-shop-check">
                                 <input

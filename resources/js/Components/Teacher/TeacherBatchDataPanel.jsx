@@ -4,6 +4,7 @@ import { useState } from 'react';
 
 export default function TeacherBatchDataPanel({ batches = [], certificationId }) {
     const [selectedBatchId, setSelectedBatchId] = useState(batches[0]?.id ?? '');
+    const [selectFocused, setSelectFocused] = useState(false);
 
     function handleProceed() {
         if (!selectedBatchId) {
@@ -20,13 +21,15 @@ export default function TeacherBatchDataPanel({ batches = [], certificationId })
             </h3>
             <p className="teacher-batch-data__lead">Select batch purchase date to view batch data.</p>
 
-            <div className="teacher-batch-data__controls">
-                <div className="teacher-batch-data__select-wrap">
-                    <ChevronDown size={16} aria-hidden="true" className="teacher-batch-data__select-icon" />
+            <div className="student-shop-toolbar teacher-batch-data__toolbar">
+                <div className={`student-shop-select-wrap teacher-batch-data__select-wrap ${selectFocused ? 'is-focused' : ''}`}>
+                    <ChevronDown size={16} aria-hidden="true" className="student-shop-select-wrap__icon" />
                     <select
-                        className="teacher-batch-data__select"
+                        className="student-shop-select"
                         value={selectedBatchId}
                         onChange={(event) => setSelectedBatchId(Number(event.target.value))}
+                        onFocus={() => setSelectFocused(true)}
+                        onBlur={() => setSelectFocused(false)}
                         aria-label="Select batch purchase date"
                     >
                         {batches.map((batch) => (
@@ -36,7 +39,12 @@ export default function TeacherBatchDataPanel({ batches = [], certificationId })
                         ))}
                     </select>
                 </div>
-                <button type="button" className="teacher-batch-data__proceed" onClick={handleProceed} disabled={!selectedBatchId}>
+                <button
+                    type="button"
+                    className="student-shop-btn student-shop-btn--soft teacher-batch-data__proceed-btn"
+                    onClick={handleProceed}
+                    disabled={!selectedBatchId}
+                >
                     Proceed
                 </button>
             </div>

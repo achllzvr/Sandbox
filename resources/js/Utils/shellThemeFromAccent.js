@@ -122,6 +122,28 @@ export function adjustHex(hex, { h = 0, sMul = 1, lDelta = 0, sMin = 8, sMax = 1
     return hslToHex(hsl.h + h, clamp(hsl.s * sMul, sMin, sMax), clamp(hsl.l + lDelta, lMin, lMax));
 }
 
+export function contrastTextForBg(hex) {
+    const rgb = hexToRgb(hex);
+    if (!rgb) {
+        return '#ffffff';
+    }
+
+    const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+
+    return luminance > 0.58 ? '#2d3540' : '#ffffff';
+}
+
+export function contrastMutedForBg(hex) {
+    const rgb = hexToRgb(hex);
+    if (!rgb) {
+        return 'rgba(255, 255, 255, 0.88)';
+    }
+
+    const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+
+    return luminance > 0.58 ? 'rgba(45, 53, 64, 0.72)' : 'rgba(255, 255, 255, 0.88)';
+}
+
 export function buildShellThemeFromAccent(accentHex) {
     const accent = normalizeHex(accentHex);
     if (!accent) {
@@ -173,6 +195,8 @@ export function buildShopThemeFromAccent(accentHex) {
     const infoBorder = adjustHex(accent, { sMul: 0.9, lDelta: -14, lMin: 26 });
     const shopAccent = adjustHex(accent, { sMul: 0.9, lDelta: -12, lMin: 28 });
     const shopAccentDark = adjustHex(accent, { sMul: 0.92, lDelta: -18, lMin: 22 });
+    const statInnerBg = shopAccent;
+    const statInnerBorder = shopAccentDark;
     const shellTheme = buildShellThemeFromAccent(accent);
 
     return {
@@ -183,12 +207,21 @@ export function buildShopThemeFromAccent(accentHex) {
         infoBorder,
         accent: shopAccent,
         accentDark: shopAccentDark,
+        onInfo: contrastTextForBg(infoBg),
+        onInfoMuted: contrastMutedForBg(infoBg),
+        onStat: contrastTextForBg(statInnerBg),
+        onStatMuted: contrastMutedForBg(statInnerBg),
+        onPage: contrastTextForBg(pageBg),
+        onAccent: contrastTextForBg(shopAccent),
+        toolbarBg: 'rgba(255, 255, 255, 0.96)',
+        toolbarText: '#2d3540',
+        toolbarBorder: 'rgba(255, 255, 255, 0.55)',
         btnSoftBg: hslToHex(hsl.h, clamp(hsl.s * 0.35, 12, 45), 92),
         btnSoftText: adjustHex(accent, { sMul: 0.85, lDelta: -20, lMin: 20 }),
         statShellBg: adjustHex(accent, { sMul: 0.9, lDelta: -4, lMin: 30 }),
         statShellBorder: adjustHex(accent, { sMul: 0.92, lDelta: -10, lMin: 26 }),
-        statInnerBg: shopAccent,
-        statInnerBorder: shopAccentDark,
+        statInnerBg,
+        statInnerBorder,
         panel: shellTheme?.body ?? pageBg,
         panelDark: shellTheme?.cardBorder ?? accent,
         hero: hsl.l > 62 ? heroBg : '#ffffff',
@@ -260,6 +293,15 @@ export function shopThemeCssVarsFromAccent(accentHex) {
         '--shop-info-border': theme.infoBorder,
         '--shop-accent': theme.accent,
         '--shop-accent-dark': theme.accentDark,
+        '--shop-on-info': theme.onInfo,
+        '--shop-on-info-muted': theme.onInfoMuted,
+        '--shop-on-stat': theme.onStat,
+        '--shop-on-stat-muted': theme.onStatMuted,
+        '--shop-on-page': theme.onPage,
+        '--shop-on-accent': theme.onAccent,
+        '--shop-toolbar-bg': theme.toolbarBg,
+        '--shop-toolbar-text': theme.toolbarText,
+        '--shop-toolbar-border': theme.toolbarBorder,
         '--shop-btn-soft-bg': theme.btnSoftBg,
         '--shop-btn-soft-text': theme.btnSoftText,
         '--shop-stat-shell-bg': theme.statShellBg,

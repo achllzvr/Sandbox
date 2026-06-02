@@ -8,6 +8,9 @@ use App\Support\Mocks\Teacher\TeacherShellMockData;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
+/**
+ * TODO[backend]: purchasedCertificationIds from teacher cohorts/voucher batches.
+ */
 class TeacherShopController extends Controller
 {
     public function index(Request $request)
@@ -59,7 +62,7 @@ class TeacherShopController extends Controller
             ->pluck('category')
             ->values();
 
-        // TODO[backend]: purchasedCertificationIds from teacher cohorts/voucher batches.
+        // Purchased shells from mock until teacher cohorts exist.
         $purchasedCertificationIds = collect(TeacherShellMockData::purchasedShells())
             ->pluck('id')
             ->all();

@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Support\Mocks\Teacher\TeacherDashboardMockData;
 use Inertia\Inertia;
 
+/**
+ * TODO[backend]: Replace mock metrics/claim logs with real teacher cohort aggregates.
+ */
 class TeacherDashboardController extends Controller
 {
     public function index()

@@ -1,3 +1,12 @@
+/**
+ * Teacher shop — browse shells and purchase voucher batches.
+ *
+ * WIRED:
+ * - Catalog from Certification model (TeacherShopController)
+ * - Bulk checkout modal flow (BulkCheckoutController mock success)
+ *
+ * TODO[backend]: purchasedCertificationIds from teacher cohorts; real payment flow.
+ */
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { ChevronDown, Loader2, Search } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';

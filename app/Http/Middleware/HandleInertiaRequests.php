@@ -63,12 +63,28 @@ class HandleInertiaRequests extends Middleware
                     ],
                 ];
             },
+            'teacherPortalSummary' => function () use ($request) {
+                $user = $request->user();
+                if (! $user || $user->role !== 'teacher') {
+                    return null;
+                }
+
+                // TODO[backend]: Replace with real aggregates from cohorts/vouchers.
+                return [
+                    'affiliation' => $user->affiliation,
+                    'total_students' => 67,
+                    'vouchers_claimed' => 50,
+                    'vouchers_unclaimed' => 17,
+                ];
+            },
             'mustVerifyEmail' => fn () => $request->user() && $request->user()->email_verified_at === null,
             'status' => fn () => $request->session()->get('status'),
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error'   => fn () => $request->session()->get('error'),
                 'shop_success' => fn () => $request->session()->get('shop_success'),
+                'teacher_purchase_success' => fn () => $request->session()->get('teacher_purchase_success'),
+                'voucher_email_sent' => fn () => $request->session()->get('voucher_email_sent'),
             ],
             'ziggy' => function () use ($request) {
                 return array_merge((new Ziggy)->toArray(), [

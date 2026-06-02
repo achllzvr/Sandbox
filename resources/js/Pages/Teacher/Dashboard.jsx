@@ -1,3 +1,11 @@
+/**
+ * Teacher dashboard — affiliate metrics and recent voucher claims.
+ *
+ * WIRED (UI + mock):
+ * - Metric cards, claim logs from TeacherDashboardMockData
+ *
+ * TODO[backend]: Real aggregates from cohort_students, vouchers, enrollments.
+ */
 import { Head } from '@inertiajs/react';
 import TeacherClaimLogsPanel from '@/Components/Teacher/TeacherClaimLogsPanel';
 import TeacherMetricCards from '@/Components/Teacher/TeacherMetricCards';

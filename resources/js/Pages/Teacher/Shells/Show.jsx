@@ -1,7 +1,17 @@
+/**
+ * Teacher shell landing — batch data + voucher manager for one purchased shell.
+ *
+ * WIRED (UI + mock):
+ * - Shell detail, batch selector, voucher manager, send-voucher modal
+ * - Per-shell purchase history modal
+ *
+ * TODO[backend]: Real cohorts, vouchers, and purchase records for auth teacher.
+ */
 import { Head, Link, usePage } from '@inertiajs/react';
 import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import TeacherBatchDataPanel from '@/Components/Teacher/TeacherBatchDataPanel';
+import TeacherPurchaseHistoryModal from '@/Components/Teacher/TeacherPurchaseHistoryModal';
 import TeacherSendVoucherModal from '@/Components/Teacher/TeacherSendVoucherModal';
 import TeacherVoucherManager from '@/Components/Teacher/TeacherVoucherManager';
 import TeacherLayout from '@/Layouts/TeacherLayout';
@@ -16,7 +26,13 @@ import { resolveShopTheme } from '@/utils/shellThemes';
 
 const HERMYS_FALLBACK = 'images/Hermy.png';
 
-export default function Show({ certification, batches = [], voucherGroups: initialGroups = [], isMock = false }) {
+export default function Show({
+    certification,
+    batches = [],
+    voucherGroups: initialGroups = [],
+    purchaseHistory = [],
+    isMock = false,
+}) {
     const { flash } = usePage().props;
     const { className: theme, style: themeStyle } = resolveShopTheme(certification, certification.id - 1);
     const provider = shopProviderLine(certification);
@@ -27,6 +43,7 @@ export default function Show({ certification, batches = [], voucherGroups: initi
     const [emailVoucher, setEmailVoucher] = useState(null);
     const [emailModalView, setEmailModalView] = useState(null);
     const [coverError, setCoverError] = useState(false);
+    const [historyOpen, setHistoryOpen] = useState(false);
 
     const coverSrc = !coverError && (certification?.thumbnail_url ?? null);
 
@@ -92,11 +109,22 @@ export default function Show({ certification, batches = [], voucherGroups: initi
             <Head title={`${certification.title} — Shell Data`} />
 
             <div className={`teacher-shell-landing student-shop-shell-page student-shop-shell-page--${theme} student-fade-in-up`} style={themeStyle}>
-                <div className="student-shop-shell-page__hero">
+                <div className="teacher-shell-landing__hero-bar">
                     <Link href={route('teacher.shells.index')} className="student-shop-shell-page__back" aria-label="Back to My Shells">
                         <ArrowLeft size={20} strokeWidth={2.25} aria-hidden="true" />
                     </Link>
+                    <div className="teacher-shell-landing__hero-actions">
+                        <button
+                            type="button"
+                            className="teacher-shell-landing__history-btn"
+                            onClick={() => setHistoryOpen(true)}
+                        >
+                            Purchase history
+                        </button>
+                    </div>
+                </div>
 
+                <div className="student-shop-shell-page__hero">
                     {coverSrc ? (
                         <img src={coverSrc} alt="" className="student-shop-shell-page__hero-image" onError={() => setCoverError(true)} />
                     ) : (
@@ -129,19 +157,29 @@ export default function Show({ certification, batches = [], voucherGroups: initi
                     </div>
                 </div>
 
-                <TeacherBatchDataPanel batches={batches} certificationId={certification.id} />
-                <TeacherVoucherManager
-                    voucherGroups={voucherGroups}
-                    selectedIds={selectedIds}
-                    onToggleSelect={handleToggleSelect}
-                    onToggleSelectAll={handleToggleSelectAll}
-                    onSendEmail={handleSendEmail}
-                    onCancelSelection={() => setSelectedIds([])}
-                    onUnlockExams={() => window.alert('TODO[backend]: Unlock final exams for selected vouchers.')}
-                />
+                <div className="teacher-shell-landing__panels">
+                    <TeacherBatchDataPanel batches={batches} certificationId={certification.id} />
+                    <TeacherVoucherManager
+                        voucherGroups={voucherGroups}
+                        selectedIds={selectedIds}
+                        onToggleSelect={handleToggleSelect}
+                        onToggleSelectAll={handleToggleSelectAll}
+                        onSendEmail={handleSendEmail}
+                        onCancelSelection={() => setSelectedIds([])}
+                        onUnlockExams={() => window.alert('TODO[backend]: Unlock final exams for selected vouchers.')}
+                    />
+                </div>
 
                 {isMock ? <p className="teacher-shell-landing__mock-note">Sample voucher data — TODO[backend] wire to teacher cohorts.</p> : null}
             </div>
+
+            <TeacherPurchaseHistoryModal
+                show={historyOpen}
+                onClose={() => setHistoryOpen(false)}
+                title={`Purchase history — ${certification.title}`}
+                transactions={purchaseHistory}
+                isMock={isMock}
+            />
 
             {emailVoucher && emailModalView ? (
                 <TeacherSendVoucherModal

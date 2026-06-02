@@ -1,5 +1,6 @@
-import { ChevronDown, Search } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import TeacherSearchCombobox from '@/Components/Teacher/TeacherSearchCombobox';
 
 export default function TeacherVoucherManager({
     voucherGroups = [],
@@ -13,9 +14,25 @@ export default function TeacherVoucherManager({
     const [search, setSearch] = useState('');
     const [claimedOnly, setClaimedOnly] = useState(false);
     const [sort, setSort] = useState('recent');
+    const [sortFocused, setSortFocused] = useState(false);
+    const [highlightId, setHighlightId] = useState(null);
+
+    const searchOptions = useMemo(
+        () =>
+            voucherGroups.flatMap((group) =>
+                group.vouchers.map((voucher) => ({
+                    id: voucher.id,
+                    label: voucher.code,
+                    sublabel: voucher.student_name ?? voucher.student_email ?? group.batch_label,
+                    value: voucher.code,
+                    voucher,
+                })),
+            ),
+        [voucherGroups],
+    );
 
     const filteredGroups = useMemo(() => {
-        return voucherGroups
+        const groups = voucherGroups
             .map((group) => ({
                 ...group,
                 vouchers: group.vouchers.filter((voucher) => {
@@ -36,11 +53,28 @@ export default function TeacherVoucherManager({
                 }),
             }))
             .filter((group) => group.vouchers.length > 0);
-    }, [voucherGroups, search, claimedOnly]);
+
+        return groups.map((group) => ({
+            ...group,
+            vouchers: [...group.vouchers].sort((a, b) => {
+                if (sort === 'code') {
+                    return a.code.localeCompare(b.code);
+                }
+
+                return (b.updated_at ?? '').localeCompare(a.updated_at ?? '') || b.id - a.id;
+            }),
+        }));
+    }, [voucherGroups, search, claimedOnly, sort]);
 
     const allVisibleIds = filteredGroups.flatMap((group) => group.vouchers.map((voucher) => voucher.id));
     const allSelected = allVisibleIds.length > 0 && allVisibleIds.every((id) => selectedIds.includes(id));
     const hasSelection = selectedIds.length > 0;
+
+    function handleSearchSelect(option) {
+        setHighlightId(option.voucher?.id ?? option.id ?? null);
+        const row = document.querySelector(`[data-voucher-id="${option.voucher?.id ?? option.id}"]`);
+        row?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
 
     return (
         <section className="teacher-voucher-manager" aria-labelledby="teacher-voucher-manager-title">
@@ -48,26 +82,32 @@ export default function TeacherVoucherManager({
                 Voucher Manager
             </h3>
 
-            <div className="teacher-voucher-manager__toolbar">
-                <div className="teacher-voucher-manager__search">
-                    <Search size={16} aria-hidden="true" />
-                    <input
-                        type="search"
-                        placeholder="Search vouchers..."
-                        value={search}
-                        onChange={(event) => setSearch(event.target.value)}
-                        aria-label="Search vouchers"
-                    />
-                </div>
+            <div className="student-shop-toolbar teacher-voucher-manager__toolbar">
+                <TeacherSearchCombobox
+                    value={search}
+                    onChange={setSearch}
+                    onSelect={handleSearchSelect}
+                    options={searchOptions}
+                    placeholder="Search vouchers..."
+                    ariaLabel="Search vouchers"
+                    emptyLabel="No vouchers match"
+                />
 
-                <label className="teacher-voucher-manager__filter">
+                <label className="teacher-voucher-manager__filter-check">
                     <input type="checkbox" checked={claimedOnly} onChange={(event) => setClaimedOnly(event.target.checked)} />
                     <span>Show claimed only</span>
                 </label>
 
-                <div className="teacher-voucher-manager__sort-wrap">
-                    <ChevronDown size={14} aria-hidden="true" />
-                    <select value={sort} onChange={(event) => setSort(event.target.value)} aria-label="Sort vouchers">
+                <div className={`student-shop-select-wrap ${sortFocused ? 'is-focused' : ''}`}>
+                    <ChevronDown size={16} aria-hidden="true" className="student-shop-select-wrap__icon" />
+                    <select
+                        className="student-shop-select"
+                        value={sort}
+                        onChange={(event) => setSort(event.target.value)}
+                        onFocus={() => setSortFocused(true)}
+                        onBlur={() => setSortFocused(false)}
+                        aria-label="Sort vouchers"
+                    >
                         <option value="recent">Most Recent</option>
                         <option value="code">Voucher Code</option>
                     </select>
@@ -76,17 +116,21 @@ export default function TeacherVoucherManager({
 
             {hasSelection ? (
                 <div className="teacher-voucher-manager__bulk">
-                    <button type="button" className="teacher-voucher-manager__bulk-btn" onClick={onUnlockExams}>
+                    <button type="button" className="student-shop-btn student-shop-btn--outline student-shop-btn--sm" onClick={onUnlockExams}>
                         Unlock Final Exams
                     </button>
-                    <button type="button" className="teacher-voucher-manager__bulk-btn teacher-voucher-manager__bulk-btn--ghost" onClick={onCancelSelection}>
+                    <button
+                        type="button"
+                        className="student-shop-btn student-shop-btn--ghost student-shop-btn--sm"
+                        onClick={onCancelSelection}
+                    >
                         Cancel Selection
                     </button>
                 </div>
             ) : null}
 
-            <div className="teacher-voucher-manager__table">
-                <div className="teacher-voucher-manager__header" role="row">
+            <div className="teacher-data-table teacher-data-table--themed">
+                <div className="teacher-data-row teacher-data-row--head teacher-data-row--themed" role="row">
                     <span>
                         <input
                             type="checkbox"
@@ -108,7 +152,12 @@ export default function TeacherVoucherManager({
                         <div key={group.batch_id} className="teacher-voucher-manager__group">
                             <div className="teacher-voucher-manager__group-label">{group.batch_label}</div>
                             {group.vouchers.map((voucher) => (
-                                <div key={voucher.id} className="teacher-voucher-manager__row" role="row">
+                                <div
+                                    key={voucher.id}
+                                    data-voucher-id={voucher.id}
+                                    className={`teacher-data-row teacher-data-row--themed ${highlightId === voucher.id ? 'teacher-data-row--highlight' : ''}`}
+                                    role="row"
+                                >
                                     <span>
                                         <input
                                             type="checkbox"
@@ -123,11 +172,19 @@ export default function TeacherVoucherManager({
                                     </span>
                                     <span className="teacher-voucher-manager__email-cell">
                                         {voucher.email_status === 'sendable' ? (
-                                            <button type="button" className="teacher-voucher-manager__send-btn" onClick={() => onSendEmail(voucher)}>
+                                            <button
+                                                type="button"
+                                                className="student-shop-btn student-shop-btn--soft student-shop-btn--sm"
+                                                onClick={() => onSendEmail(voucher)}
+                                            >
                                                 Send to Email
                                             </button>
                                         ) : voucher.email_status === 'sent' ? (
-                                            <button type="button" className="teacher-voucher-manager__send-btn teacher-voucher-manager__send-btn--sent" disabled>
+                                            <button
+                                                type="button"
+                                                className="student-shop-btn student-shop-btn--ghost student-shop-btn--sm"
+                                                disabled
+                                            >
                                                 Sent to Email
                                             </button>
                                         ) : (
