@@ -61,6 +61,7 @@ class HandleInertiaRequests extends Middleware
                 'shop_success' => fn () => $request->session()->get('shop_success'),
                 'teacher_purchase_success' => fn () => $request->session()->get('teacher_purchase_success'),
                 'voucher_email_sent' => fn () => $request->session()->get('voucher_email_sent'),
+                'xendit_checkout_url' => fn () => $request->session()->get('xendit_checkout_url'),
             ],
             'ziggy' => function () use ($request) {
                 return array_merge((new Ziggy)->toArray(), [

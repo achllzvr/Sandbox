@@ -35,10 +35,10 @@ class XenditService
                 'amount' => (float) $enrollmentRequest->amount,
                 'description' => 'Bulk Certification Vouchers: '.$certification->title,
                 'payer_email' => $teacher->email,
-                'success_redirect_url' => route('teacher.vouchers', [
+                'success_redirect_url' => route('teacher.shop.index', [
                     'payment_reference' => $enrollmentRequest->payment_reference,
                 ]),
-                'failure_redirect_url' => route('teacher.purchasing'),
+                'failure_redirect_url' => route('teacher.shop.index'),
                 'currency' => 'PHP',
             ]);
 

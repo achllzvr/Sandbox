@@ -18,7 +18,7 @@ export default function Dashboard({ metrics, claimLogs = [] }) {
                             <h2 className="student-page-title">Dashboard</h2>
                             <p className="student-page-subtitle">Overview of your voucher distribution and cohort activity.</p>
                         </div>
-                        <Link href={route('teacher.purchasing')} className="student-btn student-btn--primary">
+                        <Link href={route('teacher.shop.index')} className="student-btn student-btn--primary">
                             Buy vouchers
                         </Link>
                     </div>

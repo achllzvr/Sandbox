@@ -1,17 +1,17 @@
 import { Link, usePage } from '@inertiajs/react';
-import { LayoutDashboard, Shell, ShoppingBag, Ticket } from 'lucide-react';
+import { LayoutDashboard, Shell, ShoppingBag } from 'lucide-react';
 import TeacherWorkspace from '@/Components/Teacher/TeacherWorkspace';
 import { assetUrl } from '@/utils/assetUrl';
 
 const NAV_ITEMS = [
     { label: 'Dashboard', routeName: 'teacher.dashboard', key: 'dashboard', Icon: LayoutDashboard },
-    { label: 'Buy Vouchers', routeName: 'teacher.purchasing', key: 'purchasing', Icon: ShoppingBag },
-    { label: 'My Vouchers', routeName: 'teacher.vouchers', key: 'vouchers', Icon: Ticket },
+    { label: 'Shop', routeName: 'teacher.shop.index', key: 'shop', Icon: ShoppingBag },
     { label: 'My Shells', routeName: 'teacher.shells.index', key: 'shells', Icon: Shell },
 ];
 
 export default function TeacherLayout({ children, activeNav, layoutMode = 'standard', workspaceModifier }) {
-    const { flash } = usePage().props;
+    const { flash, errors = {} } = usePage().props;
+    const checkoutError = errors.checkout;
     const usesWorkspace = layoutMode === 'shell' || layoutMode === 'select' || layoutMode === 'shop-detail';
     const isShellPage = layoutMode === 'shell' || layoutMode === 'shop-detail';
 
@@ -73,13 +73,14 @@ export default function TeacherLayout({ children, activeNav, layoutMode = 'stand
                 )}
             </main>
 
-            {flash?.success || flash?.error || flash?.teacher_purchase_success || flash?.voucher_email_sent ? (
+            {(flash?.success || flash?.error || checkoutError || flash?.teacher_purchase_success || flash?.voucher_email_sent) ? (
                 <div
-                    className={`student-flash student-flash--floating ${flash.error ? 'student-flash--error' : 'student-flash--success'} student-fade-in-up`}
+                    className={`student-flash student-flash--floating ${flash?.error || checkoutError ? 'student-flash--error' : 'student-flash--success'} student-fade-in-up`}
                     role="status"
                 >
-                    {flash.error ||
-                        flash.success ||
+                    {flash?.error ||
+                        checkoutError ||
+                        flash?.success ||
                         (flash.teacher_purchase_success
                             ? `Purchase complete — ${flash.teacher_purchase_success.quantity} voucher${flash.teacher_purchase_success.quantity === 1 ? '' : 's'}.`
                             : null) ||

@@ -1,11 +1,5 @@
 /**
- * Teacher My Shells — purchased voucher batches.
- *
- * WIRED (UI + mock):
- * - Shell grid from TeacherShellController
- * - Purchase history modal (mock transactions)
- *
- * TODO[backend]: Real purchased shells from teacher cohorts/enrollment_requests.
+ * Teacher My Shells — purchased voucher batches (live cohort + voucher data).
  */
 import { Head } from '@inertiajs/react';
 import { useState } from 'react';

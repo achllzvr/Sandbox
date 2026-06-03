@@ -99,7 +99,8 @@ class TeacherBulkCheckoutTest extends TestCase
             'quantity' => 10,
         ]);
 
-        $response->assertStatus(409);
+        $response->assertRedirect(route('teacher.shop.index'));
+        $response->assertSessionHas('xendit_checkout_url', 'https://checkout.xendit.co/web/invoices/inv_123');
 
         $this->assertDatabaseHas('enrollment_requests', [
             'user_id' => $this->teacher->id,
@@ -161,6 +162,35 @@ class TeacherBulkCheckoutTest extends TestCase
         $this->assertEquals(3, Voucher::where('enrollment_request_id', $enrollmentRequest->id)->count());
     }
 
+    public function test_free_certification_checkout_provisions_vouchers_without_xendit(): void
+    {
+        $this->actingAs($this->teacher);
+
+        $freeCert = Certification::create([
+            'title' => 'Free Shell',
+            'description' => 'No-cost shell for bulk voucher testing',
+            'category' => 'Demo',
+            'difficulty' => 'Beginner',
+            'price' => 0.00,
+            'pass_threshold' => 70,
+            'status' => 'published',
+            'created_by_user_id' => $this->teacher->id,
+        ]);
+
+        $response = $this->post(route('teacher.checkout.bulk'), [
+            'certification_id' => $freeCert->id,
+            'quantity' => 3,
+        ]);
+
+        $response->assertRedirect(route('teacher.shop.index'));
+        $this->assertEquals(3, Voucher::where('teacher_id', $this->teacher->id)->count());
+        $this->assertDatabaseHas('enrollment_requests', [
+            'user_id' => $this->teacher->id,
+            'certification_id' => $freeCert->id,
+            'status' => 'paid',
+        ]);
+    }
+
     public function test_return_url_syncs_paid_invoice_from_xendit(): void
     {
         $this->actingAs($this->teacher);
@@ -187,7 +217,7 @@ class TeacherBulkCheckoutTest extends TestCase
             ], 200),
         ]);
 
-        $response = $this->get(route('teacher.vouchers', [
+        $response = $this->get(route('teacher.shop.index', [
             'payment_reference' => 'SBX-TCH-RETURN123',
         ]));
 

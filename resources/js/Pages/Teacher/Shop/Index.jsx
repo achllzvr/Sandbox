@@ -1,11 +1,5 @@
 /**
- * Teacher shop — browse shells and purchase voucher batches.
- *
- * WIRED:
- * - Catalog from Certification model (TeacherShopController)
- * - Bulk checkout modal flow (BulkCheckoutController mock success)
- *
- * TODO[backend]: purchasedCertificationIds from teacher cohorts; real payment flow.
+ * Teacher shop — browse shells and purchase voucher batches via Xendit checkout.
  */
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { ChevronDown, Loader2, Search } from 'lucide-react';
@@ -46,8 +40,8 @@ function groupTeacherCatalog(catalog, categoryFilter = 'all') {
         }));
 }
 
-export default function Index({ certifications, filters = {}, categories = [] }) {
-    const { flash } = usePage().props;
+export default function Index({ certifications, filters = {}, categories = [], pendingPurchases = [] }) {
+    const { flash, errors: pageErrors = {} } = usePage().props;
     const [selectedCert, setSelectedCert] = useState(null);
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [pageMode, setPageMode] = useState('browse');
@@ -131,6 +125,21 @@ export default function Index({ certifications, filters = {}, categories = [] })
         }
     }, [flash?.teacher_purchase_success, certifications.data]);
 
+    useEffect(() => {
+        const checkoutUrl = flash?.xendit_checkout_url;
+        if (checkoutUrl) {
+            window.location.assign(checkoutUrl);
+        }
+    }, [flash?.xendit_checkout_url]);
+
+    useEffect(() => {
+        if (!pageErrors.checkout) {
+            return;
+        }
+
+        setModalView('batch_confirm');
+    }, [pageErrors.checkout]);
+
     function openShellDetail(cert) {
         const index = catalog.findIndex((item) => item.id === cert.id);
         setSelectedCert(cert);
@@ -202,12 +211,21 @@ export default function Index({ certifications, filters = {}, categories = [] })
                 <div className="student-shop-page student-enter-stagger">
                     <header className="student-home-header student-shop-page__header student-enter__item" style={{ '--student-enter-index': 0 }}>
                         <h2 className="student-page-title">Available Shells</h2>
-                        <p className="student-page-subtitle">Browse the available certificates for taking!</p>
+                        <p className="student-page-subtitle">Browse certifications and purchase voucher batches for your cohort.</p>
                     </header>
+
+                    {pendingPurchases.length > 0 ? (
+                        <div className="student-mock-banner student-enter__item" style={{ '--student-enter-index': 1 }}>
+                            <strong>Awaiting Xendit payment:</strong>{' '}
+                            {pendingPurchases.length} pending batch
+                            {pendingPurchases.length === 1 ? '' : 'es'}. Complete checkout in test mode, then return here
+                            to sync vouchers into My Shells.
+                        </div>
+                    ) : null}
 
                     <div
                         className={`student-shop-toolbar student-enter__item ${isFiltering ? 'student-shop-toolbar--loading' : ''}`}
-                        style={{ '--student-enter-index': 1 }}
+                        style={{ '--student-enter-index': pendingPurchases.length > 0 ? 2 : 1 }}
                     >
                         <div className={`student-shop-search ${searchFocused ? 'is-focused' : ''} ${showSearchLoader ? 'is-loading' : ''}`}>
                             {showSearchLoader ? (

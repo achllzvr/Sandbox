@@ -253,12 +253,14 @@ Route::middleware(['auth', 'otp.verified', 'role:teacher'])
     ->name('teacher.')
     ->group(function () {
         Route::get('/dashboard', [\App\Http\Controllers\Teacher\TeacherDashboardController::class, 'index'])->name('dashboard');
-        Route::get('/purchasing', [\App\Http\Controllers\Teacher\TeacherDashboardController::class, 'purchasing'])->name('purchasing');
-        Route::get('/vouchers', [\App\Http\Controllers\Teacher\TeacherDashboardController::class, 'vouchers'])->name('vouchers');
         Route::post('/checkout/bulk', [\App\Http\Controllers\Teacher\VoucherCheckoutController::class, 'store'])->name('checkout.bulk');
 
         Route::get('/shop', [\App\Http\Controllers\Teacher\TeacherShopController::class, 'index'])->name('shop.index');
-        Route::redirect('/shop-legacy', '/teacher/purchasing');
+        Route::redirect('/purchasing', '/teacher/shop')->name('purchasing');
+        Route::get('/vouchers', function (\Illuminate\Http\Request $request) {
+            return redirect()->route('teacher.shop.index', $request->query());
+        })->name('vouchers');
+        Route::redirect('/shop-legacy', '/teacher/shop');
 
         Route::get('/shells', [\App\Http\Controllers\Teacher\TeacherShellController::class, 'index'])->name('shells.index');
         Route::get('/shells/{certification}', [\App\Http\Controllers\Teacher\TeacherShellController::class, 'show'])->name('shells.show');

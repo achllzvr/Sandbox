@@ -1,4 +1,4 @@
-import { Link, useForm } from '@inertiajs/react';
+import { Link, router, useForm, usePage } from '@inertiajs/react';
 import { ArrowLeft, CheckCircle2, Minus, Plus } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { resolveShopTheme } from '@/utils/shellThemes';
@@ -32,8 +32,11 @@ function formatBatchName(date = new Date()) {
 }
 
 export default function TeacherShopModal({ cert, view, catalogIndex = 0, quantity: quantityProp = 9, onClose, onBack, onProceedToQuantity, onProceedToConfirm }) {
+    const { errors: pageErrors = {} } = usePage().props;
     const { className: theme, style: themeStyle } = resolveShopTheme(cert, catalogIndex);
     const [quantity, setQuantity] = useState(quantityProp);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState(null);
     const provider = shopProviderLine(cert);
     const batchName = useMemo(() => `Batch ${formatBatchName()}`, []);
 
@@ -44,10 +47,6 @@ export default function TeacherShopModal({ cert, view, catalogIndex = 0, quantit
     });
 
     const checkoutForm = useForm({
-        certification_id: cert?.id ?? null,
-        quantity: quantityProp,
-        tos_action_irreversible: true,
-        tos_privacy_act: true,
         purchase_confirmed: false,
         batch_acknowledged: false,
     });
@@ -65,10 +64,6 @@ export default function TeacherShopModal({ cert, view, catalogIndex = 0, quantit
         tosForm.clearErrors();
     }, [cert?.id]);
 
-    useEffect(() => {
-        checkoutForm.setData('quantity', quantity);
-    }, [quantity]);
-
     if (!cert) {
         return null;
     }
@@ -76,6 +71,12 @@ export default function TeacherShopModal({ cert, view, catalogIndex = 0, quantit
     const canProceedTos = tosForm.data.tos_action_irreversible && tosForm.data.tos_privacy_act;
     const canProceedQuantity = quantity > 0;
     const canProceedConfirm = checkoutForm.data.purchase_confirmed && checkoutForm.data.batch_acknowledged;
+    const checkoutError =
+        submitError ||
+        pageErrors.checkout ||
+        checkoutForm.errors.checkout ||
+        checkoutForm.errors.certification_id ||
+        checkoutForm.errors.quantity;
 
     function handleTosProceed(event) {
         event.preventDefault();
@@ -95,10 +96,38 @@ export default function TeacherShopModal({ cert, view, catalogIndex = 0, quantit
 
     function handleConfirmSubmit(event) {
         event.preventDefault();
-        if (!canProceedConfirm) {
+        if (!checkoutForm.data.purchase_confirmed || !checkoutForm.data.batch_acknowledged) {
             return;
         }
-        checkoutForm.post(route('teacher.checkout.bulk'));
+
+        if (!cert?.id || quantity < 1) {
+            setSubmitError('Select a valid shell and quantity before checkout.');
+            return;
+        }
+
+        setSubmitError(null);
+        setIsSubmitting(true);
+
+        router.post(
+            route('teacher.checkout.bulk'),
+            {
+                certification_id: cert.id,
+                quantity,
+            },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onError: (errors) => {
+                    setSubmitError(
+                        errors.checkout ||
+                            errors.certification_id ||
+                            errors.quantity ||
+                            'Checkout failed. Please try again.',
+                    );
+                },
+                onFinish: () => setIsSubmitting(false),
+            },
+        );
     }
 
     function handleHeaderBack() {
@@ -196,6 +225,12 @@ export default function TeacherShopModal({ cert, view, catalogIndex = 0, quantit
                         <form className="student-shop-flow" onSubmit={handleConfirmSubmit}>
                             <h3 className="student-shop-modal__title">Confirm voucher batch purchase</h3>
 
+                            {checkoutError ? (
+                                <div className="student-mock-banner" role="alert">
+                                    {checkoutError}
+                                </div>
+                            ) : null}
+
                             <label className="student-shop-check">
                                 <input
                                     type="checkbox"
@@ -224,9 +259,9 @@ export default function TeacherShopModal({ cert, view, catalogIndex = 0, quantit
                             <button
                                 type="submit"
                                 className={`student-shop-btn student-shop-btn--primary ${canProceedConfirm ? 'is-ready' : ''}`}
-                                disabled={!canProceedConfirm || checkoutForm.processing}
+                                disabled={!canProceedConfirm || isSubmitting}
                             >
-                                {checkoutForm.processing ? 'Processing...' : 'Proceed'}
+                                {isSubmitting ? 'Processing...' : 'Proceed'}
                             </button>
                         </form>
                     ) : null}

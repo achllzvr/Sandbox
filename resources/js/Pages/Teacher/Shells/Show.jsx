@@ -1,11 +1,5 @@
 /**
  * Teacher shell landing — batch data + voucher manager for one purchased shell.
- *
- * WIRED (UI + mock):
- * - Shell detail, batch selector, voucher manager, send-voucher modal
- * - Per-shell purchase history modal
- *
- * TODO[backend]: Real cohorts, vouchers, and purchase records for auth teacher.
  */
 import { Head, Link, usePage } from '@inertiajs/react';
 import { ArrowLeft, CheckCircle2 } from 'lucide-react';
