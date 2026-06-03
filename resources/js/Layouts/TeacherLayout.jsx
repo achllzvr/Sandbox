@@ -1,11 +1,12 @@
 import { Link, usePage } from '@inertiajs/react';
-import { LayoutDashboard, Shell, ShoppingBag } from 'lucide-react';
+import { LayoutDashboard, Shell, ShoppingBag, Ticket } from 'lucide-react';
 import TeacherWorkspace from '@/Components/Teacher/TeacherWorkspace';
 import { assetUrl } from '@/utils/assetUrl';
 
 const NAV_ITEMS = [
     { label: 'Dashboard', routeName: 'teacher.dashboard', key: 'dashboard', Icon: LayoutDashboard },
-    { label: 'Shop', routeName: 'teacher.shop.index', key: 'shop', Icon: ShoppingBag },
+    { label: 'Buy Vouchers', routeName: 'teacher.purchasing', key: 'purchasing', Icon: ShoppingBag },
+    { label: 'My Vouchers', routeName: 'teacher.vouchers', key: 'vouchers', Icon: Ticket },
     { label: 'My Shells', routeName: 'teacher.shells.index', key: 'shells', Icon: Shell },
 ];
 

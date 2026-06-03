@@ -1,25 +1,27 @@
 /**
- * Teacher dashboard — affiliate metrics and recent voucher claims.
- *
- * WIRED (UI + mock):
- * - Metric cards, claim logs from TeacherDashboardMockData
- *
- * TODO[backend]: Real aggregates from cohort_students, vouchers, enrollments.
+ * Teacher dashboard — live voucher metrics and recent claims.
  */
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import TeacherClaimLogsPanel from '@/Components/Teacher/TeacherClaimLogsPanel';
 import TeacherMetricCards from '@/Components/Teacher/TeacherMetricCards';
 import TeacherLayout from '@/Layouts/TeacherLayout';
 
-export default function Dashboard({ metrics, claimLogs = [], isMock = false }) {
+export default function Dashboard({ metrics, claimLogs = [] }) {
     return (
         <TeacherLayout activeNav="dashboard">
             <Head title="Dashboard" />
 
             <div className="teacher-dashboard">
                 <header className="student-home-header">
-                    <h2 className="student-page-title">Dashboard</h2>
-                    {isMock ? <p className="student-page-subtitle">Sample affiliate metrics and recent voucher claims.</p> : null}
+                    <div className="teacher-dashboard__header-row">
+                        <div>
+                            <h2 className="student-page-title">Dashboard</h2>
+                            <p className="student-page-subtitle">Overview of your voucher distribution and cohort activity.</p>
+                        </div>
+                        <Link href={route('teacher.purchasing')} className="student-btn student-btn--primary">
+                            Buy vouchers
+                        </Link>
+                    </div>
                 </header>
 
                 <TeacherMetricCards metrics={metrics} />

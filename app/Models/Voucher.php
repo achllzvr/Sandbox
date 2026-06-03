@@ -30,4 +30,24 @@ class Voucher extends Model
     {
         return $this->belongsTo(User::class, 'used_by');
     }
+
+    public function user()
+    {
+        return $this->usedByUser();
+    }
+
+    public function certification()
+    {
+        return $this->belongsTo(Certification::class);
+    }
+
+    public function cohort()
+    {
+        return $this->belongsTo(Cohort::class);
+    }
+
+    public function enrollmentRequest()
+    {
+        return $this->belongsTo(EnrollmentRequest::class);
+    }
 }

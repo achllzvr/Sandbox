@@ -4,12 +4,12 @@ namespace App\Http\Controllers\Teacher;
 
 use App\Http\Controllers\Controller;
 use App\Models\Certification;
-use App\Support\Mocks\Teacher\TeacherShellMockData;
+use App\Models\Voucher;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 /**
- * TODO[backend]: purchasedCertificationIds from teacher cohorts/voucher batches.
+ * Teacher shop catalog — browse published shells (legacy UI; prefer /teacher/purchasing).
  */
 class TeacherShopController extends Controller
 {
@@ -62,9 +62,10 @@ class TeacherShopController extends Controller
             ->pluck('category')
             ->values();
 
-        // Purchased shells from mock until teacher cohorts exist.
-        $purchasedCertificationIds = collect(TeacherShellMockData::purchasedShells())
-            ->pluck('id')
+        $purchasedCertificationIds = Voucher::where('teacher_id', auth()->id())
+            ->pluck('certification_id')
+            ->unique()
+            ->values()
             ->all();
 
         return Inertia::render('Teacher/Shop/Index', [

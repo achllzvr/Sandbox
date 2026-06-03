@@ -8,17 +8,26 @@ class EnrollmentRequest extends Model
 {
     protected $table = 'enrollment_requests';
 
-    public $timestamps = false;
-
     protected $fillable = [
         'user_id',
         'certification_id',
+        'request_type',
+        'quantity',
+        'amount',
         'status',
         'payment_proof_url',
         'payment_reference',
+        'xendit_invoice_id',
+        'payment_method',
         'requested_at',
         'reviewed_at',
         'reviewed_by',
+    ];
+
+    protected $casts = [
+        'amount' => 'decimal:2',
+        'requested_at' => 'datetime',
+        'reviewed_at' => 'datetime',
     ];
 
     public function user()
@@ -34,5 +43,10 @@ class EnrollmentRequest extends Model
     public function reviewer()
     {
         return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
     }
 }
