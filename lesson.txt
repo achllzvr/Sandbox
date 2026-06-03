@@ -1,0 +1,18 @@
+Basic HTML Structure and Tags
+
+HTML stands for HyperText Markup Language. It is the standard markup language for documents designed to be displayed in a web browser.
+
+The Basic Structure of an HTML Page:
+- <!DOCTYPE html>: Defines that this document is an HTML5 document.
+- <html>: The root element of an HTML page.
+- <head>: Contains meta information about the HTML page (like title, encoding).
+- <title>: Specifies a title for the HTML page (which is shown in the browser's title bar).
+- <body>: Defines the document's body, and is a container for all the visible contents, such as headings, paragraphs, images, hyperlinks, tables, lists, etc.
+
+Common HTML Tags:
+- <h1> to <h6>: Defines headings. <h1> is the most important, <h6> is the least.
+- <p>: Defines a paragraph.
+- <a>: Defines a hyperlink. Use the href attribute to specify the destination URL.
+- <img>: Defines an image. Use src attribute for the source path and alt for alternative text.
+- <ul> and <ol>: Defines unordered (bulleted) and ordered (numbered) lists.
+- <li>: Defines list items inside lists.

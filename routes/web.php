@@ -13,6 +13,7 @@ use App\Http\Controllers\Creator\LearningMaterialController;
 use App\Http\Controllers\Creator\ModuleContentController;
 use App\Http\Controllers\Creator\ModuleController;
 use App\Http\Controllers\Creator\QuestionController;
+use App\Http\Controllers\Creator\GeminiController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Student\DashboardController as StudentDashboardController;
 use App\Http\Controllers\Student\MarketplaceController;
@@ -125,6 +126,10 @@ Route::middleware(['auth', 'otp.verified', 'role:content_creator'])
         // Sandbox practice quiz (Short Test) route
         Route::post('modules/{module}/questions', [QuestionController::class, 'store'])
             ->name('modules.questions.store');
+
+        // Gemini AI questions generator
+        Route::post('gemini/generate-questions', [GeminiController::class, 'generateQuestions'])
+            ->name('gemini.generate-questions');
     });
 
 /*

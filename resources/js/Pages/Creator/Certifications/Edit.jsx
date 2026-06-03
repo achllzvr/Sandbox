@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import CreatorLayout from '@/Layouts/CreatorLayout';
 import { Head, useForm, router } from '@inertiajs/react';
+import axios from 'axios';
 
 const STATUS_STYLE = {
     draft:              { border: 'border-emerald-400', bg: 'bg-emerald-50', badge: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500' },
@@ -17,7 +18,7 @@ const COMPONENT_TYPE_META = {
     youtube_embed: { icon: '🎥', label: 'YouTube Embed' },
 };
 
-export default function Edit({ certification }) {
+export default function Edit({ certification, hasSystemApiKey }) {
     // ── Extract modules from default lesson ────────────────
     const defaultLesson = certification.lessons?.[0] || null;
     const modules = defaultLesson ? (defaultLesson.modules || []) : [];
@@ -70,6 +71,370 @@ export default function Edit({ certification }) {
     const [questionsList, setQuestionsList] = useState([]);
     const [examQuestionsList, setExamQuestionsList] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // AI Generation States
+    const [quizTab, setQuizTab] = useState('edit'); // 'edit' or 'ai'
+    const [examTab, setExamTab] = useState('edit'); // 'edit' or 'ai'
+    const [aiKeyType, setAiKeyType] = useState(hasSystemApiKey ? 'system' : 'custom');
+    const [aiKey, setAiKey] = useState(localStorage.getItem('gemini_api_key') || '');
+    const [aiFile, setAiFile] = useState(null);
+    const [aiNumQuestions, setAiNumQuestions] = useState(5);
+    const [aiLoading, setAiLoading] = useState(false);
+    const [aiLoadingMessage, setAiLoadingMessage] = useState('Initiating scan...');
+    const [aiGeneratedPreview, setAiGeneratedPreview] = useState(null);
+
+    const handleSaveAiKey = (key) => {
+        setAiKey(key);
+        localStorage.setItem('gemini_api_key', key);
+    };
+
+    const handleGenerateAiQuestions = (type) => {
+        if (!aiFile) {
+            alert('Please select a file to scan.');
+            return;
+        }
+        if (aiKeyType === 'custom' && !aiKey) {
+            alert('Please paste your personal Gemini API Key.');
+            return;
+        }
+
+        setAiLoading(true);
+        setAiLoadingMessage('Connecting to Gemini API...');
+
+        const formData = new FormData();
+        formData.append('prompt_type', 'file');
+        formData.append('num_questions', aiNumQuestions);
+        formData.append('api_key_type', aiKeyType);
+        if (aiKeyType === 'custom' && aiKey) {
+            formData.append('api_key', aiKey);
+        }
+        formData.append('file', aiFile);
+
+        const messages = [
+            'Uploading document...',
+            'Scanning contents with Gemini AI...',
+            'Analyzing concepts and patterns...',
+            'Generating multiple-choice options...',
+            'Verifying correct answers...',
+            'Structuring question data...'
+        ];
+        let msgIdx = 0;
+        const interval = setInterval(() => {
+            if (msgIdx < messages.length - 1) {
+                msgIdx++;
+                setAiLoadingMessage(messages[msgIdx]);
+            }
+        }, 2500);
+
+        axios.post(route('creator.gemini.generate-questions'), formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        })
+        .then(response => {
+            clearInterval(interval);
+            setAiLoading(false);
+            if (response.data && response.data.questions) {
+                const formattedQs = response.data.questions.map(q => ({
+                    question_text: q.question_text,
+                    answers: q.answers.map(ans => ({
+                        answer_text: ans.answer_text,
+                        is_correct: !!ans.is_correct
+                    }))
+                }));
+
+                setAiGeneratedPreview(formattedQs);
+                setAiFile(null);
+            } else {
+                alert('Could not generate questions: API did not return questions structure.');
+            }
+        })
+        .catch(error => {
+            clearInterval(interval);
+            setAiLoading(false);
+            console.error(error);
+            const errMsg = error.response?.data?.error || error.message || 'An error occurred while generating questions.';
+            alert('Error: ' + errMsg);
+        });
+    };
+
+    const updatePreviewQuestionText = (idx, text) => {
+        setAiGeneratedPreview(prev => {
+            const next = [...prev];
+            next[idx] = { ...next[idx], question_text: text };
+            return next;
+        });
+    };
+
+    const updatePreviewAnswerText = (qIdx, aIdx, text) => {
+        setAiGeneratedPreview(prev => {
+            const next = [...prev];
+            const answers = [...next[qIdx].answers];
+            answers[aIdx] = { ...answers[aIdx], answer_text: text };
+            next[qIdx] = { ...next[qIdx], answers };
+            return next;
+        });
+    };
+
+    const setPreviewCorrectAnswer = (qIdx, aIdx) => {
+        setAiGeneratedPreview(prev => {
+            const next = [...prev];
+            const answers = next[qIdx].answers.map((ans, idx) => ({
+                ...ans,
+                is_correct: idx === aIdx
+            }));
+            next[qIdx] = { ...next[qIdx], answers };
+            return next;
+        });
+    };
+
+    const removePreviewQuestion = (idx) => {
+        setAiGeneratedPreview(prev => prev.filter((_, i) => i !== idx));
+    };
+
+    const handleApproveImport = (type, mode) => {
+        if (!aiGeneratedPreview || aiGeneratedPreview.length === 0) {
+            alert('No questions to import.');
+            return;
+        }
+
+        if (type === 'quiz') {
+            if (mode === 'replace') {
+                setQuestionsList(aiGeneratedPreview);
+            } else {
+                setQuestionsList(prev => [...prev, ...aiGeneratedPreview]);
+            }
+            setQuizTab('edit');
+        } else {
+            if (mode === 'replace') {
+                setExamQuestionsList(aiGeneratedPreview);
+            } else {
+                setExamQuestionsList(prev => [...prev, ...aiGeneratedPreview]);
+            }
+            setExamTab('edit');
+        }
+
+        setAiGeneratedPreview(null);
+    };
+
+    const renderAiGenerator = (type) => {
+        if (aiGeneratedPreview) {
+            return (
+                <div className="p-6 space-y-6 flex-grow overflow-y-auto">
+                    <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100 rounded-2xl p-4 flex gap-3">
+                        <span className="text-xl">✨</span>
+                        <div className="text-xs text-slate-700 leading-relaxed">
+                            <p className="font-bold text-emerald-900">Preview Generated Questions ({aiGeneratedPreview.length})</p>
+                            <p className="mt-0.5">Below are the questions scanned and generated from your study material. You can edit the questions, adjust their choices, select different correct options, or remove individual questions before importing them.</p>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        {aiGeneratedPreview.map((q, qIdx) => (
+                            <div key={qIdx} className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3 relative shadow-sm">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs font-bold text-slate-750 bg-slate-200 px-2.5 py-1 rounded-lg">Question {qIdx + 1}</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => removePreviewQuestion(qIdx)}
+                                        className="text-xs text-red-550 hover:text-red-700 font-bold flex items-center gap-1 transition-all"
+                                    >
+                                        🗑️ Remove
+                                    </button>
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Question Text</label>
+                                    <input
+                                        type="text"
+                                        value={q.question_text}
+                                        onChange={e => updatePreviewQuestionText(qIdx, e.target.value)}
+                                        className="w-full text-xs rounded-xl border-slate-200 focus:border-violet-400 focus:ring-violet-400"
+                                        required
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+                                    {q.answers.map((ans, aIdx) => (
+                                        <div 
+                                            key={aIdx} 
+                                            className={`flex items-center gap-2.5 p-2.5 rounded-xl border transition-all ${
+                                                ans.is_correct 
+                                                    ? 'border-emerald-305 bg-emerald-50/30' 
+                                                    : 'border-slate-200 bg-white'
+                                            }`}
+                                        >
+                                            <input
+                                                type="radio"
+                                                name={`preview-correct-${qIdx}`}
+                                                checked={ans.is_correct}
+                                                onChange={() => setPreviewCorrectAnswer(qIdx, aIdx)}
+                                                className="text-emerald-605 focus:ring-emerald-400 w-4 h-4"
+                                            />
+                                            <input
+                                                type="text"
+                                                value={ans.answer_text}
+                                                onChange={e => updatePreviewAnswerText(qIdx, aIdx, e.target.value)}
+                                                placeholder={`Choice Option ${aIdx + 1}`}
+                                                className="flex-grow text-xs border-0 p-0 focus:ring-0 focus:border-0 bg-transparent"
+                                                required
+                                            />
+                                            {ans.is_correct && (
+                                                <span className="text-[10px] text-emerald-600 font-bold bg-emerald-100/80 px-1.5 py-0.5 rounded-md">Correct</span>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-4 border-t border-slate-100">
+                        <button
+                            type="button"
+                            onClick={() => setAiGeneratedPreview(null)}
+                            className="w-full sm:w-auto px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all"
+                        >
+                            Discard & Start Over
+                        </button>
+                        
+                        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto font-sans">
+                            <button
+                                type="button"
+                                onClick={() => handleApproveImport(type, 'append')}
+                                className="w-full sm:w-auto px-4 py-2 border border-violet-200 hover:bg-violet-50 text-violet-700 text-xs font-bold rounded-xl transition-all"
+                            >
+                                Approve & Append
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleApproveImport(type, 'replace')}
+                                className="w-full sm:w-auto px-5 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:brightness-110 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-violet-500/15"
+                            >
+                                Approve & Replace Existing
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        return (
+            <div className="p-6 space-y-6 flex-grow overflow-y-auto">
+                <div className="bg-gradient-to-r from-violet-50 to-indigo-50 border border-violet-100 rounded-2xl p-4 flex gap-3">
+                    <span className="text-xl">💡</span>
+                    <div className="text-xs text-slate-700 leading-relaxed">
+                        <p className="font-bold text-violet-905">How it works</p>
+                        <p className="mt-0.5">Upload a study document (PDF, Text, or Image). Gemini will scan the content and automatically generate high-quality multiple choice questions. You will be able to review, edit, and approve them before they are added to the questionnaire.</p>
+                    </div>
+                </div>
+
+                {/* API Key Configuration Option */}
+                <div className="space-y-3 border-b border-slate-100 pb-4">
+                    <label className="block text-xs font-bold text-slate-700">GEMINI API KEY PREFERENCE</label>
+                    <div className="grid grid-cols-2 gap-3">
+                        <button
+                            type="button"
+                            onClick={() => setAiKeyType('system')}
+                            className={`p-2.5 rounded-xl border text-left text-xs transition-all flex flex-col justify-between min-h-[58px] ${
+                                aiKeyType === 'system'
+                                    ? 'border-violet-600 bg-violet-50/50 text-violet-750 ring-2 ring-violet-600/10'
+                                    : 'border-slate-200 hover:bg-slate-50 text-slate-650'
+                            }`}
+                        >
+                            <span className="font-bold flex items-center gap-1.5">
+                                🖥️ System API Key
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${
+                                    hasSystemApiKey 
+                                        ? 'bg-emerald-100 text-emerald-700' 
+                                        : 'bg-amber-100 text-amber-700'
+                                }`}>
+                                    {hasSystemApiKey ? 'Configured' : 'Not Set'}
+                                </span>
+                            </span>
+                            <span className="text-[10px] text-slate-400 leading-tight">Use the shared project keys</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setAiKeyType('custom')}
+                            className={`p-2.5 rounded-xl border text-left text-xs transition-all flex flex-col justify-between min-h-[58px] ${
+                                aiKeyType === 'custom'
+                                    ? 'border-violet-600 bg-violet-50/50 text-violet-750 ring-2 ring-violet-600/10'
+                                    : 'border-slate-200 hover:bg-slate-50 text-slate-650'
+                            }`}
+                        >
+                            <span className="font-bold">🔑 Personal API Key</span>
+                            <span className="text-[10px] text-slate-400 leading-tight">Paste your own Gemini API Key</span>
+                        </button>
+                    </div>
+
+                    {aiKeyType === 'custom' && (
+                        <div className="space-y-2 mt-3 pt-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                            <div className="flex justify-between items-center">
+                                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">YOUR GEMINI API KEY</label>
+                                <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-[10px] text-violet-650 hover:underline font-bold">
+                                    Get free key from Google AI Studio ↗
+                                </a>
+                            </div>
+                            <input
+                                type="password"
+                                value={aiKey}
+                                onChange={e => handleSaveAiKey(e.target.value)}
+                                placeholder="Paste your API key here (saved locally in your browser)..."
+                                className="w-full text-xs rounded-xl border-slate-200 focus:border-violet-400 focus:ring-violet-400 bg-slate-50/50"
+                            />
+                        </div>
+                    )}
+                </div>
+
+                <div className="space-y-4">
+                    <div className="space-y-2">
+                        <label className="block text-xs font-bold text-slate-700">UPLOAD FILE</label>
+                        <div className="border-2 border-dashed border-slate-200 hover:border-violet-300 rounded-xl p-6 text-center transition-all bg-slate-50/50 relative">
+                            <input
+                                type="file"
+                                accept=".pdf,.txt,.png,.jpg,.jpeg,.webp"
+                                onChange={e => setAiFile(e.target.files[0])}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            />
+                            <span className="text-2xl mb-1 block">📄</span>
+                            <span className="text-xs font-bold text-slate-600">
+                                {aiFile ? aiFile.name : "Click to browse or drag your file here"}
+                            </span>
+                            <span className="text-[10px] text-slate-400 block mt-1">Supports PDF, TXT, PNG, JPG, JPEG, WEBP (Max 10MB)</span>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 items-center pt-2">
+                        <div>
+                            <label className="block text-xs font-bold text-slate-700 mb-1">NUMBER OF QUESTIONS</label>
+                            <select
+                                value={aiNumQuestions}
+                                onChange={e => setAiNumQuestions(parseInt(e.target.value))}
+                                className="block w-full rounded-xl border-slate-250 text-xs bg-slate-50 focus:border-violet-400 focus:ring-violet-400"
+                            >
+                                <option value={5}>5 Questions (Default)</option>
+                                <option value={10}>10 Questions</option>
+                                <option value={15}>15 Questions</option>
+                                <option value={20}>20 Questions</option>
+                            </select>
+                        </div>
+                        
+                        <div className="pt-4 flex justify-end">
+                            <button
+                                type="button"
+                                onClick={() => handleGenerateAiQuestions(type)}
+                                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:brightness-110 text-white text-xs font-bold shadow-md shadow-violet-500/25 flex items-center gap-1.5 transition-all"
+                            >
+                                ✨ Scan & Generate
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
 
     // ── Module Handlers ────────────────────────────────────
     const submitAddSandbox = (e) => {
@@ -160,6 +525,7 @@ export default function Edit({ certification }) {
 
     // ── Practice Quiz (Short Test) Handlers ────────────────
     const openQuizEditor = () => {
+        setQuizTab('edit');
         const existingQuestions = (activeModule.questions || []).map(q => ({
             question_text: q.question_text,
             answers: (q.answers || []).map(a => ({
@@ -259,6 +625,7 @@ export default function Edit({ certification }) {
 
     // ── Final Exam Handlers ────────────────────────────────
     const openExamEditor = () => {
+        setExamTab('edit');
         const existingQuestions = (certification.exam_questions || []).map(q => ({
             question_text: q.question_text,
             answers: (q.answers || []).map(a => ({
@@ -957,88 +1324,137 @@ export default function Edit({ certification }) {
                 {/* ── Quiz Modal (Practice Quiz Builder) ── */}
                 {showQuizModal && (
                     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[85vh] shadow-2xl flex flex-col overflow-hidden border border-slate-100 animate-in fade-in duration-150">
+                        <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[85vh] shadow-2xl flex flex-col overflow-hidden border border-slate-100 animate-in fade-in duration-150 relative">
+                            {/* Loading Overlay */}
+                            {aiLoading && (
+                                <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-6 animate-in fade-in duration-200">
+                                    <div className="bg-white rounded-2xl p-8 max-w-sm w-full text-center space-y-4 shadow-2xl border border-slate-100 flex flex-col items-center">
+                                        <div className="relative w-16 h-16 flex items-center justify-center">
+                                            <div className="absolute inset-0 rounded-full border-4 border-slate-100"></div>
+                                            <div className="absolute inset-0 rounded-full border-4 border-violet-600 border-t-transparent animate-spin"></div>
+                                            <span className="text-xl animate-pulse">✨</span>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <h4 className="font-bold text-slate-800 text-sm">Gemini AI Scanner</h4>
+                                            <p className="text-xs text-slate-400 font-semibold animate-pulse">{aiLoadingMessage}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
                                 <div>
                                     <h3 className="font-bold text-slate-800 text-sm">Manage Practice Quiz for "{activeModule?.title}"</h3>
                                     <p className="text-[10px] text-slate-400 font-medium">Add practice multiple-choice questions. Min 5 questions required.</p>
                                 </div>
-                                <button onClick={() => setShowQuizModal(false)} className="text-slate-400 hover:text-slate-650 font-bold">✕</button>
+                                <button onClick={() => { setShowQuizModal(false); setAiGeneratedPreview(null); }} className="text-slate-400 hover:text-slate-650 font-bold">✕</button>
                             </div>
 
-                            <form onSubmit={submitQuiz} className="flex-grow overflow-y-auto p-6 space-y-6">
-                                {questionsList.map((q, qIdx) => (
-                                    <div key={qIdx} className="p-4 bg-slate-50 border border-slate-250 rounded-xl space-y-3 relative">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-xs font-bold text-slate-750 bg-slate-200 px-2 py-0.5 rounded-md">Question {qIdx + 1}</span>
-                                            {questionsList.length > 5 && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removeQuizQuestion(qIdx)}
-                                                    className="text-xs text-red-500 hover:text-red-700 font-semibold"
-                                                >
-                                                    Remove Question
-                                                </button>
-                                            )}
-                                        </div>
-
-                                        <input
-                                            type="text"
-                                            value={q.question_text}
-                                            onChange={e => updateQuizQuestionText(qIdx, e.target.value)}
-                                            placeholder="Enter practice question text"
-                                            className="w-full text-sm rounded-xl border-slate-200 focus:border-violet-400 focus:ring-violet-400"
-                                            required
-                                        />
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
-                                            {q.answers.map((ans, aIdx) => (
-                                                <div key={aIdx} className="flex items-center gap-2.5 bg-white p-2.5 rounded-xl border border-slate-200">
-                                                    <input
-                                                        type="radio"
-                                                        name={`quiz-correct-${qIdx}`}
-                                                        checked={ans.is_correct}
-                                                        onChange={() => setQuizCorrectAnswer(qIdx, aIdx)}
-                                                        className="text-violet-600 focus:ring-violet-450 w-4 h-4"
-                                                    />
-                                                    <input
-                                                        type="text"
-                                                        value={ans.answer_text}
-                                                        onChange={e => updateQuizAnswerText(qIdx, aIdx, e.target.value)}
-                                                        placeholder={`Choice Option ${aIdx + 1}`}
-                                                        className="flex-grow text-xs border-0 p-0 focus:ring-0 focus:border-0"
-                                                        required
-                                                    />
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ))}
-
-                                <button
-                                    type="button"
-                                    onClick={addQuizQuestion}
-                                    className="w-full py-3 border border-dashed border-violet-300 text-violet-600 hover:bg-violet-50 rounded-xl text-xs font-bold transition-all"
-                                >
-                                    + Add Quiz Question
-                                </button>
-
-                                <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
+                            {/* AI Assistant Tab Header */}
+                            {isEditable && (
+                                <div className="flex border-b border-slate-100 bg-slate-50/50 px-6 gap-4">
                                     <button
                                         type="button"
-                                        onClick={() => setShowQuizModal(false)}
-                                        className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all"
+                                        onClick={() => { setQuizTab('edit'); setAiGeneratedPreview(null); }}
+                                        className={`text-xs font-bold pb-2 pt-2 border-b-2 transition-all ${
+                                            quizTab === 'edit'
+                                                ? 'border-violet-650 text-violet-650'
+                                                : 'border-transparent text-slate-400 hover:text-slate-600'
+                                        }`}
                                     >
-                                        Cancel
+                                        📝 Question Editor
                                     </button>
                                     <button
-                                        type="submit"
-                                        className="px-5 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-violet-500/15 hover:brightness-110"
+                                        type="button"
+                                        onClick={() => { setQuizTab('ai'); setAiGeneratedPreview(null); }}
+                                        className={`text-xs font-bold pb-2 pt-2 border-b-2 transition-all flex items-center gap-1 ${
+                                            quizTab === 'ai'
+                                                ? 'border-violet-650 text-violet-650'
+                                                : 'border-transparent text-slate-400 hover:text-slate-600'
+                                        }`}
                                     >
-                                        Save Quiz
+                                        ✨ AI Generator (Gemini)
                                     </button>
                                 </div>
-                            </form>
+                            )}
+
+                            {quizTab === 'edit' ? (
+                                <form onSubmit={submitQuiz} className="flex-grow overflow-y-auto p-6 space-y-6">
+                                    {questionsList.map((q, qIdx) => (
+                                        <div key={qIdx} className="p-4 bg-slate-50 border border-slate-250 rounded-xl space-y-3 relative">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-xs font-bold text-slate-750 bg-slate-200 px-2 py-0.5 rounded-md">Question {qIdx + 1}</span>
+                                                {questionsList.length > 5 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeQuizQuestion(qIdx)}
+                                                        className="text-xs text-red-500 hover:text-red-700 font-semibold"
+                                                    >
+                                                        Remove Question
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            <input
+                                                type="text"
+                                                value={q.question_text}
+                                                onChange={e => updateQuizQuestionText(qIdx, e.target.value)}
+                                                placeholder="Enter practice question text"
+                                                className="w-full text-sm rounded-xl border-slate-200 focus:border-violet-400 focus:ring-violet-400"
+                                                required
+                                            />
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+                                                {q.answers.map((ans, aIdx) => (
+                                                    <div key={aIdx} className="flex items-center gap-2.5 bg-white p-2.5 rounded-xl border border-slate-200">
+                                                        <input
+                                                            type="radio"
+                                                            name={`quiz-correct-${qIdx}`}
+                                                            checked={ans.is_correct}
+                                                            onChange={() => setQuizCorrectAnswer(qIdx, aIdx)}
+                                                            className="text-violet-600 focus:ring-violet-450 w-4 h-4"
+                                                        />
+                                                        <input
+                                                            type="text"
+                                                            value={ans.answer_text}
+                                                            onChange={e => updateQuizAnswerText(qIdx, aIdx, e.target.value)}
+                                                            placeholder={`Choice Option ${aIdx + 1}`}
+                                                            className="flex-grow text-xs border-0 p-0 focus:ring-0 focus:border-0"
+                                                            required
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+
+                                    <button
+                                        type="button"
+                                        onClick={addQuizQuestion}
+                                        className="w-full py-3 border border-dashed border-violet-300 text-violet-600 hover:bg-violet-50 rounded-xl text-xs font-bold transition-all"
+                                    >
+                                        + Add Quiz Question
+                                    </button>
+
+                                    <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowQuizModal(false)}
+                                            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            className="px-5 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-violet-500/15 hover:brightness-110"
+                                        >
+                                            Save Quiz
+                                        </button>
+                                    </div>
+                                </form>
+                            ) : (
+                                renderAiGenerator('quiz')
+                            )}
                         </div>
                     </div>
                 )}
@@ -1046,88 +1462,137 @@ export default function Edit({ certification }) {
                 {/* ── Final Exam Modal (Exam Builder) ── */}
                 {showExamModal && (
                     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[85vh] shadow-2xl flex flex-col overflow-hidden border border-slate-100 animate-in fade-in duration-150">
+                        <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[85vh] shadow-2xl flex flex-col overflow-hidden border border-slate-100 animate-in fade-in duration-150 relative">
+                            {/* Loading Overlay */}
+                            {aiLoading && (
+                                <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-6 animate-in fade-in duration-200">
+                                    <div className="bg-white rounded-2xl p-8 max-w-sm w-full text-center space-y-4 shadow-2xl border border-slate-100 flex flex-col items-center">
+                                        <div className="relative w-16 h-16 flex items-center justify-center">
+                                            <div className="absolute inset-0 rounded-full border-4 border-slate-100"></div>
+                                            <div className="absolute inset-0 rounded-full border-4 border-violet-600 border-t-transparent animate-spin"></div>
+                                            <span className="text-xl animate-pulse">✨</span>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <h4 className="font-bold text-slate-800 text-sm">Gemini AI Scanner</h4>
+                                            <p className="text-xs text-slate-400 font-semibold animate-pulse">{aiLoadingMessage}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
                                 <div>
                                     <h3 className="font-bold text-slate-800 text-sm">Manage Final Exam (Sandcastle Exam)</h3>
                                     <p className="text-[10px] text-slate-400 font-medium">Add comprehensive exam options. Min 5 questions required.</p>
                                 </div>
-                                <button onClick={() => setShowExamModal(false)} className="text-slate-400 hover:text-slate-650 font-bold">✕</button>
+                                <button onClick={() => { setShowExamModal(false); setAiGeneratedPreview(null); }} className="text-slate-400 hover:text-slate-650 font-bold">✕</button>
                             </div>
 
-                            <form onSubmit={submitExam} className="flex-grow overflow-y-auto p-6 space-y-6">
-                                {examQuestionsList.map((q, qIdx) => (
-                                    <div key={qIdx} className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3 relative">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-xs font-bold text-slate-750 bg-slate-200 px-2 py-0.5 rounded-md">Exam Question {qIdx + 1}</span>
-                                            {examQuestionsList.length > 5 && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removeExamQuestion(qIdx)}
-                                                    className="text-xs text-red-500 hover:text-red-700 font-semibold"
-                                                >
-                                                    Remove Question
-                                                </button>
-                                            )}
-                                        </div>
-
-                                        <input
-                                            type="text"
-                                            value={q.question_text}
-                                            onChange={e => updateExamQuestionText(qIdx, e.target.value)}
-                                            placeholder="Enter comprehensive question text"
-                                            className="w-full text-sm rounded-xl border-slate-200 focus:border-violet-400 focus:ring-violet-455"
-                                            required
-                                        />
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
-                                            {q.answers.map((ans, aIdx) => (
-                                                <div key={aIdx} className="flex items-center gap-2.5 bg-white p-2.5 rounded-xl border border-slate-200">
-                                                    <input
-                                                        type="radio"
-                                                        name={`exam-correct-${qIdx}`}
-                                                        checked={ans.is_correct}
-                                                        onChange={() => setExamCorrectAnswer(qIdx, aIdx)}
-                                                        className="text-violet-600 focus:ring-violet-450 w-4 h-4"
-                                                    />
-                                                    <input
-                                                        type="text"
-                                                        value={ans.answer_text}
-                                                        onChange={e => updateExamAnswerText(qIdx, aIdx, e.target.value)}
-                                                        placeholder={`Choice Option ${aIdx + 1}`}
-                                                        className="flex-grow text-xs border-0 p-0 focus:ring-0 focus:border-0"
-                                                        required
-                                                    />
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ))}
-
-                                <button
-                                    type="button"
-                                    onClick={addExamQuestion}
-                                    className="w-full py-3 border border-dashed border-violet-300 text-violet-600 hover:bg-violet-50 rounded-xl text-xs font-bold transition-all"
-                                >
-                                    + Add Exam Question
-                                </button>
-
-                                <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
+                            {/* AI Assistant Tab Header */}
+                            {isEditable && (
+                                <div className="flex border-b border-slate-100 bg-slate-50/50 px-6 gap-4">
                                     <button
                                         type="button"
-                                        onClick={() => setShowExamModal(false)}
-                                        className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all"
+                                        onClick={() => { setExamTab('edit'); setAiGeneratedPreview(null); }}
+                                        className={`text-xs font-bold pb-2 pt-2 border-b-2 transition-all ${
+                                            examTab === 'edit'
+                                                ? 'border-violet-650 text-violet-650'
+                                                : 'border-transparent text-slate-400 hover:text-slate-600'
+                                        }`}
                                     >
-                                        Cancel
+                                        📝 Question Editor
                                     </button>
                                     <button
-                                        type="submit"
-                                        className="px-5 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-violet-500/15 hover:brightness-110"
+                                        type="button"
+                                        onClick={() => { setExamTab('ai'); setAiGeneratedPreview(null); }}
+                                        className={`text-xs font-bold pb-2 pt-2 border-b-2 transition-all flex items-center gap-1 ${
+                                            examTab === 'ai'
+                                                ? 'border-violet-650 text-violet-650'
+                                                : 'border-transparent text-slate-400 hover:text-slate-600'
+                                        }`}
                                     >
-                                        Save Final Exam
+                                        ✨ AI Generator (Gemini)
                                     </button>
                                 </div>
-                            </form>
+                            )}
+
+                            {examTab === 'edit' ? (
+                                <form onSubmit={submitExam} className="flex-grow overflow-y-auto p-6 space-y-6">
+                                    {examQuestionsList.map((q, qIdx) => (
+                                        <div key={qIdx} className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3 relative">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-xs font-bold text-slate-750 bg-slate-200 px-2 py-0.5 rounded-md">Exam Question {qIdx + 1}</span>
+                                                {examQuestionsList.length > 5 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeExamQuestion(qIdx)}
+                                                        className="text-xs text-red-500 hover:text-red-700 font-semibold"
+                                                    >
+                                                        Remove Question
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            <input
+                                                type="text"
+                                                value={q.question_text}
+                                                onChange={e => updateExamQuestionText(qIdx, e.target.value)}
+                                                placeholder="Enter comprehensive question text"
+                                                className="w-full text-sm rounded-xl border-slate-200 focus:border-violet-400 focus:ring-violet-455"
+                                                required
+                                            />
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+                                                {q.answers.map((ans, aIdx) => (
+                                                    <div key={aIdx} className="flex items-center gap-2.5 bg-white p-2.5 rounded-xl border border-slate-200">
+                                                        <input
+                                                            type="radio"
+                                                            name={`exam-correct-${qIdx}`}
+                                                            checked={ans.is_correct}
+                                                            onChange={() => setExamCorrectAnswer(qIdx, aIdx)}
+                                                            className="text-violet-600 focus:ring-violet-450 w-4 h-4"
+                                                        />
+                                                        <input
+                                                            type="text"
+                                                            value={ans.answer_text}
+                                                            onChange={e => updateExamAnswerText(qIdx, aIdx, e.target.value)}
+                                                            placeholder={`Choice Option ${aIdx + 1}`}
+                                                            className="flex-grow text-xs border-0 p-0 focus:ring-0 focus:border-0"
+                                                            required
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+
+                                    <button
+                                        type="button"
+                                        onClick={addExamQuestion}
+                                        className="w-full py-3 border border-dashed border-violet-300 text-violet-600 hover:bg-violet-50 rounded-xl text-xs font-bold transition-all"
+                                    >
+                                        + Add Exam Question
+                                    </button>
+
+                                    <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowExamModal(false)}
+                                            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            className="px-5 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-violet-500/15 hover:brightness-110"
+                                        >
+                                            Save Final Exam
+                                        </button>
+                                    </div>
+                                </form>
+                            ) : (
+                                renderAiGenerator('exam')
+                            )}
                         </div>
                     </div>
                 )}

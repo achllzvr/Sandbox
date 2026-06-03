@@ -46,7 +46,10 @@ class CertificationController extends Controller {
             'lessons.modules.contents',
             'lessons.modules.questions.answers'
         ]);
-        return Inertia::render('Creator/Certifications/Edit', ['certification' => $certification]);
+        return Inertia::render('Creator/Certifications/Edit', [
+            'certification' => $certification,
+            'hasSystemApiKey' => !empty(env('GEMINI_API_KEY'))
+        ]);
     }
 
     public function storeExamQuestions(\Illuminate\Http\Request $request, Certification $certification) {
