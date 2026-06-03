@@ -1,16 +1,24 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Sparkles } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { FileText, Sparkles, Upload, X } from 'lucide-react';
+import AdminBadge from '@/Components/Admin/AdminBadge';
+import CreatorGeminiLoading from '@/Components/Creator/CreatorGeminiLoading';
 import CreatorQuestionFields, { INTERACTION_TYPES } from '@/Components/Creator/CreatorQuestionFields';
 import { showAppToastError } from '@/Utils/appToast';
+import { extractAxiosErrorMessage } from '@/Utils/extractAxiosErrorMessage';
+import {
+    formatFileSize,
+    MAX_GEMINI_FILES,
+    MAX_GEMINI_UPLOAD_LABEL,
+    validateGeminiUploadFile,
+    validateGeminiUploadFiles,
+} from '@/Utils/geminiUploadLimits';
 
-const LOADING_MESSAGES = [
-    'Connecting to Gemini API...',
-    'Uploading document...',
-    'Scanning contents with Gemini AI...',
-    'Analyzing concepts and patterns...',
-    'Generating question types...',
-    'Verifying answers and metadata...',
-    'Structuring question data...',
+const LOADING_STEPS = [
+    'Preparing source materials',
+    'Sending content to Gemini',
+    'Scanning documents',
+    'Drafting question mix',
+    'Validating output',
 ];
 
 const GEMINI_KEY_STORAGE = 'gemini_api_key';
@@ -42,13 +50,24 @@ function normalizePreviewQuestion(raw) {
     return base;
 }
 
+function fileKey(file) {
+    return `${file.name}-${file.size}-${file.lastModified}`;
+}
+
 export default function CreatorGeminiPanel({
     hasSystemApiKey = false,
     moduleId = null,
     moduleContents = [],
     onImport,
-    importLabel = 'Import questions',
+    importLabel = 'Generate questions',
     questionTypes = null,
+    onBusyChange,
+    preview: controlledPreview,
+    onPreviewChange,
+    loading: controlledLoading,
+    onLoadingChange,
+    generationError,
+    onGenerationErrorChange,
 }) {
     const fixedTypes = useMemo(
         () => (Array.isArray(questionTypes) && questionTypes.length > 0 ? questionTypes : null),
@@ -59,6 +78,7 @@ export default function CreatorGeminiPanel({
     const eligibleContents = useMemo(() => eligibleModuleContents(moduleContents), [moduleContents]);
     const canUseModuleMaterials = moduleId && eligibleContents.length > 0;
 
+    const fileInputRef = useRef(null);
     const [sourceMode, setSourceMode] = useState(canUseModuleMaterials ? 'module_contents' : 'upload');
     const [aiKeyType, setAiKeyType] = useState(hasSystemApiKey ? 'system' : 'custom');
     const [aiKey, setAiKey] = useState(() => {
@@ -67,15 +87,45 @@ export default function CreatorGeminiPanel({
         }
         return window.localStorage.getItem(GEMINI_KEY_STORAGE) || '';
     });
-    const [aiFile, setAiFile] = useState(null);
+    const [aiFiles, setAiFiles] = useState([]);
     const [textPrompt, setTextPrompt] = useState('');
     const [promptType, setPromptType] = useState('file');
     const [selectedContentIds, setSelectedContentIds] = useState([]);
     const [selectedQuestionTypes, setSelectedQuestionTypes] = useState(selectableTypes);
     const [numQuestions, setNumQuestions] = useState(5);
-    const [loading, setLoading] = useState(false);
-    const [loadingMessage, setLoadingMessage] = useState(LOADING_MESSAGES[0]);
-    const [preview, setPreview] = useState(null);
+    const [internalLoading, setInternalLoading] = useState(false);
+    const [loadingStep, setLoadingStep] = useState(0);
+    const [loadingProgress, setLoadingProgress] = useState(8);
+    const [internalPreview, setInternalPreview] = useState(null);
+
+    const loading = controlledLoading ?? internalLoading;
+    const preview = controlledPreview ?? internalPreview;
+
+    const setLoading = (value) => {
+        if (onLoadingChange) {
+            onLoadingChange(value);
+        } else {
+            setInternalLoading(value);
+        }
+    };
+
+    const setPreview = (value) => {
+        const next = typeof value === 'function'
+            ? value(controlledPreview ?? internalPreview)
+            : value;
+
+        if (onPreviewChange) {
+            onPreviewChange(next);
+        } else {
+            setInternalPreview(next);
+        }
+    };
+
+    const phase = loading ? 'loading' : preview?.length ? 'preview' : 'form';
+
+    useEffect(() => {
+        onBusyChange?.(loading);
+    }, [loading, onBusyChange]);
 
     useEffect(() => {
         if (canUseModuleMaterials) {
@@ -86,6 +136,33 @@ export default function CreatorGeminiPanel({
     useEffect(() => {
         setSelectedQuestionTypes(selectableTypes);
     }, [selectableTypes]);
+
+    useEffect(() => {
+        if (!loading) {
+            return undefined;
+        }
+
+        setLoadingStep(0);
+        setLoadingProgress(8);
+
+        const stepInterval = window.setInterval(() => {
+            setLoadingStep((current) => Math.min(current + 1, LOADING_STEPS.length - 2));
+        }, 3200);
+
+        const progressInterval = window.setInterval(() => {
+            setLoadingProgress((current) => {
+                if (current >= 90) {
+                    return current;
+                }
+                return current + 3;
+            });
+        }, 900);
+
+        return () => {
+            window.clearInterval(stepInterval);
+            window.clearInterval(progressInterval);
+        };
+    }, [loading]);
 
     function persistKey(value) {
         setAiKey(value);
@@ -115,13 +192,60 @@ export default function CreatorGeminiPanel({
         });
     }
 
+    function addUploadFiles(incoming) {
+        if (!incoming?.length) {
+            return;
+        }
+
+        setAiFiles((current) => {
+            const seen = new Set(current.map(fileKey));
+            const next = [...current];
+
+            for (const file of incoming) {
+                if (next.length >= MAX_GEMINI_FILES) {
+                    showAppToastError(`You can upload up to ${MAX_GEMINI_FILES} files at a time.`);
+                    break;
+                }
+
+                const error = validateGeminiUploadFile(file);
+                if (error) {
+                    showAppToastError(error);
+                    continue;
+                }
+
+                const key = fileKey(file);
+                if (seen.has(key)) {
+                    continue;
+                }
+
+                seen.add(key);
+                next.push(file);
+            }
+
+            return next;
+        });
+    }
+
+    function removeUploadFile(index) {
+        setAiFiles((current) => current.filter((_, i) => i !== index));
+    }
+
+    function clearUploadFiles() {
+        setAiFiles([]);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    }
+
     async function handleGenerate() {
         if (sourceMode === 'upload') {
-            if (promptType === 'file' && !aiFile) {
-                showAppToastError('Please select a file to scan.');
-                return;
-            }
-            if (promptType === 'text' && !textPrompt.trim()) {
+            if (promptType === 'file') {
+                const fileError = validateGeminiUploadFiles(aiFiles);
+                if (fileError) {
+                    showAppToastError(fileError);
+                    return;
+                }
+            } else if (!textPrompt.trim()) {
                 showAppToastError('Please enter text to generate questions from.');
                 return;
             }
@@ -141,13 +265,7 @@ export default function CreatorGeminiPanel({
         }
 
         setLoading(true);
-        setLoadingMessage(LOADING_MESSAGES[0]);
-
-        let msgIdx = 0;
-        const interval = window.setInterval(() => {
-            msgIdx = Math.min(msgIdx + 1, LOADING_MESSAGES.length - 1);
-            setLoadingMessage(LOADING_MESSAGES[msgIdx]);
-        }, 2500);
+        onGenerationErrorChange?.(null);
 
         const formData = new FormData();
         formData.append('source_mode', sourceMode);
@@ -165,31 +283,42 @@ export default function CreatorGeminiPanel({
             formData.append('prompt_type', promptType);
             if (promptType === 'text') {
                 formData.append('text_prompt', textPrompt.trim());
-            } else if (aiFile) {
-                formData.append('file', aiFile);
+            } else {
+                aiFiles.forEach((file) => formData.append('files[]', file));
             }
         }
 
+        let succeeded = false;
+
         try {
             const { data } = await window.axios.post(route('creator.gemini.generate-questions'), formData, {
-                headers: { 'Content-Type': 'multipart/form-data' },
+                timeout: 300000,
             });
 
             const formatted = (data.questions || []).map(normalizePreviewQuestion);
 
             if (formatted.length === 0) {
-                showAppToastError('Gemini did not return any valid questions.');
+                const message = 'Gemini did not return any valid questions. Try fewer question types or a shorter source document.';
+                onGenerationErrorChange?.(message);
+                showAppToastError(message);
                 return;
             }
 
+            setLoadingStep(LOADING_STEPS.length - 1);
+            setLoadingProgress(100);
             setPreview(formatted);
-            setAiFile(null);
+            clearUploadFiles();
+            succeeded = true;
         } catch (error) {
-            const errMsg = error.response?.data?.error || error.message || 'Could not generate questions.';
+            const errMsg = extractAxiosErrorMessage(error);
+            onGenerationErrorChange?.(errMsg);
             showAppToastError(errMsg);
         } finally {
-            window.clearInterval(interval);
             setLoading(false);
+            if (!succeeded) {
+                setLoadingStep(0);
+                setLoadingProgress(8);
+            }
         }
     }
 
@@ -212,20 +341,32 @@ export default function CreatorGeminiPanel({
         }
         onImport?.(preview, mode);
         setPreview(null);
+        onGenerationErrorChange?.(null);
     }
 
-    if (preview) {
+    if (loading) {
         return (
-            <div className="creator-gemini-panel">
-                <div className="admin-flash admin-flash--success" style={{ marginBottom: '16px' }}>
-                    <Sparkles size={16} strokeWidth={2.25} aria-hidden="true" style={{ display: 'inline', marginRight: '6px' }} />
-                    Preview generated questions ({preview.length}). Edit types and content before importing.
+            <CreatorGeminiLoading
+                steps={LOADING_STEPS}
+                activeStep={loadingStep}
+                progress={loadingProgress}
+            />
+        );
+    }
+
+    if (preview?.length) {
+        return (
+            <div className="creator-gemini-panel creator-gemini-panel--preview">
+                <div className="creator-gemini-panel__intro">
+                    <AdminBadge type="status" value="published" label={`${preview.length} questions ready`} />
+                    <p className="admin-text-muted">Review each item, adjust types or wording, then import into the quiz editor.</p>
                 </div>
-                <div className="admin-preview-quiz">
+
+                <div className="creator-gemini-preview-list">
                     {preview.map((q, qIdx) => (
-                        <div key={qIdx} className="admin-preview-quiz__question">
-                            <div className="admin-toolbar" style={{ marginBottom: '8px' }}>
-                                <strong>Question {qIdx + 1}</strong>
+                        <section key={qIdx} className="creator-gemini-preview-item admin-card admin-card--chunky">
+                            <div className="creator-gemini-preview-item__head">
+                                <span className="creator-gemini-preview-item__index">Q{qIdx + 1}</span>
                                 <button type="button" onClick={() => removePreviewQuestion(qIdx)} className="admin-btn admin-btn--ghost admin-btn--sm">
                                     Remove
                                 </button>
@@ -234,14 +375,15 @@ export default function CreatorGeminiPanel({
                                 question={q}
                                 onChange={(next) => updatePreviewQuestion(qIdx, next)}
                             />
-                        </div>
+                        </section>
                     ))}
                 </div>
-                <div className="admin-toolbar" style={{ marginTop: '16px' }}>
+
+                <div className="creator-gemini-panel__actions">
                     <button type="button" onClick={() => setPreview(null)} className="admin-btn admin-btn--ghost">
                         Discard & start over
                     </button>
-                    <div className="admin-toolbar__end">
+                    <div className="creator-gemini-panel__actions-end">
                         <button type="button" onClick={() => handleImport('append')} className="admin-btn admin-btn--secondary">
                             Approve & append
                         </button>
@@ -258,172 +400,239 @@ export default function CreatorGeminiPanel({
 
     return (
         <div className="creator-gemini-panel">
-            {loading ? (
-                <div className="creator-gemini-panel__loading" role="status">
-                    <Sparkles size={20} strokeWidth={2.25} aria-hidden="true" />
-                    <p>{loadingMessage}</p>
+            {generationError ? (
+                <div className="admin-flash admin-flash--error creator-gemini-panel__error" role="alert">
+                    {generationError}
                 </div>
             ) : null}
 
-            <div className="admin-flash admin-flash--info" style={{ marginBottom: '16px' }}>
-                Generate a mixed quiz from your materials — multiple choice, true/false, matching, sequence, AI explain-why, and code completion.
+            <div className="creator-gemini-panel__intro">
+                <p className="admin-text-muted">
+                    Build a mixed short test from sandbox materials or temporary uploads. Files are used only for this generation and are not saved to the shell.
+                </p>
             </div>
 
-            {canUseModuleMaterials ? (
-                <fieldset className="admin-field" style={{ marginBottom: '16px' }}>
-                    <legend className="admin-field__label">Source</legend>
-                    <div className="admin-segmented">
-                        <button
-                            type="button"
-                            className={`admin-segmented__btn ${sourceMode === 'module_contents' ? 'admin-segmented__btn--active' : ''}`}
-                            onClick={() => setSourceMode('module_contents')}
-                        >
-                            Sandbox materials
-                        </button>
-                        <button
-                            type="button"
-                            className={`admin-segmented__btn ${sourceMode === 'upload' ? 'admin-segmented__btn--active' : ''}`}
-                            onClick={() => setSourceMode('upload')}
-                        >
-                            Upload file
-                        </button>
-                    </div>
-                </fieldset>
-            ) : null}
+            <div className="creator-gemini-panel__grid">
+                <section className="creator-gemini-section admin-card admin-card--chunky">
+                    <header className="creator-gemini-section__head">
+                        <h3 className="admin-section-title">1. Source material</h3>
+                    </header>
 
-            {sourceMode === 'module_contents' ? (
-                <div className="admin-field" style={{ marginBottom: '16px' }}>
-                    <span className="admin-field__label">Select materials (PDF / PPTX)</span>
-                    <div className="admin-checklist">
-                        {eligibleContents.map((item) => (
-                            <label key={item.id} className="admin-checklist__item">
-                                <input
-                                    type="checkbox"
-                                    checked={selectedContentIds.includes(item.id)}
-                                    onChange={() => toggleContentId(item.id)}
-                                />
-                                <span>{item.title || componentTypeLabel(item.type)}</span>
-                            </label>
-                        ))}
-                    </div>
-                    <p className="admin-field__hint">Video and YouTube materials are not supported for AI generation yet.</p>
-                </div>
-            ) : (
-                <>
-                    <div className="admin-segmented" style={{ marginBottom: '16px' }}>
-                        <button
-                            type="button"
-                            className={`admin-segmented__btn ${promptType === 'file' ? 'admin-segmented__btn--active' : ''}`}
-                            onClick={() => setPromptType('file')}
-                        >
-                            File upload
-                        </button>
-                        <button
-                            type="button"
-                            className={`admin-segmented__btn ${promptType === 'text' ? 'admin-segmented__btn--active' : ''}`}
-                            onClick={() => setPromptType('text')}
-                        >
-                            Paste text
-                        </button>
-                    </div>
-                    {promptType === 'file' ? (
-                        <label className="admin-field">
-                            <span className="admin-field__label">Reference file (PDF, image, or text — max 10 MB)</span>
-                            <input
-                                type="file"
-                                accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,application/pdf,image/*,text/plain"
-                                className="input-field"
-                                onChange={(e) => setAiFile(e.target.files?.[0] ?? null)}
-                            />
-                            {aiFile ? <p className="admin-field__hint">Selected: {aiFile.name}</p> : null}
-                        </label>
+                    {canUseModuleMaterials ? (
+                        <div className="admin-field">
+                            <span className="admin-field__label">Input method</span>
+                            <div className="admin-segmented">
+                                <button
+                                    type="button"
+                                    className={`admin-segmented__btn ${sourceMode === 'module_contents' ? 'admin-segmented__btn--active' : ''}`}
+                                    onClick={() => setSourceMode('module_contents')}
+                                >
+                                    Sandbox materials
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`admin-segmented__btn ${sourceMode === 'upload' ? 'admin-segmented__btn--active' : ''}`}
+                                    onClick={() => setSourceMode('upload')}
+                                >
+                                    Temporary upload
+                                </button>
+                            </div>
+                        </div>
+                    ) : null}
+
+                    {sourceMode === 'module_contents' ? (
+                        <div className="admin-field">
+                            <span className="admin-field__label">PDF / PPTX in this sandbox</span>
+                            <div className="admin-checklist">
+                                {eligibleContents.map((item) => (
+                                    <label key={item.id} className="admin-checklist__item admin-checkbox">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedContentIds.includes(item.id)}
+                                            onChange={() => toggleContentId(item.id)}
+                                        />
+                                        <span>{item.title || componentTypeLabel(item.type)}</span>
+                                    </label>
+                                ))}
+                            </div>
+                            <p className="admin-field__hint">Video and YouTube sources are not available for AI generation yet.</p>
+                        </div>
                     ) : (
-                        <label className="admin-field">
-                            <span className="admin-field__label">Study text</span>
-                            <textarea
-                                className="input-field"
-                                rows={5}
-                                value={textPrompt}
-                                onChange={(e) => setTextPrompt(e.target.value)}
-                                placeholder="Paste notes or reading material..."
-                            />
-                        </label>
+                        <>
+                            <div className="admin-field">
+                                <span className="admin-field__label">Content type</span>
+                                <div className="admin-segmented">
+                                    <button
+                                        type="button"
+                                        className={`admin-segmented__btn ${promptType === 'file' ? 'admin-segmented__btn--active' : ''}`}
+                                        onClick={() => setPromptType('file')}
+                                    >
+                                        Upload files
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`admin-segmented__btn ${promptType === 'text' ? 'admin-segmented__btn--active' : ''}`}
+                                        onClick={() => setPromptType('text')}
+                                    >
+                                        Paste text
+                                    </button>
+                                </div>
+                            </div>
+
+                            {promptType === 'file' ? (
+                                <div className="admin-field">
+                                    <span className="admin-field__label">Reference files</span>
+                                    <div
+                                        className="creator-gemini-dropzone"
+                                        onDragOver={(event) => event.preventDefault()}
+                                        onDrop={(event) => {
+                                            event.preventDefault();
+                                            addUploadFiles(Array.from(event.dataTransfer.files || []));
+                                        }}
+                                    >
+                                        <Upload size={22} strokeWidth={2.25} aria-hidden="true" />
+                                        <p className="creator-gemini-dropzone__title">Drop files here or browse</p>
+                                        <p className="admin-field__hint">
+                                            Up to {MAX_GEMINI_FILES} files · {MAX_GEMINI_UPLOAD_LABEL} each · PDF, image, or text
+                                        </p>
+                                        <button
+                                            type="button"
+                                            className="admin-btn admin-btn--secondary admin-btn--sm"
+                                            onClick={() => fileInputRef.current?.click()}
+                                        >
+                                            Choose files
+                                        </button>
+                                        <input
+                                            ref={fileInputRef}
+                                            type="file"
+                                            multiple
+                                            accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,application/pdf,image/*,text/plain"
+                                            className="creator-gemini-dropzone__input"
+                                            onChange={(e) => {
+                                                addUploadFiles(Array.from(e.target.files || []));
+                                                e.target.value = '';
+                                            }}
+                                        />
+                                    </div>
+
+                                    {aiFiles.length > 0 ? (
+                                        <ul className="creator-gemini-file-list">
+                                            {aiFiles.map((file, index) => (
+                                                <li key={fileKey(file)} className="creator-gemini-file-list__item">
+                                                    <FileText size={16} strokeWidth={2.25} aria-hidden="true" />
+                                                    <div className="creator-gemini-file-list__meta">
+                                                        <span className="creator-gemini-file-list__name">{file.name}</span>
+                                                        <span className="creator-gemini-file-list__size">{formatFileSize(file.size)}</span>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        className="admin-btn admin-btn--ghost admin-btn--sm"
+                                                        aria-label={`Remove ${file.name}`}
+                                                        onClick={() => removeUploadFile(index)}
+                                                    >
+                                                        <X size={16} strokeWidth={2.25} />
+                                                    </button>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    ) : null}
+                                </div>
+                            ) : (
+                                <label className="admin-field">
+                                    <span className="admin-field__label">Study text</span>
+                                    <textarea
+                                        className="input-field"
+                                        rows={5}
+                                        value={textPrompt}
+                                        onChange={(e) => setTextPrompt(e.target.value)}
+                                        placeholder="Paste notes, lecture copy, or reading excerpts..."
+                                    />
+                                </label>
+                            )}
+                        </>
                     )}
-                </>
-            )}
+                </section>
 
-            {!fixedTypes ? (
-                <fieldset className="admin-field" style={{ marginBottom: '16px' }}>
-                    <legend className="admin-field__label">Question types to include</legend>
-                    <div className="admin-checklist">
-                        {typeOptions.map((type) => (
-                            <label key={type.value} className="admin-checklist__item">
-                                <input
-                                    type="checkbox"
-                                    checked={selectedQuestionTypes.includes(type.value)}
-                                    onChange={() => toggleQuestionType(type.value)}
-                                />
-                                <span>{type.label}</span>
-                            </label>
-                        ))}
-                    </div>
-                    <p className="admin-field__hint">Gemini will mix the selected types across the generated set.</p>
-                </fieldset>
-            ) : null}
+                <section className="creator-gemini-section admin-card admin-card--chunky">
+                    <header className="creator-gemini-section__head">
+                        <h3 className="admin-section-title">2. Quiz settings</h3>
+                    </header>
 
-            <label className="admin-field">
-                <span className="admin-field__label">Number of questions (5–20)</span>
-                <input
-                    type="number"
-                    min={5}
-                    max={20}
-                    className="input-field"
-                    value={numQuestions}
-                    onChange={(e) => setNumQuestions(Number(e.target.value))}
-                />
-            </label>
+                    {!fixedTypes ? (
+                        <div className="admin-field">
+                            <span className="admin-field__label">Question types</span>
+                            <div className="creator-gemini-type-grid">
+                                {typeOptions.map((type) => (
+                                    <label key={type.value} className="creator-gemini-type-chip admin-checkbox">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedQuestionTypes.includes(type.value)}
+                                            onChange={() => toggleQuestionType(type.value)}
+                                        />
+                                        <span>{type.label}</span>
+                                    </label>
+                                ))}
+                            </div>
+                            <p className="admin-field__hint">Gemini mixes the selected types across the generated set.</p>
+                        </div>
+                    ) : null}
 
-            <fieldset className="admin-field" style={{ marginTop: '16px' }}>
-                <legend className="admin-field__label">Gemini API key</legend>
-                <div className="admin-segmented">
-                    <button
-                        type="button"
-                        disabled={!hasSystemApiKey}
-                        className={`admin-segmented__btn ${aiKeyType === 'system' ? 'admin-segmented__btn--active' : ''}`}
-                        onClick={() => setAiKeyType('system')}
-                    >
-                        System key {hasSystemApiKey ? '✓' : '(unavailable)'}
-                    </button>
-                    <button
-                        type="button"
-                        className={`admin-segmented__btn ${aiKeyType === 'custom' ? 'admin-segmented__btn--active' : ''}`}
-                        onClick={() => setAiKeyType('custom')}
-                    >
-                        Personal key
-                    </button>
-                </div>
-                {aiKeyType === 'custom' ? (
-                    <input
-                        type="password"
-                        className="input-field"
-                        style={{ marginTop: '8px' }}
-                        value={aiKey}
-                        onChange={(e) => persistKey(e.target.value)}
-                        placeholder="Paste your Gemini API key"
-                    />
-                ) : null}
-            </fieldset>
+                    <label className="admin-field">
+                        <span className="admin-field__label">Number of questions</span>
+                        <input
+                            type="number"
+                            min={5}
+                            max={20}
+                            className="input-field"
+                            value={numQuestions}
+                            onChange={(e) => setNumQuestions(Number(e.target.value))}
+                        />
+                        <p className="admin-field__hint">Minimum 5, maximum 20.</p>
+                    </label>
 
-            <button
-                type="button"
-                onClick={handleGenerate}
-                disabled={loading}
-                className="admin-btn admin-btn--primary admin-btn--block"
-                style={{ marginTop: '16px' }}
-            >
-                <Sparkles size={16} strokeWidth={2.25} aria-hidden="true" />
-                {importLabel}
-            </button>
+                    <fieldset className="admin-field">
+                        <legend className="admin-field__label">Gemini API key</legend>
+                        <div className="admin-segmented">
+                            <button
+                                type="button"
+                                disabled={!hasSystemApiKey}
+                                className={`admin-segmented__btn ${aiKeyType === 'system' ? 'admin-segmented__btn--active' : ''}`}
+                                onClick={() => setAiKeyType('system')}
+                            >
+                                System key {hasSystemApiKey ? '✓' : '(unavailable)'}
+                            </button>
+                            <button
+                                type="button"
+                                className={`admin-segmented__btn ${aiKeyType === 'custom' ? 'admin-segmented__btn--active' : ''}`}
+                                onClick={() => setAiKeyType('custom')}
+                            >
+                                Personal key
+                            </button>
+                        </div>
+                        {aiKeyType === 'custom' ? (
+                            <input
+                                type="password"
+                                className="input-field"
+                                style={{ marginTop: '8px' }}
+                                value={aiKey}
+                                onChange={(e) => persistKey(e.target.value)}
+                                placeholder="Paste your Gemini API key"
+                            />
+                        ) : null}
+                    </fieldset>
+                </section>
+            </div>
+
+            <div className="creator-gemini-panel__generate">
+                <button
+                    type="button"
+                    onClick={handleGenerate}
+                    className="admin-btn admin-btn--primary admin-btn--block"
+                >
+                    <Sparkles size={16} strokeWidth={2.25} aria-hidden="true" />
+                    {importLabel}
+                </button>
+            </div>
         </div>
     );
 }

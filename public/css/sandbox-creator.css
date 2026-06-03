@@ -450,3 +450,374 @@
         max-width: none;
     }
 }
+
+/* ── Gemini AI generator ─────────────────────────────────────────────────── */
+
+.admin-segmented {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.admin-segmented__btn {
+    flex: 1;
+    min-width: 120px;
+    padding: 10px 14px;
+    border-radius: var(--admin-radius-md);
+    border: 2px solid var(--admin-border-strong);
+    background: var(--admin-surface-elevated);
+    color: var(--admin-text-body);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition:
+        transform 0.15s var(--admin-ease-out, ease),
+        background 0.15s ease,
+        border-color 0.15s ease;
+}
+
+.admin-segmented__btn:hover:not(:disabled) {
+    background: var(--admin-surface-muted);
+}
+
+.admin-segmented__btn--active {
+    border-color: var(--admin-accent);
+    background: var(--admin-accent-soft, var(--admin-surface-muted));
+    color: var(--admin-text-heading);
+    box-shadow: 0 3px 0 0 var(--admin-accent-muted, var(--admin-shadow-hard));
+}
+
+.admin-segmented__btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.admin-checklist__item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.creator-gemini-modal-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.creator-gemini-panel__intro {
+    margin-bottom: 16px;
+}
+
+.creator-gemini-panel__error {
+    margin-bottom: 16px;
+}
+
+.creator-gemini-panel__grid {
+    display: grid;
+    gap: 16px;
+}
+
+.creator-gemini-section {
+    padding: 0;
+    overflow: hidden;
+}
+
+.creator-gemini-section__head {
+    padding: 16px 18px 0;
+}
+
+.creator-gemini-section .admin-field,
+.creator-gemini-section fieldset.admin-field {
+    padding: 0 18px;
+}
+
+.creator-gemini-section .admin-field:last-child,
+.creator-gemini-section fieldset.admin-field:last-child {
+    padding-bottom: 18px;
+}
+
+.creator-gemini-dropzone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 22px 18px;
+    border-radius: var(--admin-radius-lg);
+    border: 2px dashed var(--admin-border-strong);
+    background: var(--admin-surface-subtle);
+    text-align: center;
+}
+
+.creator-gemini-dropzone__title {
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--admin-text-heading);
+}
+
+.creator-gemini-dropzone__input {
+    display: none;
+}
+
+.creator-gemini-file-list {
+    list-style: none;
+    margin: 12px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 8px;
+}
+
+.creator-gemini-file-list__item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: var(--admin-radius-md);
+    border: 2px solid var(--admin-chrome-divider);
+    background: var(--admin-surface-elevated);
+}
+
+.creator-gemini-file-list__meta {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.creator-gemini-file-list__name {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--admin-text-heading);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.creator-gemini-file-list__size {
+    font-size: 0.75rem;
+    color: var(--admin-text-muted);
+}
+
+.creator-gemini-type-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.creator-gemini-type-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: var(--admin-radius-md);
+    border: 2px solid var(--admin-chrome-divider);
+    background: var(--admin-surface-subtle);
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+
+.creator-gemini-panel__generate {
+    margin-top: 16px;
+}
+
+.creator-gemini-panel__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 2px solid var(--admin-chrome-divider);
+}
+
+.creator-gemini-panel__actions-end {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.creator-gemini-preview-list {
+    display: grid;
+    gap: 12px;
+    max-height: min(62vh, 640px);
+    overflow: auto;
+    padding-right: 4px;
+}
+
+.creator-gemini-preview-item {
+    padding: 0;
+}
+
+.creator-gemini-preview-item__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 2px solid var(--admin-chrome-divider);
+}
+
+.creator-gemini-preview-item__index {
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--admin-text-muted);
+}
+
+.creator-gemini-preview-item .admin-field,
+.creator-gemini-preview-item .admin-question-block {
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+}
+
+.creator-gemini-preview-item .admin-field:first-of-type,
+.creator-gemini-preview-item .admin-question-block:first-of-type {
+    padding-top: 14px;
+}
+
+.creator-gemini-preview-item .admin-field,
+.creator-gemini-preview-item fieldset.admin-field {
+    padding-left: 16px;
+    padding-right: 16px;
+}
+
+.creator-gemini-preview-item .admin-field:last-child,
+.creator-gemini-preview-item fieldset.admin-field:last-child {
+    padding-bottom: 16px;
+}
+
+.creator-gemini-loading {
+    display: grid;
+    gap: 18px;
+    padding: 8px 2px 4px;
+}
+
+.creator-gemini-loading__hero {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+}
+
+.creator-gemini-loading__icon-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: var(--admin-radius-lg);
+    border: 2px solid var(--admin-accent-muted, var(--admin-border-strong));
+    background: var(--admin-accent-soft, var(--admin-surface-subtle));
+    color: var(--admin-accent, var(--admin-text-heading));
+    flex-shrink: 0;
+}
+
+.creator-gemini-loading__spinner {
+    position: absolute;
+    inset: -4px;
+    animation: creator-gemini-spin 1s linear infinite;
+    opacity: 0.45;
+}
+
+.creator-gemini-loading__title {
+    margin: 0 0 4px;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--admin-text-heading);
+}
+
+.creator-gemini-loading__progress {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    align-items: center;
+}
+
+.creator-gemini-loading__percent {
+    font-size: 0.8125rem;
+    font-weight: 800;
+    color: var(--admin-text-muted);
+    min-width: 2.5rem;
+    text-align: right;
+}
+
+.creator-gemini-loading__steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 8px;
+}
+
+.creator-gemini-loading__step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: var(--admin-radius-md);
+    border: 2px solid var(--admin-chrome-divider);
+    background: var(--admin-surface-subtle);
+    color: var(--admin-text-muted);
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.creator-gemini-loading__step--active {
+    border-color: var(--admin-accent);
+    background: var(--admin-accent-soft, var(--admin-surface-elevated));
+    color: var(--admin-text-heading);
+}
+
+.creator-gemini-loading__step--done {
+    border-color: var(--admin-success-border);
+    background: var(--admin-success-bg);
+    color: var(--admin-success-text);
+}
+
+.creator-gemini-loading__step-marker {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    background: var(--admin-surface-elevated);
+    border: 2px solid currentColor;
+    font-size: 0.75rem;
+    font-weight: 800;
+    flex-shrink: 0;
+}
+
+@keyframes creator-gemini-spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (max-width: 768px) {
+    .creator-gemini-type-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .creator-gemini-panel__actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .creator-gemini-panel__actions-end {
+        width: 100%;
+    }
+
+    .creator-gemini-panel__actions-end .admin-btn {
+        flex: 1;
+    }
+}

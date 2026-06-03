@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Creator;
 use App\Http\Controllers\Controller;
 use App\Models\Module;
 use App\Services\Ai\GeminiQuestionNormalizer;
+use App\Services\Ai\GeminiUploadProcessor;
 use App\Services\Ai\ModuleContentTextExtractor;
+use App\Support\UploadLimits;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -15,6 +17,7 @@ class GeminiController extends Controller
     public function __construct(
         private ModuleContentTextExtractor $contentExtractor,
         private GeminiQuestionNormalizer $questionNormalizer,
+        private GeminiUploadProcessor $uploadProcessor,
     ) {
     }
 
@@ -23,11 +26,17 @@ class GeminiController extends Controller
      */
     public function generateQuestions(Request $request)
     {
+        set_time_limit(300);
+
+        $maxFileKb = (int) (UploadLimits::APP_MAX_BYTES / 1024);
+
         $request->validate([
             'source_mode' => 'required|in:upload,module_contents',
             'prompt_type' => 'required_if:source_mode,upload|nullable|in:text,file',
             'text_prompt' => 'required_if:prompt_type,text|nullable|string',
-            'file' => 'required_if:prompt_type,file|nullable|file|mimes:pdf,png,jpg,jpeg,webp,txt|max:10240',
+            'file' => 'nullable|file|mimes:pdf,png,jpg,jpeg,webp,txt|max:'.$maxFileKb,
+            'files' => 'nullable|array|max:'.GeminiUploadProcessor::MAX_FILES,
+            'files.*' => 'file|mimes:pdf,png,jpg,jpeg,webp,txt|max:'.$maxFileKb,
             'module_id' => 'required_if:source_mode,module_contents|nullable|integer|exists:modules,id',
             'module_content_ids' => 'nullable|array',
             'module_content_ids.*' => 'integer|exists:module_content,id',
@@ -37,6 +46,13 @@ class GeminiController extends Controller
             'api_key_type' => 'required|in:system,custom',
             'api_key' => 'required_if:api_key_type,custom|nullable|string',
         ]);
+
+        if ($request->input('source_mode') === 'upload' && $request->input('prompt_type') === 'file') {
+            $uploads = $this->uploadProcessor->collectUploads($request->file('file'), $request->file('files'));
+            if ($uploads === []) {
+                return response()->json(['error' => 'Add at least one reference file to scan.'], 422);
+            }
+        }
 
         $apiKeyType = $request->input('api_key_type', 'system');
         $apiKey = null;
@@ -76,19 +92,8 @@ class GeminiController extends Controller
             } elseif ($request->input('prompt_type') === 'text') {
                 $parts[] = ['text' => (string) $request->input('text_prompt')];
             } else {
-                $file = $request->file('file');
-                $mimeType = $file->getMimeType();
-
-                if ($mimeType === 'text/plain') {
-                    $parts[] = ['text' => file_get_contents($file->getRealPath())];
-                } else {
-                    $parts[] = [
-                        'inlineData' => [
-                            'mimeType' => $mimeType,
-                            'data' => base64_encode(file_get_contents($file->getRealPath())),
-                        ],
-                    ];
-                }
+                $uploads = $this->uploadProcessor->collectUploads($request->file('file'), $request->file('files'));
+                $parts = array_merge($parts, $this->uploadProcessor->buildPartsFromUploads($uploads));
             }
         } catch (\InvalidArgumentException $e) {
             return response()->json(['error' => $e->getMessage()], 422);
@@ -104,7 +109,7 @@ class GeminiController extends Controller
                 $retries = 0;
                 while ($retries < 3) {
                     try {
-                        $response = Http::timeout(60)->withHeaders([
+                        $response = Http::timeout(180)->withHeaders([
                             'Content-Type' => 'application/json',
                         ])->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}", [
                             'contents' => [

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Creator;
 
 use App\Http\Controllers\Controller;
+use App\Support\UploadLimits;
 use Illuminate\Http\Request;
 
 /**
@@ -18,9 +19,11 @@ class AiQuizGenerationController extends Controller
 
     public function generate(Request $request)
     {
+        $maxFileKb = (int) (UploadLimits::APP_MAX_BYTES / 1024);
+
         $request->validate([
-            'pdf' => 'nullable|file|mimes:pdf,png,jpg,jpeg,webp,txt|max:10240',
-            'file' => 'nullable|file|mimes:pdf,png,jpg,jpeg,webp,txt|max:10240',
+            'pdf' => 'nullable|file|mimes:pdf,png,jpg,jpeg,webp,txt|max:'.$maxFileKb,
+            'file' => 'nullable|file|mimes:pdf,png,jpg,jpeg,webp,txt|max:'.$maxFileKb,
             'count' => 'nullable|integer|min:5|max:20',
             'num_questions' => 'nullable|integer|min:5|max:20',
             'api_key_type' => 'nullable|in:system,custom',

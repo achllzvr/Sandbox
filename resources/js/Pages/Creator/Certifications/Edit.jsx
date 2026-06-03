@@ -71,6 +71,8 @@ export default function Edit({ certification, hasSystemApiKey = false }) {
     const [showExamRequirementsModal, setShowExamRequirementsModal] = useState(false);
     const [quizTab, setQuizTab] = useState('edit');
     const [examTab, setExamTab] = useState('edit');
+    const [geminiQuizBusy, setGeminiQuizBusy] = useState(false);
+    const [geminiExamBusy, setGeminiExamBusy] = useState(false);
 
     // ── Forms ──────────────────────────────────────────────
     const addSandboxForm = useForm({
@@ -1220,7 +1222,11 @@ export default function Edit({ certification, hasSystemApiKey = false }) {
 
             <AdminModal
                 show={showQuizModal}
-                onClose={() => { setShowQuizModal(false); setQuizTab('edit'); }}
+                onClose={() => {
+                    if (geminiQuizBusy) return;
+                    setShowQuizModal(false);
+                    setQuizTab('edit');
+                }}
                 title="Modify short test"
                 size="xl"
                 footer={quizTab === 'edit' ? (
@@ -1228,15 +1234,17 @@ export default function Edit({ certification, hasSystemApiKey = false }) {
                         <button type="button" onClick={() => { setShowQuizModal(false); setQuizTab('edit'); }} className="admin-btn admin-btn--ghost">Cancel</button>
                         <button type="submit" form="quiz-form" className="admin-btn admin-btn--primary">Finish</button>
                     </>
+                ) : geminiQuizBusy ? (
+                    <button type="button" className="admin-btn admin-btn--ghost" disabled>Generating…</button>
                 ) : (
                     <button type="button" onClick={() => { setShowQuizModal(false); setQuizTab('edit'); }} className="admin-btn admin-btn--ghost">Close</button>
                 )}
             >
                 <div className="admin-segmented" style={{ marginBottom: '16px' }}>
-                    <button type="button" className={`admin-segmented__btn ${quizTab === 'edit' ? 'admin-segmented__btn--active' : ''}`} onClick={() => setQuizTab('edit')}>
+                    <button type="button" disabled={geminiQuizBusy} className={`admin-segmented__btn ${quizTab === 'edit' ? 'admin-segmented__btn--active' : ''}`} onClick={() => setQuizTab('edit')}>
                         Question editor
                     </button>
-                    <button type="button" className={`admin-segmented__btn ${quizTab === 'ai' ? 'admin-segmented__btn--active' : ''}`} onClick={() => setQuizTab('ai')}>
+                    <button type="button" disabled={geminiQuizBusy} className={`admin-segmented__btn ${quizTab === 'ai' ? 'admin-segmented__btn--active' : ''}`} onClick={() => setQuizTab('ai')}>
                         <Sparkles size={14} strokeWidth={2.25} aria-hidden="true" /> AI generator
                     </button>
                 </div>
@@ -1268,6 +1276,7 @@ export default function Edit({ certification, hasSystemApiKey = false }) {
                         moduleId={activeModule?.id}
                         moduleContents={activeModule?.contents || []}
                         onImport={handleGeminiImportQuiz}
+                        onBusyChange={setGeminiQuizBusy}
                         importLabel="Generate quiz questions"
                     />
                 )}
@@ -1275,7 +1284,11 @@ export default function Edit({ certification, hasSystemApiKey = false }) {
 
             <AdminModal
                 show={showExamModal}
-                onClose={() => { setShowExamModal(false); setExamTab('edit'); }}
+                onClose={() => {
+                    if (geminiExamBusy) return;
+                    setShowExamModal(false);
+                    setExamTab('edit');
+                }}
                 title="Final exam"
                 size="xl"
                 footer={examTab === 'edit' ? (
@@ -1283,15 +1296,17 @@ export default function Edit({ certification, hasSystemApiKey = false }) {
                         <button type="button" onClick={() => { setShowExamModal(false); setExamTab('edit'); }} className="admin-btn admin-btn--ghost">Cancel</button>
                         <button type="submit" form="exam-form" className="admin-btn admin-btn--primary">Finish</button>
                     </>
+                ) : geminiExamBusy ? (
+                    <button type="button" className="admin-btn admin-btn--ghost" disabled>Generating…</button>
                 ) : (
                     <button type="button" onClick={() => { setShowExamModal(false); setExamTab('edit'); }} className="admin-btn admin-btn--ghost">Close</button>
                 )}
             >
                 <div className="admin-segmented" style={{ marginBottom: '16px' }}>
-                    <button type="button" className={`admin-segmented__btn ${examTab === 'edit' ? 'admin-segmented__btn--active' : ''}`} onClick={() => setExamTab('edit')}>
+                    <button type="button" disabled={geminiExamBusy} className={`admin-segmented__btn ${examTab === 'edit' ? 'admin-segmented__btn--active' : ''}`} onClick={() => setExamTab('edit')}>
                         Question editor
                     </button>
-                    <button type="button" className={`admin-segmented__btn ${examTab === 'ai' ? 'admin-segmented__btn--active' : ''}`} onClick={() => setExamTab('ai')}>
+                    <button type="button" disabled={geminiExamBusy} className={`admin-segmented__btn ${examTab === 'ai' ? 'admin-segmented__btn--active' : ''}`} onClick={() => setExamTab('ai')}>
                         <Sparkles size={14} strokeWidth={2.25} aria-hidden="true" /> AI generator
                     </button>
                 </div>
@@ -1325,7 +1340,9 @@ export default function Edit({ certification, hasSystemApiKey = false }) {
                 ) : (
                     <CreatorGeminiPanel
                         hasSystemApiKey={hasSystemApiKey}
+                        questionTypes={['multiple_choice']}
                         onImport={handleGeminiImportExam}
+                        onBusyChange={setGeminiExamBusy}
                         importLabel="Generate exam questions"
                     />
                 )}
