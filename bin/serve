@@ -8,6 +8,6 @@ INI="${ROOT}/php-dev.ini"
 SERVER="${ROOT}/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php"
 
 echo "Sandbox dev server: http://${HOST}:${PORT}"
-echo "Upload limits: 64M (via php-dev.ini)"
+echo "Upload limits: 64M per file, 128M post (via php-dev.ini)"
 
 exec php -c "${INI}" -S "${HOST}:${PORT}" -t "${ROOT}/public" "${SERVER}"

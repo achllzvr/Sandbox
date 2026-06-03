@@ -45,6 +45,50 @@ class ModuleContentTextExtractor
         return $parts;
     }
 
+    /**
+     * @param  array<int, int>|null  $contentIds
+     * @return array<int, array{label: string, parts: array<int, array<string, mixed>>}>
+     */
+    public function extractUnitsForGemini(Module $module, User $creator, ?array $contentIds = null): array
+    {
+        $this->assertModuleOwnedByCreator($module, $creator);
+
+        $query = $module->contents()->orderBy('order_index');
+
+        if (! empty($contentIds)) {
+            $query->whereIn('id', $contentIds);
+        }
+
+        $units = [];
+
+        foreach ($query->get() as $content) {
+            $part = $this->extractContentPart($content);
+
+            if ($part === null) {
+                continue;
+            }
+
+            $parts = [['text' => "Material: {$content->title}"]];
+
+            if (isset($part['inlineData'])) {
+                $parts[] = $part;
+            } else {
+                $parts[] = ['text' => $part['text']];
+            }
+
+            $units[] = [
+                'label' => $content->title ?: 'Module material',
+                'parts' => $parts,
+            ];
+        }
+
+        if ($units === []) {
+            throw new \InvalidArgumentException('No extractable PDF or presentation content was found for the selected materials.');
+        }
+
+        return $units;
+    }
+
     private function assertModuleOwnedByCreator(Module $module, User $creator): void
     {
         $module->loadMissing('lesson.certification');

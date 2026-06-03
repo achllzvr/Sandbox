@@ -512,6 +512,10 @@
     margin-bottom: 16px;
 }
 
+.creator-gemini-batch-usage {
+    margin-top: 10px;
+}
+
 .creator-gemini-panel__grid {
     display: grid;
     gap: 16px;

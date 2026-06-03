@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { usePage } from '@inertiajs/react';
 import { FileText, Sparkles, Upload, X } from 'lucide-react';
 import AdminBadge from '@/Components/Admin/AdminBadge';
 import CreatorGeminiLoading from '@/Components/Creator/CreatorGeminiLoading';
@@ -6,18 +7,19 @@ import CreatorQuestionFields, { INTERACTION_TYPES } from '@/Components/Creator/C
 import { showAppToastError } from '@/Utils/appToast';
 import { extractAxiosErrorMessage } from '@/Utils/extractAxiosErrorMessage';
 import {
+    canAddGeminiUploadFiles,
     formatFileSize,
-    MAX_GEMINI_FILES,
-    MAX_GEMINI_UPLOAD_LABEL,
-    validateGeminiUploadFile,
-    validateGeminiUploadFiles,
+    geminiBatchUsageLabel,
+    geminiUploadHint,
+    resolveGeminiUploadLimits,
+    validateGeminiUploadBatch,
 } from '@/Utils/geminiUploadLimits';
 
 const LOADING_STEPS = [
     'Preparing source materials',
-    'Sending content to Gemini',
-    'Scanning documents',
-    'Drafting question mix',
+    'Reading files one by one',
+    'Building combined study notes',
+    'Drafting questions from notes',
     'Validating output',
 ];
 
@@ -69,6 +71,9 @@ export default function CreatorGeminiPanel({
     generationError,
     onGenerationErrorChange,
 }) {
+    const { props: pageProps } = usePage();
+    const uploadLimits = useMemo(() => resolveGeminiUploadLimits(pageProps), [pageProps]);
+
     const fixedTypes = useMemo(
         () => (Array.isArray(questionTypes) && questionTypes.length > 0 ? questionTypes : null),
         [questionTypes],
@@ -92,7 +97,7 @@ export default function CreatorGeminiPanel({
     const [promptType, setPromptType] = useState('file');
     const [selectedContentIds, setSelectedContentIds] = useState([]);
     const [selectedQuestionTypes, setSelectedQuestionTypes] = useState(selectableTypes);
-    const [numQuestions, setNumQuestions] = useState(5);
+    const [numQuestions, setNumQuestions] = useState(10);
     const [internalLoading, setInternalLoading] = useState(false);
     const [loadingStep, setLoadingStep] = useState(0);
     const [loadingProgress, setLoadingProgress] = useState(8);
@@ -202,20 +207,15 @@ export default function CreatorGeminiPanel({
             const next = [...current];
 
             for (const file of incoming) {
-                if (next.length >= MAX_GEMINI_FILES) {
-                    showAppToastError(`You can upload up to ${MAX_GEMINI_FILES} files at a time.`);
-                    break;
-                }
-
-                const error = validateGeminiUploadFile(file);
-                if (error) {
-                    showAppToastError(error);
-                    continue;
-                }
-
                 const key = fileKey(file);
                 if (seen.has(key)) {
                     continue;
+                }
+
+                const gate = canAddGeminiUploadFiles(next, [file], uploadLimits);
+                if (!gate.ok) {
+                    showAppToastError(gate.message);
+                    break;
                 }
 
                 seen.add(key);
@@ -240,7 +240,7 @@ export default function CreatorGeminiPanel({
     async function handleGenerate() {
         if (sourceMode === 'upload') {
             if (promptType === 'file') {
-                const fileError = validateGeminiUploadFiles(aiFiles);
+                const fileError = validateGeminiUploadBatch(aiFiles, uploadLimits);
                 if (fileError) {
                     showAppToastError(fileError);
                     return;
@@ -292,7 +292,7 @@ export default function CreatorGeminiPanel({
 
         try {
             const { data } = await window.axios.post(route('creator.gemini.generate-questions'), formData, {
-                timeout: 300000,
+                timeout: 900000,
             });
 
             const formatted = (data.questions || []).map(normalizePreviewQuestion);
@@ -408,7 +408,7 @@ export default function CreatorGeminiPanel({
 
             <div className="creator-gemini-panel__intro">
                 <p className="admin-text-muted">
-                    Build a mixed short test from sandbox materials or temporary uploads. Files are used only for this generation and are not saved to the shell.
+                    Build a mixed short test from sandbox materials or temporary uploads. Multiple files are read one at a time and merged into study notes before questions are generated. Files are not saved to the shell.
                 </p>
             </div>
 
@@ -493,7 +493,7 @@ export default function CreatorGeminiPanel({
                                         <Upload size={22} strokeWidth={2.25} aria-hidden="true" />
                                         <p className="creator-gemini-dropzone__title">Drop files here or browse</p>
                                         <p className="admin-field__hint">
-                                            Up to {MAX_GEMINI_FILES} files · {MAX_GEMINI_UPLOAD_LABEL} each · PDF, image, or text
+                                            {geminiUploadHint(uploadLimits)}
                                         </p>
                                         <button
                                             type="button"
@@ -516,7 +516,11 @@ export default function CreatorGeminiPanel({
                                     </div>
 
                                     {aiFiles.length > 0 ? (
-                                        <ul className="creator-gemini-file-list">
+                                        <>
+                                            <p className="admin-field__hint creator-gemini-batch-usage">
+                                                {geminiBatchUsageLabel(aiFiles, uploadLimits)}
+                                            </p>
+                                            <ul className="creator-gemini-file-list">
                                             {aiFiles.map((file, index) => (
                                                 <li key={fileKey(file)} className="creator-gemini-file-list__item">
                                                     <FileText size={16} strokeWidth={2.25} aria-hidden="true" />
@@ -534,7 +538,8 @@ export default function CreatorGeminiPanel({
                                                     </button>
                                                 </li>
                                             ))}
-                                        </ul>
+                                            </ul>
+                                        </>
                                     ) : null}
                                 </div>
                             ) : (
@@ -581,13 +586,13 @@ export default function CreatorGeminiPanel({
                         <span className="admin-field__label">Number of questions</span>
                         <input
                             type="number"
-                            min={5}
-                            max={20}
+                            min={10}
+                            max={200}
                             className="input-field"
                             value={numQuestions}
                             onChange={(e) => setNumQuestions(Number(e.target.value))}
                         />
-                        <p className="admin-field__hint">Minimum 5, maximum 20.</p>
+                        <p className="admin-field__hint">Minimum 10, maximum 200.</p>
                     </label>
 
                     <fieldset className="admin-field">

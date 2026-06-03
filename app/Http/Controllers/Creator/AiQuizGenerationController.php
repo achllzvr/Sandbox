@@ -24,8 +24,8 @@ class AiQuizGenerationController extends Controller
         $request->validate([
             'pdf' => 'nullable|file|mimes:pdf,png,jpg,jpeg,webp,txt|max:'.$maxFileKb,
             'file' => 'nullable|file|mimes:pdf,png,jpg,jpeg,webp,txt|max:'.$maxFileKb,
-            'count' => 'nullable|integer|min:5|max:20',
-            'num_questions' => 'nullable|integer|min:5|max:20',
+            'count' => 'nullable|integer|min:10|max:200',
+            'num_questions' => 'nullable|integer|min:10|max:200',
             'api_key_type' => 'nullable|in:system,custom',
             'api_key' => 'nullable|string',
         ]);

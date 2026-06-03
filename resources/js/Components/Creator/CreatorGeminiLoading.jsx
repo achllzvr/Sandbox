@@ -10,7 +10,7 @@ export default function CreatorGeminiLoading({ steps, activeStep, progress }) {
                 </span>
                 <div>
                     <h3 className="creator-gemini-loading__title">Generating questions</h3>
-                    <p className="admin-text-muted">Gemini is reading your materials and drafting the quiz. Large files may take a minute.</p>
+                    <p className="admin-text-muted">Gemini reads each file in order, merges the notes, then drafts your quiz. Large batches may take several minutes.</p>
                 </div>
             </div>
 

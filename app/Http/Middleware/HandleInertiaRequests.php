@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Services\GamificationService;
+use App\Support\GeminiUploadLimits;
 use App\Support\UploadLimits;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -67,6 +68,7 @@ class HandleInertiaRequests extends Middleware
                 'assessment_result' => fn () => $request->session()->get('assessment_result'),
             ],
             'uploadLimits' => fn () => UploadLimits::forFrontend(),
+            'geminiUploadLimits' => fn () => GeminiUploadLimits::forFrontend(),
             'ziggy' => function () use ($request) {
                 return array_merge((new Ziggy)->toArray(), [
                     'location' => $request->url(),
