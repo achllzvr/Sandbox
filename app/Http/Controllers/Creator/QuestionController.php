@@ -3,17 +3,18 @@
 namespace App\Http\Controllers\Creator;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Creator\Concerns\AuthorizesCertificationEditing;
 use App\Http\Requests\Creator\StoreQuestionsRequest;
 use App\Models\Module;
 use Illuminate\Support\Facades\DB;
 
 class QuestionController extends Controller
 {
+    use AuthorizesCertificationEditing;
+
     public function store(StoreQuestionsRequest $request, Module $module)
     {
-        if ($module->lesson->certification->created_by_user_id !== auth()->id()) {
-            abort(403);
-        }
+        $this->authorizeModuleEditing($module);
 
         DB::transaction(function () use ($request, $module) {
             $module->questions()->delete();

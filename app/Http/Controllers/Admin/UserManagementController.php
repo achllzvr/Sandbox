@@ -6,16 +6,17 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\InviteUserRequest;
 use App\Http\Requests\Admin\VerifyTeacherRequest;
 use App\Mail\TeacherAffiliateApprovedMail;
+use App\Mail\UserInvitationMail;
 use App\Models\User;
+use App\Models\UserInvitation;
 use App\Services\AuditLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class UserManagementController extends Controller
 {
-    // TODO[backend]: Add suspend(), archive(), show() endpoints for user management card actions.
-
     public function index(Request $request)
     {
         $query = User::query();
@@ -57,18 +58,61 @@ class UserManagementController extends Controller
         ]);
     }
 
+    public function show(User $user)
+    {
+        $user->load('verifier:id,first_name,last_name');
+
+        return Inertia::render('Admin/Users/Show', [
+            'user' => $user,
+        ]);
+    }
+
+    public function suspend(User $user, AuditLogService $auditLog)
+    {
+        if ($user->role === 'admin') {
+            return redirect()->back()->with('error', 'Admin accounts cannot be suspended.');
+        }
+
+        $user->update([
+            'status' => 'inactive',
+            'is_active' => false,
+        ]);
+
+        $auditLog->log('user_suspended', auth()->id(), [
+            'user_id' => $user->id,
+            'email' => $user->email,
+        ]);
+
+        return redirect()->back()->with('success', "{$user->first_name} {$user->last_name} has been suspended.");
+    }
+
+    public function archive(User $user, AuditLogService $auditLog)
+    {
+        if ($user->role === 'admin') {
+            return redirect()->back()->with('error', 'Admin accounts cannot be archived.');
+        }
+
+        $user->update([
+            'status' => 'inactive',
+            'is_active' => false,
+        ]);
+
+        $auditLog->log('user_archived', auth()->id(), [
+            'user_id' => $user->id,
+            'email' => $user->email,
+        ]);
+
+        return redirect()->back()->with('success', "{$user->first_name} {$user->last_name} has been archived.");
+    }
+
     public function invite(InviteUserRequest $request)
     {
-        // TODO[backend]: Add admin role invite path — InviteUserRequest excludes admin; CreateUserFlow fakes success for admin.
-
-        // Check if user already exists
-        if (\App\Models\User::where('email', $request->email)->exists()) {
+        if (User::where('email', $request->email)->exists()) {
             return redirect()->back()->withErrors(['email' => 'User already exists.']);
         }
 
-        // Create or update invitation
-        $token = \Illuminate\Support\Str::random(60);
-        $invitation = \App\Models\UserInvitation::updateOrCreate(
+        $token = Str::random(60);
+        $invitation = UserInvitation::updateOrCreate(
             ['email' => $request->email],
             [
                 'role' => $request->role,
@@ -76,12 +120,39 @@ class UserManagementController extends Controller
             ]
         );
 
-        // Send email
-        \Illuminate\Support\Facades\Mail::to($invitation->email)
-            ->send(new \App\Mail\UserInvitationMail($invitation));
+        Mail::to($invitation->email)->send(new UserInvitationMail($invitation));
 
         return redirect()->route('admin.users.index')
             ->with('success', 'Invitation sent successfully!');
+    }
+
+    public function inviteAdmin(Request $request, AuditLogService $auditLog)
+    {
+        $validated = $request->validate([
+            'email' => ['required', 'email', 'unique:users,email'],
+        ]);
+
+        if (User::where('email', $validated['email'])->exists()) {
+            return redirect()->back()->withErrors(['email' => 'User already exists.']);
+        }
+
+        $token = Str::random(60);
+        $invitation = UserInvitation::updateOrCreate(
+            ['email' => $validated['email']],
+            [
+                'role' => 'admin',
+                'token' => $token,
+            ]
+        );
+
+        Mail::to($invitation->email)->send(new UserInvitationMail($invitation));
+
+        $auditLog->log('admin_invited', auth()->id(), [
+            'email' => $validated['email'],
+        ]);
+
+        return redirect()->route('admin.users.index')
+            ->with('success', 'Admin invitation sent successfully!');
     }
 
     public function verifyTeacher(VerifyTeacherRequest $request, User $user, AuditLogService $auditLog)

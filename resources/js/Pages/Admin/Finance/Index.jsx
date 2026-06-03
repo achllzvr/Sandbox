@@ -1,18 +1,4 @@
-/**
- * Admin Finance
- *
- * WIRED (backend + database): none — FinanceController returns is_mock: true only
- *
- * TODO (backend + database):
- * - All metric cards → payment/ledger aggregates
- * - Master ledger table → transactions table
- * - Withdrawal management → withdrawals table + WithdrawalController (empty)
- * - Update status popover actions → withdrawal status API
- * - Webhook monitor → webhook_events table + retry/revoke handlers
- * - Export CSV → download endpoint
- * - Date range → server-side filter on all tabs
- */
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import AdminBadge from '@/Components/Admin/AdminBadge';
 import AdminModal from '@/Components/Admin/AdminModal';
@@ -22,30 +8,10 @@ import { useAdminPagination } from '@/hooks/useAdminPagination';
 import {
     formatCurrency,
     formatFinanceTimestamp,
-    MOCK_LEDGER_METRICS,
-    MOCK_MASTER_LEDGER,
-    MOCK_WEBHOOK_EVENTS,
-    MOCK_WEBHOOK_METRICS,
-    MOCK_WITHDRAWALS,
     WITHDRAWAL_STATUS_OPTIONS,
     WEBHOOK_STATUS_OPTIONS,
 } from '@/Components/Admin/AdminFinanceMockData';
-import { useMemo, useState } from 'react';
-
-function inDateRange(isoDate, from, to) {
-    if (!from && !to) return true;
-    const d = new Date(isoDate);
-    if (Number.isNaN(d.getTime())) return true;
-    if (from) {
-        const start = new Date(`${from}T00:00:00`);
-        if (d < start) return false;
-    }
-    if (to) {
-        const end = new Date(`${to}T23:59:59`);
-        if (d > end) return false;
-    }
-    return true;
-}
+import { useCallback, useEffect, useState } from 'react';
 
 const LEDGER_METRIC_ITEMS = [
     { key: 'gross_volume', label: 'Gross volume', accent: '#cf7860' },
@@ -60,7 +26,14 @@ const WEBHOOK_METRIC_ITEMS = [
     { key: 'failures', label: 'Failures / errors', accent: '#e09890' },
 ];
 
-export default function FinanceIndex({ filters = {}, is_mock = true }) {
+export default function FinanceIndex({
+    filters = {},
+    summary = {},
+    webhook_metrics = {},
+    master_ledger = [],
+    withdrawals = [],
+    webhook_events = [],
+}) {
     const [topTab, setTopTab] = useState(filters?.tab === 'webhook' ? 'webhook' : 'ledger');
     const [ledgerTab, setLedgerTab] = useState(
         filters?.ledger_tab === 'withdrawals' ? 'withdrawals' : 'master'
@@ -73,69 +46,40 @@ export default function FinanceIndex({ filters = {}, is_mock = true }) {
     const [dateFrom, setDateFrom] = useState(filters?.date_from || '');
     const [dateTo, setDateTo] = useState(filters?.date_to || '');
     const [showDateModal, setShowDateModal] = useState(false);
+    const [statusProcessing, setStatusProcessing] = useState(false);
 
-    const webhookMetrics = MOCK_WEBHOOK_METRICS;
-
-    const filteredMasterLedger = useMemo(() => {
-        let rows = MOCK_MASTER_LEDGER;
-        if (search.trim()) {
-            const q = search.toLowerCase();
-            rows = rows.filter(
-                (row) =>
-                    row.transaction_id.toLowerCase().includes(q) ||
-                    row.item_sold.toLowerCase().includes(q) ||
-                    row.creator.toLowerCase().includes(q)
+    const applyFilters = useCallback(
+        (overrides = {}) => {
+            router.get(
+                route('admin.finance.index'),
+                {
+                    tab: topTab === 'webhook' ? 'webhook' : undefined,
+                    ledger_tab: ledgerTab === 'withdrawals' ? 'withdrawals' : undefined,
+                    search: search || undefined,
+                    status: statusFilter || undefined,
+                    date_from: dateFrom || undefined,
+                    date_to: dateTo || undefined,
+                    certification_id: filters?.certification_id || undefined,
+                    ...overrides,
+                },
+                { preserveState: true, replace: true }
             );
-        }
-        if (dateFrom || dateTo) {
-            rows = rows.filter((row) => inDateRange(row.timestamp, dateFrom, dateTo));
-        }
-        return rows;
-    }, [search, dateFrom, dateTo]);
+        },
+        [topTab, ledgerTab, search, statusFilter, dateFrom, dateTo, filters?.certification_id]
+    );
 
-    const filteredWithdrawals = useMemo(() => {
-        let rows = MOCK_WITHDRAWALS;
-        if (search.trim()) {
-            const q = search.toLowerCase();
-            rows = rows.filter(
-                (row) =>
-                    row.creator_name.toLowerCase().includes(q) ||
-                    row.payment_detail.includes(q)
-            );
-        }
-        if (statusFilter) {
-            rows = rows.filter((row) => row.status === statusFilter);
-        }
-        if (dateFrom || dateTo) {
-            rows = rows.filter((row) => inDateRange(row.timestamp, dateFrom, dateTo));
-        }
-        return rows;
-    }, [search, statusFilter, dateFrom, dateTo]);
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (search !== (filters?.search || '')) {
+                applyFilters({ search: search || undefined });
+            }
+        }, 400);
+        return () => clearTimeout(timer);
+    }, [search, filters?.search, applyFilters]);
 
-    const filteredWebhooks = useMemo(() => {
-        let rows = MOCK_WEBHOOK_EVENTS;
-        if (search.trim()) {
-            const q = search.toLowerCase();
-            rows = rows.filter(
-                (row) =>
-                    row.transaction_id.toLowerCase().includes(q) ||
-                    row.user_name.toLowerCase().includes(q) ||
-                    row.user_email.toLowerCase().includes(q) ||
-                    row.item_purchased.toLowerCase().includes(q)
-            );
-        }
-        if (statusFilter) {
-            rows = rows.filter((row) => row.status === statusFilter);
-        }
-        if (dateFrom || dateTo) {
-            rows = rows.filter((row) => inDateRange(row.timestamp, dateFrom, dateTo));
-        }
-        return rows;
-    }, [search, statusFilter, dateFrom, dateTo]);
-
-    const masterLedgerPagination = useAdminPagination(filteredMasterLedger);
-    const withdrawalsPagination = useAdminPagination(filteredWithdrawals);
-    const webhooksPagination = useAdminPagination(filteredWebhooks);
+    const masterLedgerPagination = useAdminPagination(master_ledger);
+    const withdrawalsPagination = useAdminPagination(withdrawals);
+    const webhooksPagination = useAdminPagination(webhook_events);
 
     function openTodoAction(type, payload) {
         setActionModal({ type, payload });
@@ -143,12 +87,57 @@ export default function FinanceIndex({ filters = {}, is_mock = true }) {
         setWebhookMenuId(null);
     }
 
+    function updateWithdrawalStatus(row, status) {
+        if (statusProcessing) return;
+        setStatusProcessing(true);
+        setWithdrawalMenuId(null);
+        router.put(
+            route('admin.withdrawals.status.update', row.id),
+            { status },
+            {
+                preserveScroll: true,
+                onFinish: () => setStatusProcessing(false),
+            }
+        );
+    }
+
+    function switchTopTab(tab) {
+        setTopTab(tab);
+        applyFilters({ tab: tab === 'webhook' ? 'webhook' : undefined });
+    }
+
+    function switchLedgerTab(tab) {
+        setLedgerTab(tab);
+        applyFilters({ ledger_tab: tab === 'withdrawals' ? 'withdrawals' : undefined });
+    }
+
+    function handleStatusChange(e) {
+        const value = e.target.value;
+        setStatusFilter(value);
+        applyFilters({ status: value || undefined });
+    }
+
+    function applyDateRange() {
+        setShowDateModal(false);
+        applyFilters({
+            date_from: dateFrom || undefined,
+            date_to: dateTo || undefined,
+        });
+    }
+
+    function clearDateRange() {
+        setDateFrom('');
+        setDateTo('');
+        setShowDateModal(false);
+        applyFilters({ date_from: undefined, date_to: undefined });
+    }
+
     const topbarTabs = (
         <div className="admin-page-tabs admin-page-tabs--topbar">
             <button
                 type="button"
                 className={`admin-page-tabs__btn ${topTab === 'ledger' ? 'admin-page-tabs__btn--active' : ''}`}
-                onClick={() => setTopTab('ledger')}
+                onClick={() => switchTopTab('ledger')}
                 aria-selected={topTab === 'ledger'}
             >
                 Financial ledger
@@ -156,7 +145,7 @@ export default function FinanceIndex({ filters = {}, is_mock = true }) {
             <button
                 type="button"
                 className={`admin-page-tabs__btn ${topTab === 'webhook' ? 'admin-page-tabs__btn--active' : ''}`}
-                onClick={() => setTopTab('webhook')}
+                onClick={() => switchTopTab('webhook')}
                 aria-selected={topTab === 'webhook'}
             >
                 Webhook monitor
@@ -165,7 +154,7 @@ export default function FinanceIndex({ filters = {}, is_mock = true }) {
     );
 
     const metricItems = topTab === 'ledger' ? LEDGER_METRIC_ITEMS : WEBHOOK_METRIC_ITEMS;
-    const metricData = topTab === 'ledger' ? MOCK_LEDGER_METRICS : webhookMetrics;
+    const metricData = topTab === 'ledger' ? summary : webhook_metrics;
 
     function formatMetricValue(key) {
         const val = metricData[key];
@@ -174,9 +163,9 @@ export default function FinanceIndex({ filters = {}, is_mock = true }) {
                 key
             )
         ) {
-            return formatCurrency(val);
+            return formatCurrency(val ?? 0);
         }
-        return val;
+        return val ?? 0;
     }
 
     const dateRangeLabel =
@@ -188,17 +177,6 @@ export default function FinanceIndex({ filters = {}, is_mock = true }) {
         <AdminLayout pageTitle="Finance" topbarEnd={topbarTabs}>
             <Head title="Finance" />
 
-            {is_mock && (
-                <div className="admin-notice admin-notice--todo">
-                    <span className="admin-todo-badge">TODO: live data</span>
-                    <span>
-                        Finance metrics, ledger entries, withdrawals, and webhook events are mocked
-                        until the payment system is integrated.
-                    </span>
-                </div>
-            )}
-
-            {/* TODO[backend]: Finance metric cards — MOCK_LEDGER_METRICS / MOCK_WEBHOOK_METRICS */}
             <div
                 className={`admin-finance-metrics ${topTab === 'webhook' ? 'admin-finance-metrics--3' : ''}`}
             >
@@ -236,7 +214,7 @@ export default function FinanceIndex({ filters = {}, is_mock = true }) {
                 >
                     <select
                         value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
+                        onChange={handleStatusChange}
                         className="input-field admin-subtoolbar__role"
                         aria-label="Filter by status"
                         aria-hidden={topTab !== 'webhook' && ledgerTab !== 'withdrawals'}
@@ -275,7 +253,6 @@ export default function FinanceIndex({ filters = {}, is_mock = true }) {
                 </div>
             </div>
 
-            {/* Ledger panel: master ledger + withdrawal tabs — mock row data */}
             {topTab === 'ledger' ? (
                 <div className="admin-finance-panel admin-card admin-card--chunky admin-panel--clip-visible">
                     <div className="admin-finance-panel__tabs" role="tablist" aria-label="Ledger views">
@@ -284,7 +261,7 @@ export default function FinanceIndex({ filters = {}, is_mock = true }) {
                             role="tab"
                             aria-selected={ledgerTab === 'master'}
                             className={`admin-finance-panel__tab ${ledgerTab === 'master' ? 'admin-finance-panel__tab--active' : ''}`}
-                            onClick={() => setLedgerTab('master')}
+                            onClick={() => switchLedgerTab('master')}
                         >
                             Master ledger
                         </button>
@@ -293,7 +270,7 @@ export default function FinanceIndex({ filters = {}, is_mock = true }) {
                             role="tab"
                             aria-selected={ledgerTab === 'withdrawals'}
                             className={`admin-finance-panel__tab ${ledgerTab === 'withdrawals' ? 'admin-finance-panel__tab--active' : ''}`}
-                            onClick={() => setLedgerTab('withdrawals')}
+                            onClick={() => switchLedgerTab('withdrawals')}
                         >
                             Withdrawal management
                         </button>
@@ -312,7 +289,7 @@ export default function FinanceIndex({ filters = {}, is_mock = true }) {
                                 <span>Creator cut</span>
                             </div>
                             <div className="admin-finance-panel__body">
-                                {filteredMasterLedger.length === 0 ? (
+                                {master_ledger.length === 0 ? (
                                     <p className="admin-empty" style={{ padding: '3rem' }}>
                                         No ledger entries found.
                                     </p>
@@ -354,7 +331,7 @@ export default function FinanceIndex({ filters = {}, is_mock = true }) {
                                 <span>Actions</span>
                             </div>
                             <div className="admin-finance-panel__body">
-                                {filteredWithdrawals.length === 0 ? (
+                                {withdrawals.length === 0 ? (
                                     <p className="admin-empty" style={{ padding: '3rem' }}>
                                         No withdrawal requests found.
                                     </p>
@@ -379,25 +356,25 @@ export default function FinanceIndex({ filters = {}, is_mock = true }) {
                                                     <button
                                                         type="button"
                                                         className="admin-cert-action admin-cert-action--finance admin-cert-action--compact"
+                                                        disabled={statusProcessing}
                                                         onClick={() => setWithdrawalMenuId(withdrawalMenuId === row.id ? null : row.id)}
                                                     >
                                                         Update status
                                                     </button>
-                                                    {/* TODO[backend]: Withdrawal status updates → WithdrawalController */}
                                                     {withdrawalMenuId === row.id && (
                                                         <div className={`admin-finance-popover ${popoverAbove ? 'admin-finance-popover--above' : ''}`}>
                                                             {row.status === 'pending' && (
                                                                 <>
-                                                                    <button type="button" className="admin-finance-popover__btn admin-finance-popover__btn--process" onClick={() => openTodoAction('withdrawal_processing', row)}>
+                                                                    <button type="button" className="admin-finance-popover__btn admin-finance-popover__btn--process" onClick={() => updateWithdrawalStatus(row, 'processing')}>
                                                                         Mark as processing
                                                                     </button>
-                                                                    <button type="button" className="admin-finance-popover__btn admin-finance-popover__btn--decline" onClick={() => openTodoAction('withdrawal_decline', row)}>
+                                                                    <button type="button" className="admin-finance-popover__btn admin-finance-popover__btn--decline" onClick={() => updateWithdrawalStatus(row, 'declined')}>
                                                                         Decline request
                                                                     </button>
                                                                 </>
                                                             )}
                                                             {row.status === 'processing' && (
-                                                                <button type="button" className="admin-finance-popover__btn admin-finance-popover__btn--process" onClick={() => openTodoAction('withdrawal_paid', row)}>
+                                                                <button type="button" className="admin-finance-popover__btn admin-finance-popover__btn--process" onClick={() => updateWithdrawalStatus(row, 'paid')}>
                                                                     Mark as paid
                                                                 </button>
                                                             )}
@@ -426,7 +403,6 @@ export default function FinanceIndex({ filters = {}, is_mock = true }) {
                     </div>
                 </div>
             ) : (
-                /* TODO[backend]: Webhook monitor table — MOCK_WEBHOOK_EVENTS; action popover not wired */
                 <div className="admin-finance-panel admin-card admin-card--chunky admin-panel--clip-visible">
                     <div className="admin-finance-panel__header admin-finance-panel__header--webhook">
                         <span>Timestamp</span>
@@ -439,7 +415,7 @@ export default function FinanceIndex({ filters = {}, is_mock = true }) {
                         <span>Actions</span>
                     </div>
                     <div className="admin-finance-panel__body">
-                        {filteredWebhooks.length === 0 ? (
+                        {webhook_events.length === 0 ? (
                             <p className="admin-empty" style={{ padding: '3rem' }}>
                                 No webhook events found.
                             </p>
@@ -502,7 +478,6 @@ export default function FinanceIndex({ filters = {}, is_mock = true }) {
                 </div>
             )}
 
-            {/* Date range — client-side filter on mock data; TODO[backend] persist to FinanceController */}
             <AdminDateRangeModal
                 show={showDateModal}
                 onClose={() => setShowDateModal(false)}
@@ -510,15 +485,10 @@ export default function FinanceIndex({ filters = {}, is_mock = true }) {
                 dateTo={dateTo}
                 onChangeFrom={setDateFrom}
                 onChangeTo={setDateTo}
-                onApply={() => setShowDateModal(false)}
-                onClear={() => {
-                    setDateFrom('');
-                    setDateTo('');
-                    setShowDateModal(false);
-                }}
+                onApply={applyDateRange}
+                onClear={clearDateRange}
             />
 
-            {/* TODO[backend]: Finance action modal — withdrawal/webhook/export handlers not implemented */}
             <AdminModal
                 show={!!actionModal}
                 onClose={() => setActionModal(null)}
@@ -531,18 +501,22 @@ export default function FinanceIndex({ filters = {}, is_mock = true }) {
             >
                 <p className="admin-table__muted">
                     {actionModal?.type === 'export_csv' && 'Export ledger data to CSV.'}
-                    {actionModal?.type === 'withdrawal_processing' && `Mark withdrawal for ${actionModal.payload?.creator_name} as processing.`}
-                    {actionModal?.type === 'withdrawal_decline' && `Decline withdrawal for ${actionModal.payload?.creator_name}.`}
-                    {actionModal?.type === 'withdrawal_paid' && `Mark withdrawal for ${actionModal.payload?.creator_name} as paid.`}
-                    {actionModal?.type === 'webhook_json' && `View webhook payload for ${actionModal.payload?.transaction_id}.`}
+                    {actionModal?.type === 'webhook_json' && (
+                        <>
+                            Webhook payload for {actionModal.payload?.transaction_id}:
+                            <pre style={{ marginTop: '12px', fontSize: '12px', overflow: 'auto' }}>
+                                {actionModal.payload?.raw_payload || 'No payload stored.'}
+                            </pre>
+                        </>
+                    )}
                     {actionModal?.type === 'webhook_override' && `Manual override for ${actionModal.payload?.transaction_id}.`}
                     {actionModal?.type === 'webhook_revoke' && `Revoke access for ${actionModal.payload?.user_name}.`}
                 </p>
-                <p className="admin-table__muted" style={{ marginTop: '12px' }}>
-                    <span className="admin-todo-badge admin-todo-badge--inline">
-                        TODO: wire {actionModal?.type?.replace(/_/g, ' ')} to backend
-                    </span>
-                </p>
+                {(actionModal?.type === 'webhook_override' || actionModal?.type === 'webhook_revoke' || actionModal?.type === 'export_csv') && (
+                    <p className="admin-table__muted" style={{ marginTop: '12px' }}>
+                        This action is not yet implemented.
+                    </p>
+                )}
             </AdminModal>
         </AdminLayout>
     );

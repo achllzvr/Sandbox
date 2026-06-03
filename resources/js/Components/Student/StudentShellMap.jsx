@@ -216,6 +216,7 @@ export default function StudentShellMap({
     shellMeta = {},
     examStatus = {},
     examDraftAvailable = false,
+    suppressEnterAnimation = false,
     selectHref,
     onPlayModule,
     onTakeFinalExam,
@@ -253,14 +254,21 @@ export default function StudentShellMap({
     }, [allModules, progress.completed_module_ids, isAllCompleted]);
 
     useLayoutEffect(() => {
-        setMapEntered(false);
         hasAutoScrolledRef.current = false;
+
+        if (suppressEnterAnimation) {
+            setMapEntered(true);
+            return undefined;
+        }
+
+        setMapEntered(false);
 
         const frame = requestAnimationFrame(() => {
             requestAnimationFrame(() => setMapEntered(true));
         });
+
         return () => cancelAnimationFrame(frame);
-    }, [certification.id]);
+    }, [certification.id, suppressEnterAnimation]);
 
     useEffect(() => {
         const firstActive = allModules.findIndex((module, index) => isUnlocked(index) && !isCompleted(module.id));

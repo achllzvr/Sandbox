@@ -9,8 +9,8 @@ export function moduleFileExtension(fileUrl) {
     return match ? match[1].toLowerCase() : null;
 }
 
-export function resolveModulePreviewKind(contentType, fileUrl) {
-    const ext = moduleFileExtension(fileUrl);
+export function resolveModulePreviewKind(contentType, fileUrl, fileExtension = null) {
+    const ext = (fileExtension || moduleFileExtension(fileUrl) || '').toLowerCase();
 
     if (ext === 'pdf') {
         return 'pdf';
@@ -22,6 +22,16 @@ export function resolveModulePreviewKind(contentType, fileUrl) {
 
     if (ext === 'ppt') {
         return 'ppt';
+    }
+
+    if (ext === 'bin') {
+        if (contentType === 'document') {
+            return 'pdf';
+        }
+
+        if (contentType === 'presentation') {
+            return 'pptx';
+        }
     }
 
     if (contentType === 'document') {

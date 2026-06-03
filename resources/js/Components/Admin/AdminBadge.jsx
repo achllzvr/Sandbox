@@ -9,6 +9,7 @@ const STATUS_MAP = {
     denied: 'denied',
     declined: 'declined',
     draft: 'draft',
+    archived: 'inactive',
 };
 
 const ROLE_MAP = {

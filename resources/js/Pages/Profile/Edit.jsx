@@ -9,9 +9,6 @@ import UpdateProfileInformationForm from './Partials/UpdateProfileInformationFor
 import { Head, Link, usePage } from '@inertiajs/react';
 import { ArrowLeft } from 'lucide-react';
 
-// TODO[backend]: ProfileController@update is a stub — persist name/email to users table (map name → first_name/last_name/full_name).
-// TODO[backend]: password.update route/handler not registered — wire UpdatePasswordForm to a real password change endpoint for admins.
-
 export default function Edit({ mustVerifyEmail, status }) {
     const { auth } = usePage().props;
     const role = auth.user?.role;

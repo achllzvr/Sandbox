@@ -11,11 +11,19 @@ import JSZip from 'jszip';
  * Props:
  *   fileUrl  – path to the .pptx file (e.g. "/storage/module-contents/abc.pptx")
  */
-export default function PptxViewer({ fileUrl }) {
-    const [slides, setSlides]     = useState([]);
-    const [current, setCurrent]   = useState(0);
-    const [loading, setLoading]   = useState(true);
-    const [error, setError]       = useState(null);
+export default function PptxViewer({
+    fileUrl,
+    slideIndex,
+    onSlideCountChange,
+    immersive = false,
+}) {
+    const [slides, setSlides] = useState([]);
+    const [internalCurrent, setInternalCurrent] = useState(0);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    const isControlled = slideIndex !== undefined && slideIndex !== null;
+    const current = isControlled ? slideIndex : internalCurrent;
 
     useEffect(() => {
         if (!fileUrl) return;
@@ -123,7 +131,10 @@ export default function PptxViewer({ fileUrl }) {
 
                 if (!cancelled) {
                     setSlides(parsed);
-                    setCurrent(0);
+                    if (!isControlled) {
+                        setInternalCurrent(0);
+                    }
+                    onSlideCountChange?.(parsed.length);
                 }
             } catch (err) {
                 console.error('PptxViewer error:', err);
@@ -139,9 +150,15 @@ export default function PptxViewer({ fileUrl }) {
     // ── Loading state ───────────────────────────────────────────────────────
     if (loading) {
         return (
-            <div className="w-full flex flex-col items-center justify-center py-16 space-y-3">
-                <div className="w-10 h-10 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin" />
-                <p className="text-xs font-semibold text-slate-500">Parsing PowerPoint file…</p>
+            <div className={immersive ? 'student-sandbox__viewer-status-wrap' : 'w-full flex flex-col items-center justify-center py-16 space-y-3'}>
+                {immersive ? (
+                    <p className="student-sandbox__viewer-status">Parsing PowerPoint file…</p>
+                ) : (
+                    <>
+                        <div className="w-10 h-10 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin" />
+                        <p className="text-xs font-semibold text-slate-500">Parsing PowerPoint file…</p>
+                    </>
+                )}
             </div>
         );
     }
@@ -176,7 +193,76 @@ export default function PptxViewer({ fileUrl }) {
     }
 
     // ── Slide viewer ────────────────────────────────────────────────────────
-    const slide = slides[current];
+    const slide = slides[Math.min(Math.max(current, 0), slides.length - 1)];
+
+    const slideBody = (
+        <div className={immersive ? 'student-sandbox__slide-body' : 'p-6 min-h-[280px] flex flex-col gap-4'}>
+            {slide.images.length > 0 && (
+                <div className={immersive ? 'student-sandbox__slide-images' : 'flex flex-wrap gap-3 justify-center'}>
+                    {slide.images.map((src, i) => (
+                        <img
+                            key={i}
+                            src={src}
+                            alt={`Slide ${current + 1} image ${i + 1}`}
+                            className={
+                                immersive
+                                    ? 'student-sandbox__slide-image'
+                                    : 'max-h-52 rounded-lg border border-slate-200 shadow-sm object-contain'
+                            }
+                        />
+                    ))}
+                </div>
+            )}
+
+            {slide.textParagraphs.length > 0 ? (
+                <div className={immersive ? 'student-sandbox__slide-text' : 'space-y-2'}>
+                    {slide.textParagraphs.map((para, i) => {
+                        if (i === 0 && slide.textParagraphs.length > 1) {
+                            return (
+                                <h3
+                                    key={i}
+                                    className={
+                                        immersive
+                                            ? 'student-sandbox__slide-title'
+                                            : 'text-lg font-bold text-slate-800 leading-snug'
+                                    }
+                                >
+                                    {para}
+                                </h3>
+                            );
+                        }
+
+                        return (
+                            <p
+                                key={i}
+                                className={
+                                    immersive
+                                        ? 'student-sandbox__slide-paragraph'
+                                        : 'text-sm text-slate-600 leading-relaxed'
+                                }
+                            >
+                                {para}
+                            </p>
+                        );
+                    })}
+                </div>
+            ) : (
+                !slide.images.length && (
+                    <p className={immersive ? 'student-sandbox__slide-empty' : 'text-sm text-slate-400 italic text-center'}>
+                        (This slide has no text content)
+                    </p>
+                )
+            )}
+        </div>
+    );
+
+    if (immersive) {
+        return (
+            <div className="student-sandbox__slide" key={`slide-${current}`}>
+                {slideBody}
+            </div>
+        );
+    }
 
     return (
         <div className="w-full space-y-4">
@@ -190,14 +276,14 @@ export default function PptxViewer({ fileUrl }) {
                     <div className="flex items-center gap-1.5">
                         <button
                             disabled={current === 0}
-                            onClick={() => setCurrent(c => c - 1)}
+                            onClick={() => setInternalCurrent((value) => value - 1)}
                             className="px-2.5 py-1 rounded-lg border border-violet-200 bg-white text-violet-600 text-xs font-bold hover:bg-violet-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                         >
                             ◀ Prev
                         </button>
                         <button
                             disabled={current === slides.length - 1}
-                            onClick={() => setCurrent(c => c + 1)}
+                            onClick={() => setInternalCurrent((value) => value + 1)}
                             className="px-2.5 py-1 rounded-lg border border-violet-200 bg-white text-violet-600 text-xs font-bold hover:bg-violet-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                         >
                             Next ▶
@@ -205,49 +291,7 @@ export default function PptxViewer({ fileUrl }) {
                     </div>
                 </div>
 
-                {/* Slide content */}
-                <div className="p-6 min-h-[280px] flex flex-col gap-4">
-                    {/* Images */}
-                    {slide.images.length > 0 && (
-                        <div className="flex flex-wrap gap-3 justify-center">
-                            {slide.images.map((src, i) => (
-                                <img
-                                    key={i}
-                                    src={src}
-                                    alt={`Slide ${current + 1} image ${i + 1}`}
-                                    className="max-h-52 rounded-lg border border-slate-200 shadow-sm object-contain"
-                                />
-                            ))}
-                        </div>
-                    )}
-
-                    {/* Text content */}
-                    {slide.textParagraphs.length > 0 ? (
-                        <div className="space-y-2">
-                            {slide.textParagraphs.map((para, i) => {
-                                // First paragraph is likely the title
-                                if (i === 0 && slide.textParagraphs.length > 1) {
-                                    return (
-                                        <h3 key={i} className="text-lg font-bold text-slate-800 leading-snug">
-                                            {para}
-                                        </h3>
-                                    );
-                                }
-                                return (
-                                    <p key={i} className="text-sm text-slate-600 leading-relaxed">
-                                        {para}
-                                    </p>
-                                );
-                            })}
-                        </div>
-                    ) : (
-                        !slide.images.length && (
-                            <p className="text-sm text-slate-400 italic text-center">
-                                (This slide has no text content)
-                            </p>
-                        )
-                    )}
-                </div>
+                {slideBody}
             </div>
 
             {/* Slide pagination dots */}
@@ -256,7 +300,7 @@ export default function PptxViewer({ fileUrl }) {
                     {slides.map((_, i) => (
                         <button
                             key={i}
-                            onClick={() => setCurrent(i)}
+                            onClick={() => setInternalCurrent(i)}
                             className={`w-2.5 h-2.5 rounded-full transition-all ${
                                 i === current
                                     ? 'bg-violet-600 scale-125'

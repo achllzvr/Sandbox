@@ -129,13 +129,6 @@ export default function Leaderboard({
                     <p className="student-page-subtitle">See who is building the tallest sandcastles this week.</p>
                 </header>
 
-                {is_mock ? (
-                    <div className="student-mock-banner student-enter__item" style={{ '--student-enter-index': 1 }}>
-                        <strong>TODO[backend]:</strong> Rankings use mock data. Wire to sandbox completions, sand dollars,
-                        and streak stats from the database.
-                    </div>
-                ) : null}
-
                 <div className="student-leaderboard-toolbar student-enter__item" style={{ '--student-enter-index': 2 }}>
                     <div className="student-leaderboard-tabs" role="tablist" aria-label="Leaderboard period">
                         {periodOptions.map((option) => (

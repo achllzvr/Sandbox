@@ -5,8 +5,6 @@ import TextInput from '@/Components/TextInput';
 import { Link, useForm, usePage } from '@inertiajs/react';
 import { Transition } from '@headlessui/react';
 
-// TODO[backend]: ProfileController@update redirects without saving — map `name` to first_name/last_name/full_name on users table.
-
 export default function UpdateProfileInformation({ mustVerifyEmail, status, className, variant = 'default' }) {
     const user = usePage().props.auth.user;
     const isAdmin = variant === 'admin';
@@ -37,20 +35,6 @@ export default function UpdateProfileInformation({ mustVerifyEmail, status, clas
                 </h2>
                 <p className={isAdmin ? 'admin-profile-card__subtitle' : usesSandboxField ? 'student-profile-form__subtitle' : 'mt-1 text-sm text-gray-600'}>
                     Update your account profile information and email address.
-                    {isAdmin && (
-                        <>
-                            {' '}
-                            <span className="admin-todo-badge admin-todo-badge--inline">
-                                TODO: profile.update save
-                            </span>
-                        </>
-                    )}
-                    {isStudent && (
-                        <>
-                            {' '}
-                            <span className="student-todo-badge">TODO</span>
-                        </>
-                    )}
                 </p>
             </header>
 

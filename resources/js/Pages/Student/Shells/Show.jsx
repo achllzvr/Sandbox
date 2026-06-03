@@ -1,18 +1,44 @@
 import { Head, router, usePage } from '@inertiajs/react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import StudentCertificateView from '@/Components/Student/StudentCertificateView';
 import StudentExamDisclaimerModal from '@/Components/Student/StudentExamDisclaimerModal';
 import StudentQuizResults from '@/Components/Student/StudentQuizResults';
 import StudentSandboxQuiz from '@/Components/Student/StudentSandboxQuiz';
 import StudentShellMap from '@/Components/Student/StudentShellMap';
-import ModuleContentPreview from '@/Components/ModuleContentPreview';
+import ReviewAssistantPanel from '@/Components/Student/ReviewAssistantPanel';
+import StudentSandboxMaterialPreview, {
+    studentMaterialHasPageNavigation,
+    studentMaterialPreviewKind,
+} from '@/Components/Student/StudentSandboxMaterialPreview';
 import StudentLayout from '@/Layouts/StudentLayout';
+import AppToastProvider from '@/Components/AppToastProvider';
 import { clearExamDraft, hasExamDraft, loadExamDraft, saveExamDraft } from '@/utils/examProgressStorage';
 import { resolveShellMapTheme } from '@/utils/shellThemes';
 import { assetUrl } from '@/utils/assetUrl';
 import { showAppToastError } from '@/Utils/appToast';
 
-export default function Show() {
+function readAssistantSidebarCollapsed() {
+    if (typeof window === 'undefined') {
+        return false;
+    }
+
+    return window.localStorage.getItem('sandbox-review-assistant-collapsed') === '1';
+}
+
+function reviewAssistantLayoutModifier(reviewAssistantEnabled, assistantCollapsed) {
+    if (!reviewAssistantEnabled) {
+        return 'student-sandbox-layout--assistant-hidden';
+    }
+
+    if (assistantCollapsed) {
+        return 'student-sandbox-layout--assistant-collapsed';
+    }
+
+    return '';
+}
+
+function ShowShellPage() {
     const {
         certification,
         progress,
@@ -45,12 +71,16 @@ export default function Show() {
     const [isTakingFinalExam, setIsTakingFinalExam] = useState(false);
     const [isViewingCertificate, setIsViewingCertificate] = useState(false);
     const [contentFinished, setContentFinished] = useState(false);
+    const [previewPage, setPreviewPage] = useState(0);
+    const [previewPageCount, setPreviewPageCount] = useState(0);
     const [examIntroOpen, setExamIntroOpen] = useState(false);
     const [examExitOpen, setExamExitOpen] = useState(false);
     const [examDraftAvailable, setExamDraftAvailable] = useState(() => hasExamDraft(certification.id, userId));
     const [isCheckingAnswer, setIsCheckingAnswer] = useState(false);
     const [flowKey, setFlowKey] = useState('map');
     const [assessmentResult, setAssessmentResult] = useState(null);
+    const [assistantCollapsed, setAssistantCollapsed] = useState(readAssistantSidebarCollapsed);
+    const [suppressMapEnterAnimation, setSuppressMapEnterAnimation] = useState(false);
 
     const allModules = certification.lessons.flatMap((lesson) => lesson.modules);
     const isCompleted = (moduleId) => progress.completed_module_ids?.includes(moduleId);
@@ -71,6 +101,8 @@ export default function Show() {
         setViewingModule(null);
         setIsReviewMode(false);
         setContentIndex(0);
+        setPreviewPage(0);
+        setPreviewPageCount(0);
         setIsViewingQuiz(false);
         setIsViewingResults(false);
         setQuizIndex(0);
@@ -111,6 +143,28 @@ export default function Show() {
             return 'content_only';
         },
         [moduleTypes],
+    );
+
+    const isTestAssessmentActive = useCallback(
+        (module) => {
+            if (!module || getModuleType(module) !== 'test') {
+                return false;
+            }
+
+            return isViewingQuiz || (isViewingResults && !isReviewMode);
+        },
+        [getModuleType, isViewingQuiz, isViewingResults, isReviewMode],
+    );
+
+    const showReviewAssistant = useCallback(
+        (module) => {
+            if (!module || isTakingFinalExam) {
+                return false;
+            }
+
+            return !isTestAssessmentActive(module);
+        },
+        [isTakingFinalExam, isTestAssessmentActive],
     );
 
     useEffect(() => {
@@ -156,11 +210,10 @@ export default function Show() {
 
     const exitToShellMap = useCallback(() => {
         resetSession();
+        setSuppressMapEnterAnimation(true);
         setFlowKey('map');
-        router.get(route('student.shells.show', certification.id), {}, {
-            preserveScroll: true,
-        });
-    }, [resetSession, certification.id]);
+        reloadShellProgress();
+    }, [resetSession, reloadShellProgress]);
 
     const openCertificate = useCallback(() => {
         setIsViewingExamFinish(false);
@@ -200,33 +253,44 @@ export default function Show() {
 
             const moduleType = getModuleType(module);
             const latestAttempt = latestQuizAttempts[module.id];
+            const history = attemptHistory[module.id] ?? [];
+            const savedAttempt = latestAttempt ?? history[history.length - 1] ?? null;
 
-            if (review && latestAttempt) {
+            if (review && !retake) {
+                if (moduleType === 'test' && (module.contents?.length ?? 0) > 0) {
+                    setContentFinished(true);
+
+                    if (savedAttempt) {
+                        setAssessmentResult({
+                            type: moduleType,
+                            module_id: module.id,
+                            score: savedAttempt.score,
+                            total: savedAttempt.total,
+                            passed: savedAttempt.passed,
+                            attempt_number: savedAttempt.attempt_number,
+                            answers: savedAttempt.answers ?? [],
+                        });
+                    }
+
+                    return;
+                }
+
+                const saved = moduleProgress[module.id];
+
                 setAssessmentResult({
                     type: moduleType,
                     module_id: module.id,
-                    score: latestAttempt.score,
-                    total: latestAttempt.total,
-                    passed: latestAttempt.passed,
-                    answers: latestAttempt.answers ?? [],
+                    score: savedAttempt?.score ?? saved?.score ?? 0,
+                    total: savedAttempt?.total ?? module.questions?.length ?? 0,
+                    passed: savedAttempt?.passed ?? null,
+                    attempt_number: savedAttempt?.attempt_number,
+                    answers: savedAttempt?.answers ?? [],
                 });
                 setIsViewingResults(true);
                 setFlowKey(`results-${module.id}`);
-                return;
-            }
-
-            if (review) {
-                const saved = moduleProgress[module.id];
-                if (moduleType === 'quiz' || moduleType === 'test') {
-                    setScore(saved?.score ?? 0);
-                    setIsViewingResults(true);
-                    setFlowKey(`results-${module.id}`);
-                } else if (module.contents?.length > 0) {
-                    setContentFinished(true);
-                }
             }
         },
-        [getModuleType, latestQuizAttempts, moduleProgress, resetSession],
+        [attemptHistory, getModuleType, latestQuizAttempts, moduleProgress, resetSession],
     );
 
     const buildSubmission = useCallback(
@@ -371,6 +435,9 @@ export default function Show() {
         const resultTotal = result.total ?? resultModule?.questions?.length ?? certification.exam_questions?.length ?? 0;
         const resultAnswers = result.answers ?? [];
         const resultQuestions = isExamResults ? certification.exam_questions : resultModule?.questions;
+        const moduleAttemptHistory = isExamResults
+            ? (examStatus.attemptHistory ?? [])
+            : (resultModule ? (attemptHistory[resultModule.id] ?? []) : []);
 
         return (
             <>
@@ -383,11 +450,21 @@ export default function Show() {
                         total={resultTotal}
                         passed={result.passed ?? null}
                         answers={resultAnswers}
+                        attemptHistory={moduleAttemptHistory}
+                        initialAttemptNumber={result.attempt_number ?? null}
                         assessmentType={isExamResults ? 'exam' : moduleType}
                         reviewOnly={isReviewMode && moduleType !== 'test'}
                         onRetake={
                             moduleType === 'test' && resultModule
                                 ? () => openModule(resultModule, { retake: true })
+                                : null
+                        }
+                        onReviewContent={
+                            isReviewMode && moduleType === 'test' && resultModule
+                                ? () => {
+                                    setIsViewingResults(false);
+                                    setFlowKey(`module-${resultModule.id}-review`);
+                                }
                                 : null
                         }
                         onBack={() => {
@@ -556,15 +633,25 @@ export default function Show() {
             }
             setExamExitOpen(false);
             resetSession();
+            setSuppressMapEnterAnimation(true);
             setFlowKey('map');
-            router.get(route('student.shells.show', certification.id), {}, { preserveScroll: true });
+            reloadShellProgress();
         };
+
+        const reviewAssistantEnabled = showReviewAssistant(viewingModule);
+        const assistantLayoutClass = reviewAssistantLayoutModifier(reviewAssistantEnabled, assistantCollapsed);
 
         return (
             <>
                 <Head title={isTakingFinalExam ? 'Final Exam' : viewingModule?.title} />
-                <div key={flowKey} style={themeVars}>
-                    <StudentSandboxQuiz
+                <div
+                    key={flowKey}
+                    className={`student-sandbox-layout student-sandbox-layout--quiz ${assistantLayoutClass}`}
+                    style={themeVars}
+                >
+                    <div className="student-sandbox-layout__main">
+                        <StudentSandboxQuiz
+                        key={flowKey}
                         title={viewingModule?.title}
                         questions={questions}
                         quizIndex={quizIndex}
@@ -580,7 +667,16 @@ export default function Show() {
                         }}
                         onClose={handleExamCloseRequest}
                         isFinalExam={isTakingFinalExam}
-                    />
+                        />
+                    </div>
+                    {!isTakingFinalExam && reviewAssistantEnabled ? (
+                        <ReviewAssistantPanel
+                            moduleId={viewingModule.id}
+                            moduleTitle={viewingModule.title}
+                            themeVars={themeVars}
+                            onCollapsedChange={setAssistantCollapsed}
+                        />
+                    ) : null}
                 </div>
                 <StudentExamDisclaimerModal
                     show={examExitOpen}
@@ -628,14 +724,45 @@ export default function Show() {
                 return;
             }
 
-            setContentIndex(contentIndex + 1);
-            setFlowKey(`module-${viewingModule.id}-content-${contentIndex + 1}`);
+            navigateToContent(contentIndex + 1);
+        };
+
+        const navigateToContent = (nextIndex) => {
+            if (nextIndex < 0 || nextIndex >= contents.length || nextIndex === contentIndex) {
+                return;
+            }
+
+            if (!isReviewMode && !contentFinished) {
+                return;
+            }
+
+            setContentIndex(nextIndex);
+            setPreviewPage(0);
+            setPreviewPageCount(0);
+            setFlowKey(`module-${viewingModule.id}-content-${nextIndex}`);
+
             if (!isReviewMode) {
                 setContentFinished(false);
             }
         };
 
+        const canGoPrevious = contentIndex > 0;
+        const canGoNext = contentIndex < contents.length - 1;
+
         const currentContent = contents[contentIndex];
+        const previewItem = currentContent
+            ? {
+                  type: currentContent.content_type,
+                  title: currentContent.title,
+                  file_url: currentContent.file_url,
+                  stream_url: currentContent.stream_url,
+                  file_extension: currentContent.file_extension,
+              }
+            : null;
+        const currentPreviewKind = studentMaterialPreviewKind(previewItem);
+        const hasPreviewPages = studentMaterialHasPageNavigation(currentPreviewKind) && previewPageCount > 1;
+        const isEmbedPreview =
+            previewItem && (previewItem.type === 'youtube_embed' || previewItem.type === 'video');
         const isLastContent = contentIndex === contents.length - 1;
         const iframeContentTypes = ['youtube_embed', 'presentation', 'document'];
         const usesIframeGate = currentContent && iframeContentTypes.includes(currentContent.content_type);
@@ -654,11 +781,20 @@ export default function Show() {
         }
 
         const actionDisabled = !isReviewMode && contents.length > 0 && !contentFinished;
+        const componentNavLocked = !isReviewMode && !contentFinished;
+        const reviewAssistantEnabled = showReviewAssistant(viewingModule);
+        const assistantLayoutClass = reviewAssistantLayoutModifier(reviewAssistantEnabled, assistantCollapsed);
 
         return (
-            <div key={flowKey} className="student-sandbox student-sandbox--material" style={themeVars}>
-                <Head title={`${viewingModule.title} — Sandbox`} />
-                <header className="student-sandbox__header">
+            <div
+                key={flowKey}
+                className={`student-sandbox-layout student-sandbox-layout--material ${assistantLayoutClass}`}
+                style={themeVars}
+            >
+                <div className="student-sandbox-layout__main">
+                    <div className="student-sandbox student-sandbox--material">
+                        <Head title={`${viewingModule.title} — Sandbox`} />
+                        <header className="student-sandbox__header">
                     <button type="button" className="student-sandbox__header-btn" onClick={closeViewer} aria-label="Close">
                         ✕
                     </button>
@@ -699,66 +835,124 @@ export default function Show() {
                                     {currentContent?.title || `Material ${contentIndex + 1} of ${contents.length}`}
                                 </p>
                                 <div
-                                    className="student-sandbox__viewer student-enter__item"
+                                    className={`student-sandbox__preview-frame ${hasPreviewPages ? 'student-sandbox__preview-frame--paged' : ''} student-enter__item`}
                                     style={{ '--student-enter-index': isReviewMode ? 2 : 1 }}
                                 >
-                                    {currentContent ? (
-                                        <ModuleContentPreview
-                                            item={{
-                                                type: currentContent.content_type,
-                                                title: currentContent.title,
-                                                file_url: currentContent.file_url,
-                                            }}
-                                            iframeClassName="student-sandbox__iframe"
-                                            videoClassName="student-sandbox__iframe"
-                                            pptxClassName="student-sandbox__pptx"
-                                            videoProps={{
-                                                onEnded: () => !isReviewMode && setContentFinished(true),
-                                            }}
-                                        />
-                                    ) : (
-                                        <div className="student-sandbox__viewer-fallback">Unsupported content type.</div>
-                                    )}
+                                    {hasPreviewPages ? (
+                                        <button
+                                            type="button"
+                                            className="student-sandbox__nav-btn student-sandbox__nav-btn--side"
+                                            onClick={() => setPreviewPage((page) => Math.max(0, page - 1))}
+                                            disabled={previewPage === 0}
+                                            aria-label="Previous page"
+                                        >
+                                            <ChevronLeft size={20} strokeWidth={2.5} aria-hidden="true" />
+                                        </button>
+                                    ) : null}
+                                    <div className="student-sandbox__viewer-column">
+                                        <div
+                                            className={`student-sandbox__viewer ${isEmbedPreview ? 'student-sandbox__viewer--embed' : ''}`}
+                                        >
+                                            {previewItem ? (
+                                                <StudentSandboxMaterialPreview
+                                                    item={previewItem}
+                                                    pageIndex={previewPage}
+                                                    onPageCountChange={setPreviewPageCount}
+                                                    videoProps={{
+                                                        onEnded: () => !isReviewMode && setContentFinished(true),
+                                                    }}
+                                                />
+                                            ) : (
+                                                <div className="student-sandbox__viewer-fallback">Unsupported content type.</div>
+                                            )}
+                                        </div>
+                                        {hasPreviewPages ? (
+                                            <p className="student-sandbox__preview-meta">
+                                                Page {previewPage + 1} of {previewPageCount}
+                                            </p>
+                                        ) : null}
+                                    </div>
+                                    {hasPreviewPages ? (
+                                        <button
+                                            type="button"
+                                            className="student-sandbox__nav-btn student-sandbox__nav-btn--side"
+                                            onClick={() => setPreviewPage((page) => Math.min(previewPageCount - 1, page + 1))}
+                                            disabled={previewPage >= previewPageCount - 1}
+                                            aria-label="Next page"
+                                        >
+                                            <ChevronRight size={20} strokeWidth={2.5} aria-hidden="true" />
+                                        </button>
+                                    ) : null}
                                 </div>
+                            </div>
+
+                            {contents.length > 1 ? (
+                                <div className="student-sandbox__component-nav student-enter__item" style={{ '--student-enter-index': 3 }}>
+                                    <button
+                                        type="button"
+                                        className="student-sandbox__nav-btn"
+                                        onClick={() => navigateToContent(contentIndex - 1)}
+                                        disabled={!canGoPrevious || componentNavLocked}
+                                        aria-label="Previous material"
+                                    >
+                                        <ChevronLeft size={20} strokeWidth={2.5} aria-hidden="true" />
+                                    </button>
+                                    <div className="student-sandbox__dots">
+                                        {contents.map((_, i) => (
+                                            <span
+                                                key={i}
+                                                className={`student-sandbox__dot ${i === contentIndex ? 'student-sandbox__dot--active' : i < contentIndex ? 'student-sandbox__dot--done' : ''}`}
+                                            />
+                                        ))}
+                                    </div>
+                                    <button
+                                        type="button"
+                                        className="student-sandbox__nav-btn"
+                                        onClick={() => navigateToContent(contentIndex + 1)}
+                                        disabled={!canGoNext || componentNavLocked}
+                                        aria-label="Next material"
+                                    >
+                                        <ChevronRight size={20} strokeWidth={2.5} aria-hidden="true" />
+                                    </button>
+                                </div>
+                            ) : null}
+
+                            <div className="student-sandbox__finish-row student-enter__item" style={{ '--student-enter-index': 4 }}>
                                 {usesIframeGate && !isReviewMode && !contentFinished ? (
                                     <button
                                         type="button"
-                                        className="student-sandbox__mark-complete student-enter__item"
-                                        style={{ '--student-enter-index': 3 }}
+                                        className="student-sandbox__mark-complete"
                                         onClick={() => setContentFinished(true)}
                                     >
                                         I've finished this material
                                     </button>
                                 ) : null}
-                            </div>
-
-                            {contents.length > 1 && (
-                                <div className="student-sandbox__dots student-enter__item" style={{ '--student-enter-index': 3 }}>
-                                    {contents.map((_, i) => (
-                                        <span
-                                            key={i}
-                                            className={`student-sandbox__dot ${i === contentIndex ? 'student-sandbox__dot--active' : i < contentIndex ? 'student-sandbox__dot--done' : ''}`}
-                                        />
-                                    ))}
-                                </div>
-                            )}
-
-                            <button
-                                type="button"
-                                disabled={actionDisabled}
-                                onClick={proceedFromContent}
-                                className={`student-sandbox__action student-enter__item ${actionDisabled ? 'student-sandbox__action--disabled' : 'student-sandbox__action--primary'}`}
-                                style={{ '--student-enter-index': 4 }}
-                            >
+                                <button
+                                    type="button"
+                                    disabled={actionDisabled}
+                                    onClick={proceedFromContent}
+                                    className={`student-sandbox__action ${actionDisabled ? 'student-sandbox__action--disabled' : 'student-sandbox__action--primary'}`}
+                                >
                                 {actionDisabled
                                     ? currentContent?.content_type === 'video' || currentContent?.content_type === 'youtube_embed'
                                         ? 'Finish video to proceed'
                                         : 'Finish material to proceed'
                                     : actionLabel}
-                            </button>
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>
+                    </div>
+                </div>
+                {reviewAssistantEnabled ? (
+                    <ReviewAssistantPanel
+                        moduleId={viewingModule.id}
+                        moduleTitle={viewingModule.title}
+                        themeVars={themeVars}
+                        onCollapsedChange={setAssistantCollapsed}
+                    />
+                ) : null}
             </div>
         );
     }
@@ -776,6 +970,7 @@ export default function Show() {
                 shellMeta={shellMeta}
                 examStatus={examStatus}
                 examDraftAvailable={examDraftAvailable}
+                suppressEnterAnimation={suppressMapEnterAnimation}
                 selectHref={route('student.dashboard', { select: 1 })}
                 onPlayModule={(module, options = {}) => {
                     const completed = isCompleted(module.id);
@@ -818,6 +1013,7 @@ export default function Show() {
                         score: examStatus.latest_score,
                         total: examStatus.latest_total,
                         passed: examStatus.latest_passed,
+                        attempt_number: examStatus.latestAttempt?.attempt_number ?? null,
                         answers: examStatus.latestAttempt?.answers ?? [],
                     });
                     setIsViewingResults(true);
@@ -844,6 +1040,15 @@ export default function Show() {
                 }}
                 onCancel={() => setExamIntroOpen(false)}
             />
+
         </StudentLayout>
+    );
+}
+
+export default function Show() {
+    return (
+        <AppToastProvider>
+            <ShowShellPage />
+        </AppToastProvider>
     );
 }

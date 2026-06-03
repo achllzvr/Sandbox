@@ -15,7 +15,9 @@ class CertificationService
 
     private const MIN_QUIZ_QUESTIONS = 5;
 
-    public function __construct(private AuditLogService $auditService) {}
+    public function __construct(private AuditLogService $auditService)
+    {
+    }
 
     public function submitForApproval(Certification $cert): void
     {
@@ -96,6 +98,16 @@ class CertificationService
     private function validateQuestionAnswers($question, string $context): void
     {
         $type = $question->interaction_type ?? 'multiple_choice';
+
+        if ($type === 'true_false') {
+            $metadata = is_array($question->metadata) ? $question->metadata : [];
+
+            if (! array_key_exists('correct', $metadata)) {
+                throw new Exception("{$context} is missing required metadata for true/false.");
+            }
+
+            return;
+        }
 
         if (in_array($type, ['matching', 'sequence', 'true_false_ai', 'code_complete'], true)) {
             if (empty($question->metadata)) {

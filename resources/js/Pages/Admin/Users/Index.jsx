@@ -1,17 +1,3 @@
-/**
- * Admin User Management
- *
- * WIRED (backend + database):
- * - User list + pagination → UserManagementController@index → users table
- * - Search, role filter, approvals tab filters → query params on index
- * - Teacher approve/decline → verifyTeacher → users table
- * - Creator invite → invite → user_invitations + email
- *
- * TODO (backend + database):
- * - Suspend / View / Archive buttons → no endpoints yet (placeholder modal)
- * - Admin role invite → CreateUserFlow UI-only success
- * - Affiliation dropdown → hardcoded list, needs institutions table/API
- */
 import { Head, Link, router } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import AdminModal from '@/Components/Admin/AdminModal';
@@ -30,7 +16,6 @@ export default function UsersIndex({ users, filters, pending_approvals_count = 0
     const [activeTab, setActiveTab] = useState(filters?.tab === 'approvals' ? 'approvals' : 'management');
     const [showCreateFlow, setShowCreateFlow] = useState(false);
     const [reviewUser, setReviewUser] = useState(null);
-    const [actionModal, setActionModal] = useState(null);
     const [search, setSearch] = useState(filters?.search || '');
     const [roleFilter, setRoleFilter] = useState(filters?.role || '');
     const [approvalFilter, setApprovalFilter] = useState(filters?.approval_status || '');
@@ -103,11 +88,6 @@ export default function UsersIndex({ users, filters, pending_approvals_count = 0
                 onFinish: () => setVerifyProcessing(false),
             }
         );
-    }
-
-    // TODO: Replace placeholder modal with real suspend/view/archive API calls.
-    function handleUserAction(type, user) {
-        setActionModal({ type, user });
     }
 
     const isPendingTeacher = (user) =>
@@ -192,7 +172,6 @@ export default function UsersIndex({ users, filters, pending_approvals_count = 0
                 )}
             </div>
 
-            {/* User list cards — suspend/view/archive actions TODO[backend] */}
             <div className="admin-user-list">
                 {users.data.length === 0 ? (
                     <div className="admin-card admin-card--chunky">
@@ -209,7 +188,6 @@ export default function UsersIndex({ users, filters, pending_approvals_count = 0
                             user={u}
                             mode={activeTab === 'approvals' ? 'approvals' : 'management'}
                             onReview={setReviewUser}
-                            onAction={handleUserAction}
                         />
                     ))
                 )}
@@ -235,7 +213,6 @@ export default function UsersIndex({ users, filters, pending_approvals_count = 0
                 </nav>
             )}
 
-            {/* Create user flow — creator invite wired; admin invite TODO[backend] */}
             <CreateUserFlow show={showCreateFlow} onClose={() => setShowCreateFlow(false)} />
 
             {/* Teacher review modal — approve/decline wired; credential preview uses storage path */}
@@ -307,41 +284,6 @@ export default function UsersIndex({ users, filters, pending_approvals_count = 0
                 </div>
             </AdminModal>
 
-            {/* TODO[backend]: Suspend / archive / view user — placeholder modal only */}
-            <AdminModal
-                show={!!actionModal}
-                onClose={() => setActionModal(null)}
-                title={
-                    actionModal?.type === 'suspend'
-                        ? 'Suspend user'
-                        : actionModal?.type === 'archive'
-                          ? 'Archive user'
-                          : 'View user'
-                }
-                footer={
-                    <button
-                        type="button"
-                        className="admin-btn admin-btn--ghost"
-                        onClick={() => setActionModal(null)}
-                    >
-                        Close
-                    </button>
-                }
-            >
-                <p className="admin-table__muted">
-                    {actionModal?.user && (
-                        <>
-                            {actionModal.user.first_name} {actionModal.user.last_name} (
-                            {actionModal.user.email})
-                        </>
-                    )}
-                </p>
-                <p className="admin-table__muted" style={{ marginTop: '12px' }}>
-                    <span className="admin-todo-badge admin-todo-badge--inline">
-                        TODO: wire {actionModal?.type} action to backend
-                    </span>
-                </p>
-            </AdminModal>
         </AdminLayout>
     );
 }

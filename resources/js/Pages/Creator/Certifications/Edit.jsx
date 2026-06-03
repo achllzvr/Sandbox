@@ -7,7 +7,7 @@ import GenerateQuizModal from '@/Components/Creator/GenerateQuizModal';
 import CreatorGeminiPanel from '@/Components/Creator/CreatorGeminiPanel';
 import CreatorQuestionFields from '@/Components/Creator/CreatorQuestionFields';
 import CreatorStatusPill from '@/Components/Creator/CreatorStatusPill';
-import { showAppToastError } from '@/Utils/appToast';
+import { showAppToastError, showAppToastSuccess } from '@/Utils/appToast';
 import {
     estimatedDurationForStore,
     formatEstimatedDurationLabel,
@@ -266,6 +266,10 @@ export default function Edit({ certification, hasSystemApiKey = false }) {
 
     // ── Practice Quiz (Short Test) Handlers ────────────────
     const openQuizEditor = () => {
+        if (!['draft', 'revision_required'].includes(certification.status)) {
+            return;
+        }
+
         const existingQuestions = (activeModule.questions || []).map(q => ({
             question_text: q.question_text,
             interaction_type: q.interaction_type || 'multiple_choice',
@@ -361,6 +365,10 @@ export default function Edit({ certification, hasSystemApiKey = false }) {
 
     // ── Final Exam Handlers ────────────────────────────────
     const openExamEditor = () => {
+        if (!['draft', 'revision_required'].includes(certification.status)) {
+            return;
+        }
+
         const existingQuestions = (certification.exam_questions || []).map(q => ({
             question_text: q.question_text,
             answers: (q.answers || []).map(a => ({
@@ -589,6 +597,42 @@ export default function Edit({ certification, hasSystemApiKey = false }) {
             return;
         }
 
+        if (!certification.title?.trim() || !certification.description?.trim()) {
+            showAppToastError('Save shell title and description in Shell details before submitting.');
+            return;
+        }
+
+        if (!certification.category?.trim() || !certification.difficulty?.trim()) {
+            showAppToastError('Select a category and difficulty in Shell details, then save, before submitting.');
+            return;
+        }
+
+        for (const mod of sortedModules) {
+            if ((mod.questions || []).length === 0) {
+                continue;
+            }
+
+            const quizError = validateQuestionsForStore(mod.questions, {
+                minCount: 5,
+                label: `Practice quiz for "${mod.title}"`,
+            });
+
+            if (quizError) {
+                showAppToastError(quizError);
+                return;
+            }
+        }
+
+        const examError = validateQuestionsForStore(certification.exam_questions || [], {
+            minCount: 5,
+            label: 'Final exam',
+        });
+
+        if (examError) {
+            showAppToastError(examError);
+            return;
+        }
+
         setShowSubmitModal(true);
     };
 
@@ -596,6 +640,20 @@ export default function Edit({ certification, hasSystemApiKey = false }) {
         setShowSubmitModal(false);
         setIsSubmitting(true);
         router.post(route('creator.certifications.submit', certification.id), {}, {
+            preserveScroll: true,
+            onSuccess: (page) => {
+                if (page.props.flash?.error) {
+                    showAppToastError(page.props.flash.error);
+                    return;
+                }
+
+                if (page.props.flash?.success) {
+                    showAppToastSuccess(page.props.flash.success);
+                }
+            },
+            onError: () => {
+                showAppToastError('Could not submit for review. Please try again.');
+            },
             onFinish: () => setIsSubmitting(false),
         });
     };
@@ -606,7 +664,13 @@ export default function Edit({ certification, hasSystemApiKey = false }) {
     const modulesReady = sortedModules.length >= MIN_MODULES;
     const quizOnlyReady = quizOnlySandboxCount >= MIN_QUIZ_ONLY_SANDBOXES;
     const examReady = examQuestionsCount >= 5;
-    const canSubmit = isEditable && modulesReady && quizOnlyReady && examReady;
+    const shellDetailsReady = Boolean(
+        certification.title?.trim()
+        && certification.description?.trim()
+        && certification.category?.trim()
+        && certification.difficulty?.trim()
+    );
+    const canSubmit = isEditable && modulesReady && quizOnlyReady && examReady && shellDetailsReady;
 
     // Component sorting helpers
     const activeModuleComponents = activeModule
@@ -622,6 +686,12 @@ export default function Edit({ certification, hasSystemApiKey = false }) {
                     <div className="admin-toolbar">
                         <CreatorStatusPill status={certification.status} className="creator-shell-status" />
                     </div>
+
+                    {certification.status === 'pending_review' ? (
+                        <div className="admin-flash admin-flash--warning" style={{ marginBottom: '16px' }}>
+                            This shell is pending approval. Sandboxes and exams are read-only until an admin completes review.
+                        </div>
+                    ) : null}
 
                     {certification.status === 'revision_required' && certification.remarks ? (
                         <div className="admin-flash admin-flash--warning" style={{ marginBottom: '16px' }}>
@@ -806,7 +876,7 @@ export default function Edit({ certification, hasSystemApiKey = false }) {
                                                         </>
                                                     ) : null}
                                                     <button type="button" onClick={() => setActiveModuleId(mod.id)} className="admin-btn admin-btn--secondary admin-btn--sm">
-                                                        Edit sandbox
+                                                        {isEditable ? 'Edit sandbox' : 'View sandbox'}
                                                     </button>
                                                     {isEditable ? (
                                                         <button type="button" onClick={() => deleteModule(mod.id)} className="admin-btn admin-btn--danger admin-btn--sm" aria-label="Delete">
@@ -836,33 +906,54 @@ export default function Edit({ certification, hasSystemApiKey = false }) {
                                             Generate final exam
                                         </button>
                                     ) : null}
-                                    <button type="button" onClick={openExamEditor} className="admin-btn admin-btn--primary admin-btn--sm">
-                                        {examQuestionsCount > 0 ? 'Edit exam' : 'Configure exam'}
-                                    </button>
+                                    {isEditable ? (
+                                        <button type="button" onClick={openExamEditor} className="admin-btn admin-btn--primary admin-btn--sm">
+                                            {examQuestionsCount > 0 ? 'Edit exam' : 'Configure exam'}
+                                        </button>
+                                    ) : examQuestionsCount > 0 ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => setPreviewItem({ type: 'quiz', title: 'Final exam', questions: certification.exam_questions })}
+                                            className="admin-btn admin-btn--secondary admin-btn--sm"
+                                        >
+                                            View exam
+                                        </button>
+                                    ) : null}
                                 </div>
                             </div>
                         </div>
 
                         <div className="admin-card admin-card--chunky">
                             <div className="admin-card__header">
-                                <h3>Submit for approval</h3>
+                                <h3>{certification.status === 'pending_review' ? 'Approval status' : 'Submit for approval'}</h3>
                             </div>
                             <div className="admin-card__body">
-                                <p className="admin-text-muted">Complete the checklist before submitting.</p>
-                                <ul className="admin-checklist" style={{ margin: '16px 0' }}>
-                                    <li className={modulesReady ? 'admin-checklist__done' : ''}>
-                                        {modulesReady ? '✓' : '○'} At least {MIN_MODULES} sandboxes ({sortedModules.length}/{MIN_MODULES})
-                                    </li>
-                                    <li className={quizOnlyReady ? 'admin-checklist__done' : ''}>
-                                        {quizOnlyReady ? '✓' : '○'} At least {MIN_QUIZ_ONLY_SANDBOXES} quiz-only sandboxes ({quizOnlySandboxCount}/{MIN_QUIZ_ONLY_SANDBOXES})
-                                    </li>
-                                    <li className={examReady ? 'admin-checklist__done' : ''}>
-                                        {examReady ? '✓' : '○'} Final exam configured (min 5 Qs)
-                                    </li>
-                                </ul>
-                                <button type="button" onClick={submitForReview} disabled={!canSubmit || isSubmitting} className="admin-btn admin-btn--primary admin-btn--block">
-                                    {isSubmitting ? 'Submitting…' : 'Submit for review'}
-                                </button>
+                                {certification.status === 'pending_review' ? (
+                                    <p className="admin-text-muted">
+                                        Submitted for review. You will be able to edit sandboxes again if an admin requests revisions.
+                                    </p>
+                                ) : (
+                                    <>
+                                        <p className="admin-text-muted">Complete the checklist before submitting.</p>
+                                        <ul className="admin-checklist" style={{ margin: '16px 0' }}>
+                                            <li className={modulesReady ? 'admin-checklist__done' : ''}>
+                                                {modulesReady ? '✓' : '○'} At least {MIN_MODULES} sandboxes ({sortedModules.length}/{MIN_MODULES})
+                                            </li>
+                                            <li className={quizOnlyReady ? 'admin-checklist__done' : ''}>
+                                                {quizOnlyReady ? '✓' : '○'} At least {MIN_QUIZ_ONLY_SANDBOXES} quiz-only sandboxes ({quizOnlySandboxCount}/{MIN_QUIZ_ONLY_SANDBOXES})
+                                            </li>
+                                            <li className={examReady ? 'admin-checklist__done' : ''}>
+                                                {examReady ? '✓' : '○'} Final exam configured (min 5 Qs)
+                                            </li>
+                                            <li className={shellDetailsReady ? 'admin-checklist__done' : ''}>
+                                                {shellDetailsReady ? '✓' : '○'} Shell details saved (title, description, category, difficulty)
+                                            </li>
+                                        </ul>
+                                        <button type="button" onClick={submitForReview} disabled={!canSubmit || isSubmitting} className="admin-btn admin-btn--primary admin-btn--block">
+                                            {isSubmitting ? 'Submitting…' : 'Submit for review'}
+                                        </button>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -883,6 +974,9 @@ export default function Edit({ certification, hasSystemApiKey = false }) {
                         <div className="admin-card admin-card--chunky">
                             <div className="admin-card__header">
                                 <h3>Module information &amp; rules</h3>
+                                {!isEditable ? (
+                                    <AdminBadge type="status" value="pending_review" label="Read-only" />
+                                ) : null}
                             </div>
                             <form onSubmit={isEditable ? submitUpdateModule : (e) => e.preventDefault()} className="admin-card__body">
                                 <label className="admin-field">
@@ -1000,9 +1094,20 @@ export default function Edit({ certification, hasSystemApiKey = false }) {
                                                 Generate short test
                                             </button>
                                         ) : null}
-                                        <button type="button" onClick={openQuizEditor} className="admin-btn admin-btn--secondary admin-btn--sm" aria-label="Edit quiz">
-                                            <Pencil size={16} strokeWidth={2.25} />
-                                        </button>
+                                        {isEditable ? (
+                                            <button type="button" onClick={openQuizEditor} className="admin-btn admin-btn--secondary admin-btn--sm" aria-label="Edit quiz">
+                                                <Pencil size={16} strokeWidth={2.25} />
+                                            </button>
+                                        ) : (activeModule.questions || []).length > 0 ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => setPreviewItem({ type: 'quiz', title: 'Short test', questions: activeModule.questions })}
+                                                className="admin-btn admin-btn--secondary admin-btn--sm"
+                                                aria-label="View quiz"
+                                            >
+                                                <Eye size={16} strokeWidth={2.25} />
+                                            </button>
+                                        ) : null}
                                     </div>
                                 </div>
                             </div>

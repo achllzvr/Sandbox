@@ -1,40 +1,11 @@
-/**
- * Admin Audit Logs
- *
- * WIRED (backend + database):
- * - Live logs when audit_logs table exists and has rows → AuditLogController@index
- *
- * TODO (backend + database):
- * - Falls back to MOCK_AUDIT_LOGS when table empty/missing
- * - Search, action filter, date range → client-side only (not persisted to query string)
- * - Audit log writes on admin actions (suspend, finance, etc.) not implemented
- */
-import { Head } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import AdminAuditLogRow from '@/Components/Admin/AdminAuditLogRow';
 import AdminDateRangeModal from '@/Components/Admin/AdminDateRangeModal';
 import AdminTablePagination from '@/Components/Admin/AdminTablePagination';
 import { useAdminPagination } from '@/hooks/useAdminPagination';
-import {
-    AUDIT_ACTION_OPTIONS,
-    MOCK_AUDIT_LOGS,
-} from '@/Components/Admin/AdminFinanceMockData';
-import { useMemo, useState } from 'react';
-
-function inDateRange(isoDate, from, to) {
-    if (!from && !to) return true;
-    const d = new Date(isoDate);
-    if (Number.isNaN(d.getTime())) return true;
-    if (from) {
-        const start = new Date(`${from}T00:00:00`);
-        if (d < start) return false;
-    }
-    if (to) {
-        const end = new Date(`${to}T23:59:59`);
-        if (d > end) return false;
-    }
-    return true;
-}
+import { AUDIT_ACTION_OPTIONS, MOCK_AUDIT_LOGS } from '@/Components/Admin/AdminFinanceMockData';
+import { useCallback, useEffect, useState } from 'react';
 
 export default function AuditLogsIndex({ logs, is_mock = true, filters = {} }) {
     const [search, setSearch] = useState(filters?.search || '');
@@ -43,60 +14,83 @@ export default function AuditLogsIndex({ logs, is_mock = true, filters = {} }) {
     const [dateTo, setDateTo] = useState(filters?.date_to || '');
     const [showDateModal, setShowDateModal] = useState(false);
 
-    const sourceLogs = is_mock || !logs?.length ? MOCK_AUDIT_LOGS : logs;
+    const isPaginated = !is_mock && logs && Array.isArray(logs.data);
+    const sourceLogs = is_mock ? MOCK_AUDIT_LOGS : isPaginated ? logs.data : [];
 
-    const displayedLogs = useMemo(() => {
-        let result = sourceLogs;
-        if (search.trim()) {
-            const q = search.toLowerCase();
-            result = result.filter(
-                (log) =>
-                    log.action?.toLowerCase().includes(q) ||
-                    log.details_summary?.toLowerCase().includes(q) ||
-                    log.done_by?.toLowerCase().includes(q) ||
-                    `${log.user?.first_name || ''} ${log.user?.last_name || ''}`
-                        .toLowerCase()
-                        .includes(q)
+    const applyFilters = useCallback(
+        (overrides = {}) => {
+            router.get(
+                route('admin.audit-logs.index'),
+                {
+                    search: search || undefined,
+                    action: actionFilter || undefined,
+                    date_from: dateFrom || undefined,
+                    date_to: dateTo || undefined,
+                    ...overrides,
+                },
+                { preserveState: true, replace: true }
             );
-        }
-        if (actionFilter) {
-            result = result.filter((log) =>
-                log.action?.toLowerCase().includes(actionFilter)
-            );
-        }
-        if (dateFrom || dateTo) {
-            result = result.filter((log) => inDateRange(log.created_at, dateFrom, dateTo));
-        }
-        return result;
-    }, [sourceLogs, search, actionFilter, dateFrom, dateTo]);
+        },
+        [search, actionFilter, dateFrom, dateTo]
+    );
 
-    const {
-        page,
-        setPage,
-        totalPages,
-        totalItems,
-        paginatedItems,
-        rangeStart,
-        rangeEnd,
-    } = useAdminPagination(displayedLogs);
+    useEffect(() => {
+        if (is_mock) return;
+        const timer = setTimeout(() => {
+            if (search !== (filters?.search || '')) {
+                applyFilters({ search: search || undefined });
+            }
+        }, 400);
+        return () => clearTimeout(timer);
+    }, [search, filters?.search, applyFilters, is_mock]);
+
+    const clientPagination = useAdminPagination(is_mock ? sourceLogs : []);
 
     const dateRangeLabel =
         dateFrom || dateTo
             ? `${dateFrom || '…'} – ${dateTo || '…'}`
             : 'Date range';
 
+    function handleActionChange(e) {
+        const value = e.target.value;
+        setActionFilter(value);
+        if (!is_mock) {
+            applyFilters({ action: value || undefined });
+        }
+    }
+
+    function applyDateRange() {
+        setShowDateModal(false);
+        if (!is_mock) {
+            applyFilters({
+                date_from: dateFrom || undefined,
+                date_to: dateTo || undefined,
+            });
+        }
+    }
+
+    function clearDateRange() {
+        setDateFrom('');
+        setDateTo('');
+        setShowDateModal(false);
+        if (!is_mock) {
+            applyFilters({ date_from: undefined, date_to: undefined });
+        }
+    }
+
+    const displayedLogs = is_mock ? clientPagination.paginatedItems : sourceLogs;
+
     return (
         <AdminLayout pageTitle="Audit log">
             <Head title="Audit Log" />
 
-            {(is_mock || !logs?.length) && (
+            {is_mock && (
                 <div className="admin-notice admin-notice--todo">
-                    <span className="admin-todo-badge">TODO: live data</span>
-                    <span>Audit log entries are mocked until the audit_logs table and API are wired.</span>
+                    <span className="admin-todo-badge">Sample data</span>
+                    <span>No audit log entries in the database yet. Showing sample rows.</span>
                 </div>
             )}
 
-            {/* Sub-toolbar: search/action/date — TODO[backend] persist filters via router.get when not mock */}
             <div className="admin-subtoolbar">
                 <input
                     type="search"
@@ -108,7 +102,7 @@ export default function AuditLogsIndex({ logs, is_mock = true, filters = {} }) {
                 />
                 <select
                     value={actionFilter}
-                    onChange={(e) => setActionFilter(e.target.value)}
+                    onChange={handleActionChange}
                     className="input-field admin-subtoolbar__role"
                     aria-label="Filter by action type"
                 >
@@ -127,7 +121,6 @@ export default function AuditLogsIndex({ logs, is_mock = true, filters = {} }) {
                 </button>
             </div>
 
-            {/* Audit log rows — mock or live from AuditLogController */}
             <div className="admin-audit-panel admin-card admin-card--chunky">
                 <div className="admin-audit-panel__header">
                     <span>Action</span>
@@ -140,23 +133,43 @@ export default function AuditLogsIndex({ logs, is_mock = true, filters = {} }) {
                             No audit log entries match this filter.
                         </p>
                     ) : (
-                        paginatedItems.map((log) => (
-                            <AdminAuditLogRow key={log.id} log={log} />
-                        ))
+                        displayedLogs.map((log) => <AdminAuditLogRow key={log.id} log={log} />)
                     )}
                 </div>
             </div>
 
-            <AdminTablePagination
-                page={page}
-                totalPages={totalPages}
-                totalItems={totalItems}
-                rangeStart={rangeStart}
-                rangeEnd={rangeEnd}
-                onPageChange={setPage}
-            />
+            {is_mock ? (
+                <AdminTablePagination
+                    page={clientPagination.page}
+                    totalPages={clientPagination.totalPages}
+                    totalItems={clientPagination.totalItems}
+                    rangeStart={clientPagination.rangeStart}
+                    rangeEnd={clientPagination.rangeEnd}
+                    onPageChange={clientPagination.setPage}
+                />
+            ) : (
+                isPaginated &&
+                logs.last_page > 1 && (
+                    <nav className="admin-pagination">
+                        {logs.links.map((link, i) => (
+                            <Link
+                                key={i}
+                                href={link.url || '#'}
+                                preserveScroll
+                                className={
+                                    link.active
+                                        ? 'admin-pagination__active'
+                                        : !link.url
+                                          ? 'admin-pagination__disabled'
+                                          : ''
+                                }
+                                dangerouslySetInnerHTML={{ __html: link.label }}
+                            />
+                        ))}
+                    </nav>
+                )
+            )}
 
-            {/* Date range modal — client-side filter only; TODO[backend] query params + SQL date filter */}
             <AdminDateRangeModal
                 show={showDateModal}
                 onClose={() => setShowDateModal(false)}
@@ -164,12 +177,8 @@ export default function AuditLogsIndex({ logs, is_mock = true, filters = {} }) {
                 dateTo={dateTo}
                 onChangeFrom={setDateFrom}
                 onChangeTo={setDateTo}
-                onApply={() => setShowDateModal(false)}
-                onClear={() => {
-                    setDateFrom('');
-                    setDateTo('');
-                    setShowDateModal(false);
-                }}
+                onApply={applyDateRange}
+                onClear={clearDateRange}
             />
         </AdminLayout>
     );

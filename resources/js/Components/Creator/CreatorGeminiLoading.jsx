@@ -1,6 +1,12 @@
 import { Loader2, Sparkles } from 'lucide-react';
 
-export default function CreatorGeminiLoading({ steps, activeStep, progress }) {
+export default function CreatorGeminiLoading({
+    steps,
+    activeStep,
+    progress,
+    title = 'Generating questions',
+    description = 'Gemini reads each file in order, merges the notes, then drafts your quiz. Large batches may take several minutes.',
+}) {
     return (
         <div className="creator-gemini-loading admin-fade-in-up">
             <div className="creator-gemini-loading__hero">
@@ -9,8 +15,8 @@ export default function CreatorGeminiLoading({ steps, activeStep, progress }) {
                     <Loader2 size={18} strokeWidth={2.25} className="creator-gemini-loading__spinner" />
                 </span>
                 <div>
-                    <h3 className="creator-gemini-loading__title">Generating questions</h3>
-                    <p className="admin-text-muted">Gemini reads each file in order, merges the notes, then drafts your quiz. Large batches may take several minutes.</p>
+                    <h3 className="creator-gemini-loading__title">{title}</h3>
+                    <p className="admin-text-muted">{description}</p>
                 </div>
             </div>
 

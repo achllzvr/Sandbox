@@ -1,8 +1,7 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import StudentShellCard from '@/Components/Student/StudentShellCard';
 import StudentShellMap from '@/Components/Student/StudentShellMap';
 import StudentLayout from '@/Layouts/StudentLayout';
-import { showAppToastError, showAppToast } from '@/Utils/appToast';
 
 export default function Dashboard({
     myShells = [],
@@ -41,10 +40,11 @@ export default function Dashboard({
                             ))}
                         </div>
                     ) : (
-                        <div className="student-empty student-fade-in-up student-fade-in-up--delay-1">
+                        <div className="student-empty student-cast-empty student-fade-in-up student-fade-in-up--delay-1">
                             <p className="student-empty__title">No active shells yet</p>
                             <p className="student-page-subtitle">
-                                Browse the shop to enroll in your first certification shell.
+                                Browse the shop to enroll in your first certification shell, or redeem a group voucher from
+                                your teacher.
                             </p>
                             <Link
                                 href={route('marketplace.index')}
@@ -70,17 +70,28 @@ export default function Dashboard({
                     shellMeta={shellMeta}
                     selectHref={selectHref}
                     onPlayModule={() => {
-                        showAppToast('info', 'Enroll in this shell from the shop to play sandboxes.');
+                        if (certification?.id) {
+                            router.visit(route('student.shells.show', certification.id));
+                        }
                     }}
                     onTakeFinalExam={() => {
-                        showAppToast('info', 'Complete all sandboxes to unlock the final exam.');
+                        if (certification?.id) {
+                            router.visit(route('student.shells.show', certification.id));
+                        }
                     }}
                 />
             ) : (
-                <div className="student-empty student-fade-in-up">
+                <div className="student-empty student-cast-empty student-fade-in-up">
                     <p className="student-empty__title">No active shells yet</p>
-                    <Link href={selectHref} className="student-btn student-btn--coral">
-                        Browse your shells
+                    <p className="student-page-subtitle">
+                        Browse the shop to enroll in your first certification shell, or redeem a group voucher from your
+                        teacher.
+                    </p>
+                    <Link href={route('marketplace.index')} className="student-btn student-btn--coral student-empty__cta">
+                        Browse available shells
+                    </Link>
+                    <Link href={selectHref} className="student-btn student-btn--ghost" style={{ marginTop: '0.75rem' }}>
+                        My shells
                     </Link>
                 </div>
             )}

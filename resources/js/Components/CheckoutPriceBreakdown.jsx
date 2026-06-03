@@ -12,6 +12,7 @@ export default function CheckoutPriceBreakdown({
     quantity = 1,
     totalLabel = 'Total due',
     className = '',
+    theme = 'green',
 }) {
     const unit = parseFloat(unitPrice) || 0;
     const qty = Math.max(1, Number.parseInt(quantity, 10) || 1);
@@ -19,27 +20,31 @@ export default function CheckoutPriceBreakdown({
     const showLineItems = qty > 1;
 
     return (
-        <div className={`checkout-price-breakdown ${className}`.trim()}>
-            {showLineItems ? (
-                <>
+        <div className={`checkout-price-breakdown checkout-price-breakdown--${theme} ${className}`.trim()}>
+            <p className="checkout-price-breakdown__heading">Price breakdown</p>
+            <div className="checkout-price-breakdown__card">
+                {showLineItems ? (
+                    <>
+                        <div className="checkout-price-breakdown__row">
+                            <span>Price per voucher</span>
+                            <span>{formatShopPrice(unit)}</span>
+                        </div>
+                        <div className="checkout-price-breakdown__row">
+                            <span>Quantity</span>
+                            <span>{qty}</span>
+                        </div>
+                    </>
+                ) : (
                     <div className="checkout-price-breakdown__row">
-                        <span>Price per voucher</span>
+                        <span>Shell price</span>
                         <span>{formatShopPrice(unit)}</span>
                     </div>
-                    <div className="checkout-price-breakdown__row">
-                        <span>Quantity</span>
-                        <span>{qty}</span>
-                    </div>
-                </>
-            ) : (
-                <div className="checkout-price-breakdown__row">
-                    <span>Shell price</span>
-                    <span>{formatShopPrice(unit)}</span>
+                )}
+                <div className="checkout-price-breakdown__divider" aria-hidden="true" />
+                <div className="checkout-price-breakdown__row checkout-price-breakdown__row--total">
+                    <span>{totalLabel}</span>
+                    <strong>{formatShopPrice(total)}</strong>
                 </div>
-            )}
-            <div className="checkout-price-breakdown__row checkout-price-breakdown__row--total">
-                <span>{totalLabel}</span>
-                <strong>{formatShopPrice(total)}</strong>
             </div>
         </div>
     );

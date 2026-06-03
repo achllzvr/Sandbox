@@ -27,13 +27,14 @@ class Certification extends Model
         'approved_at',
         'submitted_at',
         'decline_reason',
+        'archived_from_status',
     ];
 
     protected $casts = [
         'approved_at' => 'datetime',
         'submitted_at' => 'datetime',
-        'price'       => 'decimal:2',
-        'tags'        => 'array',
+        'price' => 'decimal:2',
+        'tags' => 'array',
     ];
 
     protected $appends = [
@@ -43,6 +44,11 @@ class Certification extends Model
     public function getThumbnailUrlAttribute(): ?string
     {
         return CertificationCover::url($this->thumbnail, $this->id);
+    }
+
+    public function isCreatorEditable(): bool
+    {
+        return in_array($this->status, ['draft', 'revision_required'], true);
     }
 
     // ── Relationships ──────────────────────────────────────
@@ -75,6 +81,11 @@ class Certification extends Model
     public function lessons()
     {
         return $this->hasMany(Lesson::class);
+    }
+
+    public function knowledgeBase()
+    {
+        return $this->hasOne(CertificationKnowledgeBase::class);
     }
 
     // ── Scopes ─────────────────────────────────────────────

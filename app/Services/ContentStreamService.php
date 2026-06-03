@@ -45,6 +45,10 @@ class ContentStreamService
             if (! empty($row['file_url']) && ! preg_match('/^https?:\/\//i', $row['file_url'])) {
                 $contentModel = ModuleContent::find($row['id'] ?? 0);
                 if ($contentModel) {
+                    $extension = strtolower(pathinfo($row['file_url'], PATHINFO_EXTENSION) ?: '');
+                    if ($extension !== '') {
+                        $row['file_extension'] = $extension;
+                    }
                     $row['stream_url'] = $this->signedUrl($contentModel, $userId);
                     $row['file_url'] = null;
                 }

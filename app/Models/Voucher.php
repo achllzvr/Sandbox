@@ -14,9 +14,11 @@ class Voucher extends Model
         'code',
         'is_used',
         'used_by',
+        'recipient_email',
         'issued_at',
         'used_at',
         'expires_at',
+        'sent_to_email_at',
     ];
 
     protected $casts = [
@@ -24,6 +26,7 @@ class Voucher extends Model
         'issued_at' => 'datetime',
         'used_at' => 'datetime',
         'expires_at' => 'datetime',
+        'sent_to_email_at' => 'datetime',
     ];
 
     public function usedByUser()

@@ -6,4 +6,5 @@
 <link rel="stylesheet" href="{{ $assetBase }}/css/style.css?v={{ $sandboxCssVersion }}">
 <script>
     window.__SANDBOX_ASSET_BASE__ = @json($assetBase);
+    window.__SANDBOX_VITE_BUILD__ = @json(rtrim($assetBase, '/') . '/build/assets');
 </script>

@@ -6,8 +6,6 @@ import TextInput from '@/Components/TextInput';
 import { useForm } from '@inertiajs/react';
 import { Transition } from '@headlessui/react';
 
-// TODO[backend]: Register password.update route + controller — currently no handler exists in routes/auth.php.
-
 export default function UpdatePasswordForm({ className, variant = 'default' }) {
     const isAdmin = variant === 'admin';
     const isStudent = variant === 'student';

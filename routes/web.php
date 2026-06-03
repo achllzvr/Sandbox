@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\CertificationApprovalController;
 use App\Http\Controllers\Admin\FinanceController;
+use App\Http\Controllers\Admin\WithdrawalController as AdminWithdrawalController;
 use App\Http\Controllers\AffiliationController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\ContentStreamController;
@@ -176,6 +177,10 @@ Route::middleware(['auth', 'otp.verified', 'role:admin'])
         Route::prefix('users')->name('users.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\UserManagementController::class, 'index'])->name('index');
             Route::post('/invite', [\App\Http\Controllers\Admin\UserManagementController::class, 'invite'])->name('invite');
+            Route::post('/invite-admin', [\App\Http\Controllers\Admin\UserManagementController::class, 'inviteAdmin'])->name('invite-admin');
+            Route::get('/{user}', [\App\Http\Controllers\Admin\UserManagementController::class, 'show'])->name('show');
+            Route::put('/{user}/suspend', [\App\Http\Controllers\Admin\UserManagementController::class, 'suspend'])->name('suspend');
+            Route::put('/{user}/archive', [\App\Http\Controllers\Admin\UserManagementController::class, 'archive'])->name('archive');
             Route::put('/{user}/verify-teacher', [\App\Http\Controllers\Admin\UserManagementController::class, 'verifyTeacher'])->name('verify-teacher');
         });
 
@@ -188,6 +193,10 @@ Route::middleware(['auth', 'otp.verified', 'role:admin'])
             ->name('certifications.status.update');
         Route::put('/certifications/{certification}/request-revision', [CertificationApprovalController::class, 'requestRevision'])
             ->name('certifications.request_revision');
+        Route::put('/certifications/{certification}/archive', [CertificationApprovalController::class, 'archive'])
+            ->name('certifications.archive');
+        Route::put('/certifications/{certification}/restore', [CertificationApprovalController::class, 'restore'])
+            ->name('certifications.restore');
 
         Route::redirect('/teachers', '/admin/users?tab=approvals')->name('teachers.index');
 
@@ -198,6 +207,8 @@ Route::middleware(['auth', 'otp.verified', 'role:admin'])
         // Finance
         Route::get('/finance', [FinanceController::class, 'index'])
             ->name('finance.index');
+        Route::put('/withdrawals/{withdrawal}/status', [AdminWithdrawalController::class, 'updateStatus'])
+            ->name('withdrawals.status.update');
     });
 
 /*
@@ -241,6 +252,14 @@ Route::middleware(['auth', 'otp.verified', 'role:user'])
         Route::post('/certifications/{certification}/exam/submit', [\App\Http\Controllers\Student\ExamController::class, 'submit'])
             ->middleware('enrolled')
             ->name('certifications.exam.submit');
+
+        Route::get('/modules/{module}/review-assistant/status', [\App\Http\Controllers\Student\StudentReviewAssistantController::class, 'status'])
+            ->middleware('enrolled')
+            ->name('modules.review-assistant.status');
+
+        Route::post('/modules/{module}/review-assistant/chat', [\App\Http\Controllers\Student\StudentReviewAssistantController::class, 'chat'])
+            ->middleware(['enrolled', 'throttle:20,1'])
+            ->name('modules.review-assistant.chat');
     });
 
 Route::middleware(['auth', 'otp.verified', 'role:user'])

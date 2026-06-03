@@ -82,26 +82,54 @@ class MyShellController extends Controller
                 continue;
             }
 
-            $attemptHistory[$module->id] = $attempts->map(fn (ModuleQuizAttempt $attempt) => [
-                'attempt_number' => $attempt->attempt_number,
-                'score' => $attempt->score,
-                'total' => $attempt->total,
-                'passed' => $attempt->passed,
-                'completed_at' => $attempt->completed_at,
-                'answers' => $attempt->answers_json ?? [],
-            ])->values()->all();
+            $attemptHistory[$module->id] = $attempts->map(function (ModuleQuizAttempt $attempt) {
+                $answers = collect($attempt->answers_json ?? [])->map(function (array $answer) {
+                    if (! empty($answer['correct_answer'])) {
+                        return $answer;
+                    }
+
+                    $question = \App\Models\Question::with('answers')->find($answer['question_id'] ?? null);
+                    if ($question) {
+                        $answer['correct_answer'] = $this->quizService->correctAnswerLabel($question);
+                    }
+
+                    return $answer;
+                })->values()->all();
+
+                return [
+                    'attempt_number' => $attempt->attempt_number,
+                    'score' => $attempt->score,
+                    'total' => $attempt->total,
+                    'passed' => $attempt->passed,
+                    'completed_at' => $attempt->completed_at,
+                    'answers' => $answers,
+                ];
+            })->sortByDesc('attempt_number')->values()->all();
         }
 
         $latestQuizAttempts = [];
         foreach ($quizAttempts as $moduleId => $attempts) {
             $latest = $attempts->sortByDesc('attempt_number')->first();
             if ($latest) {
+                $answers = collect($latest->answers_json ?? [])->map(function (array $answer) {
+                    if (! empty($answer['correct_answer'])) {
+                        return $answer;
+                    }
+
+                    $question = \App\Models\Question::with('answers')->find($answer['question_id'] ?? null);
+                    if ($question) {
+                        $answer['correct_answer'] = $this->quizService->correctAnswerLabel($question);
+                    }
+
+                    return $answer;
+                })->values()->all();
+
                 $latestQuizAttempts[$moduleId] = [
                     'score' => $latest->score,
                     'total' => $latest->total,
                     'passed' => $latest->passed,
                     'attempt_number' => $latest->attempt_number,
-                    'answers' => $latest->answers_json ?? [],
+                    'answers' => $answers,
                 ];
             }
         }
@@ -132,26 +160,35 @@ class MyShellController extends Controller
         $latestAttempt = $examAttempts->first();
         $hasPassedExam = $hasCertificate || $examAttempts->contains(fn ($row) => (bool) $row->passed);
 
-        $latestAttemptBreakdown = null;
-        if ($latestAttempt) {
+        $examAttemptsChronological = $examAttempts->sortBy('attempted_at')->values();
+        $examAttemptHistory = $examAttemptsChronological->map(function ($attempt, $index) {
             $answerRows = \Illuminate\Support\Facades\DB::table('exam_attempt_answers')
-                ->where('attempt_id', $latestAttempt->id)
+                ->where('attempt_id', $attempt->id)
                 ->get();
 
-            $latestAttemptBreakdown = [
-                'id' => $latestAttempt->id,
-                'score' => $latestAttempt->score,
-                'total' => $latestAttempt->total_questions,
-                'passed' => (bool) $latestAttempt->passed,
-                'attempted_at' => $latestAttempt->attempted_at,
-                'answers' => $answerRows->map(fn ($row) => [
+            $answers = $answerRows->map(function ($row) {
+                $question = \App\Models\Question::with('answers')->find($row->question_id);
+
+                return [
                     'question_id' => (int) $row->question_id,
                     'selected_option' => $row->selected_answer_id ? (int) $row->selected_answer_id : null,
                     'is_correct' => (bool) $row->is_correct,
                     'ai_feedback' => null,
-                ])->values()->all(),
+                    'correct_answer' => $question ? $this->quizService->correctAnswerLabel($question) : null,
+                ];
+            })->values()->all();
+
+            return [
+                'attempt_number' => $index + 1,
+                'score' => $attempt->score,
+                'total' => $attempt->total_questions,
+                'passed' => (bool) $attempt->passed,
+                'completed_at' => $attempt->attempted_at,
+                'answers' => $answers,
             ];
-        }
+        })->reverse()->values()->all();
+
+        $latestAttemptBreakdown = $examAttemptHistory[0] ?? null;
 
         $examStatus = [
             'has_passed' => $hasPassedExam,
@@ -162,6 +199,7 @@ class MyShellController extends Controller
             'latest_total' => $latestAttempt?->total_questions,
             'latest_passed' => (bool) ($latestAttempt?->passed ?? false),
             'latestAttempt' => $latestAttemptBreakdown,
+            'attemptHistory' => $examAttemptHistory,
         ];
 
         $shellMeta = [

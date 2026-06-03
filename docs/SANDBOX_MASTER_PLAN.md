@@ -72,59 +72,54 @@ This prevents UI/backend drift that blocked realistic submit testing.
 
 | Surface | Status | Wire to |
 |---------|--------|---------|
-| [`GenerateQuizModal.jsx`](resources/js/Components/Creator/GenerateQuizModal.jsx) | **Mock AI** — PDF never uploaded, `setTimeout` + hardcoded pools | New `AiQuizGenerationController`, queue job, LLM provider |
+| [`GenerateQuizModal.jsx`](resources/js/Components/Creator/GenerateQuizModal.jsx) / [`CreatorGeminiPanel.jsx`](resources/js/Components/Creator/CreatorGeminiPanel.jsx) | **Working** | [`GeminiController`](app/Http/Controllers/Creator/GeminiController.php), sequential file synthesis |
 | Shell CRUD, modules, content, manual quiz/exam | **Working** | Existing creator controllers |
 | Wallet / Auditor | **Working** | Existing controllers |
+| Review assistant KB | **Working** | [`CertificationKnowledgeBuilder`](app/Services/Ai/CertificationKnowledgeBuilder.php) on final exam save + submit gate |
 
 ### Admin
 
 | Surface | Status | Wire to |
 |---------|--------|---------|
-| [`Finance/Index.jsx`](resources/js/Pages/Admin/Finance/Index.jsx) + `AdminFinanceMockData.js` | **100% mock** | `FinanceController`, `WithdrawalController`, payments/ledger tables |
-| [`Dashboard.jsx`](resources/js/Pages/Admin/Dashboard.jsx) charts | **Mock charts** | Analytics aggregates API |
-| [`Users/Index.jsx`](resources/js/Pages/Admin/Users/Index.jsx) suspend/archive/show | **Stub** | `UserManagementController` methods |
-| [`AuditLogs/Index.jsx`](resources/js/Pages/Admin/AuditLogs/Index.jsx) | **Mock fallback** | Write audit rows on mutations; server filters |
-| Cert archive/restore | **Stub buttons** | `CertificationApprovalController` |
+| [`Finance/Index.jsx`](resources/js/Pages/Admin/Finance/Index.jsx) | **Working** (ledger, withdrawals, webhooks live) | [`FinanceController`](app/Http/Controllers/Admin/FinanceController.php), [`WithdrawalController`](app/Http/Controllers/Admin/WithdrawalController.php) |
+| [`Dashboard.jsx`](resources/js/Pages/Admin/Dashboard.jsx) charts | **Working** | [`AdminDashboardController`](app/Http/Controllers/Admin/AdminDashboardController.php) enrollment/role/revenue aggregates |
+| [`Users/Index.jsx`](resources/js/Pages/Admin/Users/Index.jsx) suspend/archive/show | **Working** | [`UserManagementController`](app/Http/Controllers/Admin/UserManagementController.php) |
+| [`AuditLogs/Index.jsx`](resources/js/Pages/Admin/AuditLogs/Index.jsx) | **Working** (live when table populated) | [`AuditLogController`](app/Http/Controllers/Admin/AuditLogController.php) |
+| Cert archive/restore | **Working** | [`CertificationApprovalController`](app/Http/Controllers/Admin/CertificationApprovalController.php) |
 
-### Teacher (entire portal on mocks)
+### Teacher
 
-| Surface | Mock source | Wire to |
+| Surface | Status | Wire to |
 |---------|-------------|---------|
-| Dashboard, shells, batch, purchase history | [`app/Support/Mocks/Teacher/*`](app/Support/Mocks/Teacher/) | Real cohorts, vouchers, enrollments, `BulkCheckoutController` |
-| Bulk checkout | Fake redirect | Create enrollments + vouchers + cohort records |
-| Voucher email | Flash only | Mail + DB voucher state |
-| `HandleInertiaRequests` teacher summary | Hardcoded counts | Real aggregates |
+| Dashboard, shells, batch, purchase history | **Working** | [`TeacherShellController`](app/Http/Controllers/Teacher/TeacherShellController.php), [`CohortBatchAnalyticsService`](app/Services/Teacher/CohortBatchAnalyticsService.php) |
+| Bulk checkout | **Working** | Enrollment requests + Xendit + vouchers |
+| Voucher email | **Working** | [`VoucherController`](app/Http/Controllers/Teacher/VoucherController.php), [`VoucherInvitationMail`](app/Mail/VoucherInvitationMail.php) |
+| `HandleInertiaRequests` teacher summary | **Working** | Real cohort/voucher aggregates |
 
 ### Student
 
 | Surface | Status | Wire to |
 |---------|--------|---------|
-| [`Leaderboard.jsx`](resources/js/Pages/Student/Leaderboard.jsx) | **Full mock** | `LeaderboardController` + gamification tables |
-| [`MyCast.jsx`](resources/js/Pages/Student/MyCast.jsx) | **Full mock** | `CastController` + casts/vouchers |
-| Dashboard demo shells (no enrollment) | **Mock fallback** | Empty state or marketplace CTA only |
-| `HandleInertiaRequests` `studentGamification` | **Hardcoded** SD/streak/badges | Real DB reads |
-| Shop diagnostic | `window.alert` | Diagnostic flow (Phase 4) |
+| [`Leaderboard.jsx`](resources/js/Pages/Student/Leaderboard.jsx) | **Working** | [`LeaderboardController`](app/Http/Controllers/Student/LeaderboardController.php) + [`GamificationService`](app/Services/GamificationService.php) |
+| [`MyCast.jsx`](resources/js/Pages/Student/MyCast.jsx) | **Working** | [`CastController`](app/Http/Controllers/Student/CastController.php) + [`CastService`](app/Services/Student/CastService.php) |
+| Dashboard (no enrollment) | **Working** | Empty state + marketplace CTA |
+| `HandleInertiaRequests` `studentGamification` | **Working** | Real DB reads via [`GamificationService`](app/Services/GamificationService.php) |
+| **Review AI assistant** | **Working** | [`StudentReviewAssistantController`](app/Http/Controllers/Student/StudentReviewAssistantController.php) + cached KB |
+| Shop diagnostic | **Stub** | Diagnostic pre-assessment flow (future) |
 
 ### Shared
 
 | Surface | Status | Wire to |
 |---------|--------|---------|
-| [`ProfileController.php`](app/Http/Controllers/ProfileController.php) | `update`/`destroy` stubs | Map `name` → `first_name`/`last_name`/`full_name`; add `password.update` route |
+| [`ProfileController.php`](app/Http/Controllers/ProfileController.php) | **Working** | `profile.update`, `password.update`, `profile.destroy` |
+| [`AcceptInvite.jsx`](resources/js/Pages/Auth/AcceptInvite.jsx) affiliation docs | **Stub** | Document upload step (future) |
 | [`routes/api.php`](routes/api.php) | Sanctum stubs | Defer or implement as needed |
 
-### AI integration backlog (priority order)
+### AI integration (completed)
 
-1. **PDF → quiz generation** (short test + final exam aggregation)
-2. **AI complete-the-code** grading (Phase 4)
-3. **Modified true/false** statement equivalence (Phase 4)
-4. **Future:** diagnostic pre-assessment, fast-track question generation
-
-**Proposed AI stack (config-driven):**
-
-- `config/ai.php` — provider, model, rate limits
-- `app/Services/Ai/` — `DocumentQuizGenerator`, `CodeAnswerGrader`, `StatementEquivalenceGrader`
-- Queue jobs for long PDF parsing
-- Store generation metadata on `questions.metadata` JSON column (audit trail, not exposed to students)
+1. **PDF → quiz generation** — Gemini sequential synthesis + question generation
+2. **AI complete-the-code** / **true_false_ai** grading — [`GeminiGradingService`](app/Services/Ai/GeminiGradingService.php)
+3. **Review assistant chatbot** — certification knowledge base + student chat panel
 
 ---
 

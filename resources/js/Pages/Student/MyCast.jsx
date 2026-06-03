@@ -24,7 +24,7 @@ function CastStatusPill({ status, label }) {
     return <span className={`student-cast-status student-cast-status--${status}`}>{label}</span>;
 }
 
-function CastMemberRow({ member, authUser }) {
+function CastMemberRow({ member, authUser, cast }) {
     const name = resolveMemberName(member, authUser);
     const handle = resolveMemberHandle(member, authUser);
 
@@ -43,10 +43,17 @@ function CastMemberRow({ member, authUser }) {
                 </div>
                 <p className="student-cast-member__handle">@{handle}</p>
                 {member.status === 'pending_enrollment' ? (
-                    <p className="student-cast-member__note">
-                        {/* TODO[backend]: Show invite redemption CTA when cast invite is pending. */}
-                        Waiting to redeem group voucher and enroll in the shell.
-                    </p>
+                    <div className="student-cast-member__note">
+                        <p>Waiting to redeem your group voucher and enroll in {cast.shell_title}.</p>
+                        {member.is_current_user && member.redeem_voucher_code ? (
+                            <Link
+                                href={route('marketplace.index')}
+                                className="student-btn student-btn--coral student-cast-member__cta"
+                            >
+                                Redeem voucher ({member.redeem_voucher_code})
+                            </Link>
+                        ) : null}
+                    </div>
                 ) : member.status === 'not_started' ? (
                     <p className="student-cast-member__note">Joined the cast but has not opened the shell yet.</p>
                 ) : (
@@ -103,7 +110,6 @@ function CastCard({ cast, authUser }) {
             {isExpired ? (
                 <div className="student-cast-card__alert">
                     <Clock3 size={16} aria-hidden="true" />
-                    {/* TODO[backend]: Derive expiry from vouchers.expires_at and cast status. */}
                     This cast&apos;s group voucher has expired. Progress is read-only until the teacher renews seats.
                 </div>
             ) : null}
@@ -114,7 +120,7 @@ function CastCard({ cast, authUser }) {
 
             <div className="student-cast-card__members">
                 {cast.members.map((member) => (
-                    <CastMemberRow key={member.id} member={member} authUser={authUser} />
+                    <CastMemberRow key={member.id} member={member} authUser={authUser} cast={cast} />
                 ))}
             </div>
         </section>

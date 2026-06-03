@@ -89,6 +89,36 @@ class ModuleContentTextExtractor
         return $units;
     }
 
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function extractPartsForReviewAssistant(Module $module): array
+    {
+        $parts = [];
+
+        foreach ($module->contents()->orderBy('order_index')->get() as $content) {
+            $part = $this->extractContentPart($content);
+
+            if ($part === null) {
+                continue;
+            }
+
+            $parts[] = ['text' => "Material: {$content->title}"];
+
+            if (isset($part['inlineData'])) {
+                $parts[] = $part;
+            } else {
+                $parts[] = ['text' => $part['text']];
+            }
+        }
+
+        if ($parts === []) {
+            throw new \InvalidArgumentException('No extractable PDF or presentation content was found for this sandbox.');
+        }
+
+        return $parts;
+    }
+
     private function assertModuleOwnedByCreator(Module $module, User $creator): void
     {
         $module->loadMissing('lesson.certification');

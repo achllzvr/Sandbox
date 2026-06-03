@@ -3,23 +3,28 @@
 namespace App\Http\Controllers\Creator;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Creator\Concerns\AuthorizesCertificationEditing;
+use App\Http\Requests\Creator\StoreModuleContentRequest;
 use App\Models\Module;
 use App\Models\ModuleContent;
-use App\Http\Requests\Creator\StoreModuleContentRequest;
 use App\Support\YoutubeEmbedUrl;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
-class ModuleContentController extends Controller {
-    public function store(StoreModuleContentRequest $request, Module $module) {
-        if ($module->lesson->certification->created_by_user_id !== auth()->id()) abort(403);
+class ModuleContentController extends Controller
+{
+    use AuthorizesCertificationEditing;
+
+    public function store(StoreModuleContentRequest $request, Module $module)
+    {
+        $this->authorizeModuleEditing($module);
 
         $data = $request->validated();
         $url = null;
 
         if ($data['type'] === 'youtube_embed') {
             $url = YoutubeEmbedUrl::toEmbedUrl($data['youtube_url']);
-        } else if ($request->hasFile('file')) {
+        } elseif ($request->hasFile('file')) {
             $url = $request->file('file')->store('module-contents', 'public');
         }
 
@@ -45,8 +50,9 @@ class ModuleContentController extends Controller {
         return redirect()->back()->with('success', 'Module component uploaded successfully!');
     }
 
-    public function reorder(Request $request, Module $module) {
-        if ($module->lesson->certification->created_by_user_id !== auth()->id()) abort(403);
+    public function reorder(Request $request, Module $module)
+    {
+        $this->authorizeModuleEditing($module);
 
         $request->validate([
             'contents' => ['required', 'array'],
@@ -63,15 +69,19 @@ class ModuleContentController extends Controller {
         return redirect()->back()->with('success', 'Module components reordered successfully!');
     }
 
-    public function destroy(Module $module, ModuleContent $content) {
-        if ($module->lesson->certification->created_by_user_id !== auth()->id()) abort(403);
-        if ($content->module_id !== $module->id) abort(404);
+    public function destroy(Module $module, ModuleContent $content)
+    {
+        $this->authorizeModuleEditing($module);
+        if ($content->module_id !== $module->id) {
+            abort(404);
+        }
 
         if ($content->content_type !== 'youtube_embed' && $content->file_url) {
             Storage::disk('public')->delete($content->file_url);
         }
 
         $content->delete();
+
         return redirect()->back()->with('success', 'Module component deleted successfully!');
     }
 }

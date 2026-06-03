@@ -5,13 +5,12 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UpdateCertificationStatusRequest;
 use App\Models\Certification;
+use App\Services\AuditLogService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class CertificationApprovalController extends Controller
 {
-    // TODO[backend]: Add archive() and restore() endpoints for certification management card actions.
-
     public function index(Request $request)
     {
         $query = Certification::query()
@@ -80,17 +79,19 @@ class CertificationApprovalController extends Controller
             'lessons.modules.contents',
             'lessons.modules.questions.answers',
             'quizQuestions.answers',
-            'examQuestions.answers'
+            'examQuestions.answers',
         ]);
 
-        $moduleCount = $certification->lessons->sum(function($lesson) { return $lesson->modules->count(); });
+        $moduleCount = $certification->lessons->sum(function ($lesson) {
+            return $lesson->modules->count();
+        });
 
         return Inertia::render('Admin/Certifications/Show', [
             'certification' => array_merge($certification->toArray(), [
                 'module_count' => $moduleCount,
                 'quiz_questions_count' => $certification->quizQuestions->count(),
                 'exam_questions_count' => $certification->examQuestions->count(),
-            ])
+            ]),
         ]);
     }
 
@@ -110,7 +111,7 @@ class CertificationApprovalController extends Controller
             ->with('success', 'Certification status updated.');
     }
 
-    public function requestRevision(\Illuminate\Http\Request $request, Certification $certification)
+    public function requestRevision(Request $request, Certification $certification)
     {
         $validated = $request->validate([
             'remarks' => ['required', 'string'],
@@ -124,5 +125,49 @@ class CertificationApprovalController extends Controller
 
         return redirect()->back()
             ->with('success', 'Revision requested successfully.');
+    }
+
+    public function archive(Certification $certification, AuditLogService $auditLog)
+    {
+        if ($certification->status === 'archived') {
+            return redirect()->back()->with('error', 'This certification is already archived.');
+        }
+
+        $certification->update([
+            'archived_from_status' => $certification->status,
+            'status' => 'archived',
+        ]);
+
+        $auditLog->log('certification_archived', auth()->id(), [
+            'certification_id' => $certification->id,
+            'title' => $certification->title,
+        ]);
+
+        return redirect()->back()->with('success', '"'.$certification->title.'" has been archived.');
+    }
+
+    public function restore(Certification $certification, AuditLogService $auditLog)
+    {
+        if ($certification->status !== 'archived') {
+            return redirect()->back()->with('error', 'Only archived certifications can be restored.');
+        }
+
+        $previous = $certification->archived_from_status;
+        $restoredStatus = in_array($previous, ['published', 'approved'], true)
+            ? 'published'
+            : ($previous ?: 'draft');
+
+        $certification->update([
+            'status' => $restoredStatus,
+            'archived_from_status' => null,
+        ]);
+
+        $auditLog->log('certification_restored', auth()->id(), [
+            'certification_id' => $certification->id,
+            'title' => $certification->title,
+            'status' => $restoredStatus,
+        ]);
+
+        return redirect()->back()->with('success', '"'.$certification->title.'" has been restored.');
     }
 }

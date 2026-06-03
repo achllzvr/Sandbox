@@ -24,6 +24,9 @@
         "chart.js": "^4.5.1",
         "jszip": "^3.10.1",
         "lucide-react": "^1.17.0",
-        "react-chartjs-2": "^5.3.1"
+        "pdfjs-dist": "^4.10.38",
+        "react-chartjs-2": "^5.3.1",
+        "react-markdown": "^10.1.0",
+        "remark-gfm": "^4.0.1"
     }
 }

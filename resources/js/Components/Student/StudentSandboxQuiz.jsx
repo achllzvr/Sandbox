@@ -50,6 +50,8 @@ export default function StudentSandboxQuiz({
         typingActive,
         showOptions,
         canSelectOptions,
+        showHermy,
+        showBubble,
     } = useQuizRevealSequence(questionKey);
 
     useEffect(() => {
@@ -83,6 +85,8 @@ export default function StudentSandboxQuiz({
     const sceneClasses = [
         'student-quiz__scene',
         isExiting ? 'student-quiz__scene--exiting' : '',
+        showHermy ? 'student-quiz__scene--hermy' : '',
+        showBubble ? 'student-quiz__scene--bubble' : '',
         typingActive ? 'student-quiz__scene--typing' : '',
         showOptions ? 'student-quiz__scene--options' : '',
         answerStatus === 'correct' ? 'student-quiz__scene--result-correct' : '',

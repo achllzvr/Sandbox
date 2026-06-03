@@ -26,7 +26,6 @@ export default function Show({
     batches = [],
     voucherGroups: initialGroups = [],
     purchaseHistory = [],
-    isMock = false,
 }) {
     const { flash } = usePage().props;
     const { className: theme, style: themeStyle } = resolveShopTheme(certification, certification.id - 1);
@@ -165,7 +164,6 @@ export default function Show({
                     />
                 </div>
 
-                {isMock ? <p className="teacher-shell-landing__mock-note">Sample voucher data — TODO[backend] wire to teacher cohorts.</p> : null}
             </div>
 
             <TeacherPurchaseHistoryModal
@@ -173,7 +171,6 @@ export default function Show({
                 onClose={() => setHistoryOpen(false)}
                 title={`Purchase history — ${certification.title}`}
                 transactions={purchaseHistory}
-                isMock={isMock}
             />
 
             {emailVoucher && emailModalView ? (

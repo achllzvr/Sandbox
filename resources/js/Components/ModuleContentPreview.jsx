@@ -66,9 +66,13 @@ export default function ModuleContentPreview({
     }
 
     const resolvedUrl = moduleStorageUrl(item.file_url, item.stream_url);
-    const previewKind = resolveModulePreviewKind(item.type, item.file_url || item.stream_url);
+    const previewKind = resolveModulePreviewKind(
+        item.type,
+        item.file_url || item.stream_url,
+        item.file_extension,
+    );
 
-    if ((item.type === 'presentation' || item.type === 'document') && resolvedUrl) {
+    if (resolvedUrl && (item.type === 'presentation' || item.type === 'document' || previewKind === 'pdf' || previewKind === 'pptx' || previewKind === 'ppt')) {
         if (previewKind === 'pdf') {
             return (
                 <div className="admin-preview-pdf">

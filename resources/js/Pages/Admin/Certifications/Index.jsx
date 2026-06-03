@@ -1,16 +1,3 @@
-/**
- * Admin Certifications (Shells) Index
- *
- * WIRED (backend + database):
- * - Certification list + search/status filters → CertificationApprovalController@index
- * - Accept (publish) / Decline → update status endpoint → certifications table
- * - View certification path → show page with lessons/modules/exam
- *
- * TODO (backend + database):
- * - Archive / Restore buttons → no dedicated endpoints (placeholder modal)
- * - Approvals tab filters pending_review client-side from full list (consider server-side tab)
- * - See finances link → finance index without certification_id filter
- */
 import { Head, router, useForm } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import AdminModal from '@/Components/Admin/AdminModal';
@@ -27,6 +14,7 @@ const STATUS_OPTIONS = [
     { value: 'published', label: 'Published' },
     { value: 'approved', label: 'Approved' },
     { value: 'denied', label: 'Denied' },
+    { value: 'archived', label: 'Archived' },
 ];
 
 export default function CertificationsIndex({ certifications, filters }) {
@@ -34,8 +22,6 @@ export default function CertificationsIndex({ certifications, filters }) {
     const [search, setSearch] = useState(filters?.search || '');
     const [statusFilter, setStatusFilter] = useState(filters?.status || '');
     const [declineTarget, setDeclineTarget] = useState(null);
-    const [actionModal, setActionModal] = useState(null);
-
     const declineForm = useForm({ status: 'denied', decline_reason: '' });
 
     // TODO[backend]: Approvals tab uses client-side filter; consider server tab=approvals query
@@ -103,11 +89,13 @@ export default function CertificationsIndex({ certifications, filters }) {
     }
 
     function handleArchive(cert) {
-        setActionModal({ type: 'archive', cert });
+        if (!confirm(`Archive "${cert.title}"?`)) return;
+        router.put(route('admin.certifications.archive', cert.id), {}, { preserveScroll: true });
     }
 
     function handleRestore(cert) {
-        setActionModal({ type: 'restore', cert });
+        if (!confirm(`Restore "${cert.title}"?`)) return;
+        router.put(route('admin.certifications.restore', cert.id), {}, { preserveScroll: true });
     }
 
     const topbarTabs = (
@@ -167,7 +155,6 @@ export default function CertificationsIndex({ certifications, filters }) {
                 </div>
             </div>
 
-            {/* Certification panel — list wired; archive/restore actions TODO[backend] */}
             <div className="admin-cert-panel admin-card admin-card--chunky">
                 <div className="admin-cert-panel__header">
                     <span>Name</span>
@@ -254,38 +241,6 @@ export default function CertificationsIndex({ certifications, filters }) {
                 </form>
             </AdminModal>
 
-            {/* TODO[backend]: Archive / restore certification — placeholder modal only */}
-            <AdminModal
-                show={!!actionModal}
-                onClose={() => setActionModal(null)}
-                title={
-                    actionModal?.type === 'archive'
-                        ? 'Archive certification'
-                        : 'Restore certification'
-                }
-                footer={
-                    <button
-                        type="button"
-                        className="admin-btn admin-btn--ghost"
-                        onClick={() => setActionModal(null)}
-                    >
-                        Close
-                    </button>
-                }
-            >
-                <p className="admin-table__muted">
-                    {actionModal?.cert && (
-                        <>
-                            {actionModal.cert.title} — {actionModal.cert.status}
-                        </>
-                    )}
-                </p>
-                <p className="admin-table__muted" style={{ marginTop: '12px' }}>
-                    <span className="admin-todo-badge admin-todo-badge--inline">
-                        TODO: wire {actionModal?.type} action to backend
-                    </span>
-                </p>
-            </AdminModal>
         </AdminLayout>
     );
 }

@@ -128,7 +128,7 @@ export default function StudentShopModal({
                             <form className="student-shop-flow" onSubmit={handleEnrollSubmit}>
                                 <h3 className="student-shop-modal__title">You are enrolling</h3>
                                 <ShopCertBadge cert={cert} theme={theme} />
-                                <CheckoutPriceBreakdown unitPrice={cert.price} />
+                                <CheckoutPriceBreakdown unitPrice={cert.price} theme={theme} />
 
                                 {(checkoutError || enrollForm.errors.checkout) && (
                                     <div className="student-shop-alert student-shop-alert--error">

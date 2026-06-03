@@ -66,7 +66,7 @@ class GeminiController extends Controller
         }
 
         $sourceUnitCount = $this->countSourceUnits($request, $uploads);
-        set_time_limit(min(900, 120 + ($sourceUnitCount * 90)));
+        set_time_limit(min(180, 60 + ($sourceUnitCount * 45)));
 
         $numQuestions = (int) $request->input('num_questions', 10);
         $allowedTypes = $this->questionNormalizer->allowedTypes($request->input('question_types'));
@@ -86,7 +86,7 @@ class GeminiController extends Controller
         ];
 
         try {
-            $decoded = $this->geminiClient->generateJson($parts, $apiKey, 180);
+            $decoded = $this->geminiClient->generateJson($parts, $apiKey, min(90, (int) config('services.gemini.timeout', 45) + 30));
 
             if (! isset($decoded['questions']) || ! is_array($decoded['questions'])) {
                 return response()->json(['error' => 'Invalid JSON structure returned by AI (missing "questions" key).'], 500);

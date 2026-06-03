@@ -1,9 +1,6 @@
 import { Link } from '@inertiajs/react';
 import AdminBadge from '@/Components/Admin/AdminBadge';
 
-// TODO[backend]: See finances link should pass certification_id to finance index filter.
-// TODO[backend]: Archive / Restore buttons call placeholder modal — no API endpoints.
-
 const DESC_VARIANTS = ['blue', 'green'];
 
 function authorLabel(cert) {
@@ -24,6 +21,7 @@ export default function AdminCertificationCard({
     processing = false,
 }) {
     const descVariant = DESC_VARIANTS[variantIndex % DESC_VARIANTS.length];
+    const isArchived = cert.status === 'archived';
     const isDenied = cert.status === 'denied';
     const isPending = cert.status === 'pending_review';
 
@@ -53,20 +51,18 @@ export default function AdminCertificationCard({
 
                 {mode === 'management' ? (
                     <>
-                        {/* TODO[backend]: Per-shell finance view — link has no certification filter */}
                         <Link
-                            href={route('admin.finance.index')}
+                            href={route('admin.finance.index', { certification_id: cert.id })}
                             className="admin-cert-action admin-cert-action--finance"
                         >
                             See finances
                         </Link>
-                        {isDenied ? (
+                        {isArchived || isDenied ? (
                             <button
                                 type="button"
                                 className="admin-cert-action admin-cert-action--restore"
                                 disabled={processing}
                                 onClick={() => onRestore?.(cert)}
-                                title="TODO: wire restore to backend"
                             >
                                 Restore
                             </button>
@@ -76,7 +72,6 @@ export default function AdminCertificationCard({
                                 className="admin-cert-action admin-cert-action--archive"
                                 disabled={processing}
                                 onClick={() => onArchive?.(cert)}
-                                title="TODO: wire archive to backend"
                             >
                                 Archive
                             </button>

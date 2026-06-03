@@ -1,4 +1,4 @@
-import { useForm } from '@inertiajs/react';
+import { router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import AdminModal from '@/Components/Admin/AdminModal';
 
@@ -40,8 +40,14 @@ export default function CreateUserFlow({ show, onClose }) {
         if (!confirmed) return;
 
         if (selectedRole === 'admin') {
-            // TODO: Wire dedicated admin invite endpoint (currently UI-only success).
-            setStep('success');
+            router.post(
+                route('admin.users.invite-admin'),
+                { email: inviteForm.data.email },
+                {
+                    onSuccess: () => setStep('success'),
+                    onError: (errors) => inviteForm.setError(errors),
+                }
+            );
             return;
         }
 
@@ -178,14 +184,6 @@ export default function CreateUserFlow({ show, onClose }) {
             >
                 <p className="admin-table__muted">
                     A link to complete the account setup has been sent to the respective email.
-                    {selectedRole === 'admin' && (
-                        <>
-                            {' '}
-                            <span className="admin-todo-badge admin-todo-badge--inline">
-                                TODO: admin invite API
-                            </span>
-                        </>
-                    )}
                 </p>
             </AdminModal>
         </>

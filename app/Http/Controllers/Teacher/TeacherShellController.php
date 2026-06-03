@@ -7,11 +7,15 @@ use App\Models\Certification;
 use App\Models\Cohort;
 use App\Models\EnrollmentRequest;
 use App\Models\Voucher;
-use Illuminate\Support\Facades\DB;
+use App\Services\Teacher\CohortBatchAnalyticsService;
 use Inertia\Inertia;
 
 class TeacherShellController extends Controller
 {
+    public function __construct(private CohortBatchAnalyticsService $batchAnalytics)
+    {
+    }
+
     public function index()
     {
         $teacherId = auth()->id();
@@ -66,7 +70,9 @@ class TeacherShellController extends Controller
                         'student_email' => $student?->email,
                         'updated_at' => $voucher->used_at?->format('M d, Y; g:ia')
                             ?? $voucher->updated_at?->format('M d, Y; g:ia'),
-                        'email_status' => $voucher->is_used ? null : 'sendable',
+                        'email_status' => $voucher->is_used
+                            ? null
+                            : ($voucher->sent_to_email_at ? 'sent' : 'sendable'),
                     ];
                 });
 
@@ -89,22 +95,15 @@ class TeacherShellController extends Controller
     public function batch(int $certification, int $cohort)
     {
         $teacherId = auth()->id();
-        $cert = Certification::findOrFail($certification);
-        $batch = Cohort::where('id', $cohort)->where('teacher_id', $teacherId)->firstOrFail();
-
-        $studentIds = DB::table('cohort_students')->where('cohort_id', $cohort)->pluck('user_id');
-        $completed = DB::table('user_module_progress')
-            ->whereIn('user_id', $studentIds)
-            ->where('is_completed', true)
-            ->count();
+        $cert = Certification::with('lessons.modules')->findOrFail($certification);
+        $batch = Cohort::where('id', $cohort)
+            ->where('teacher_id', $teacherId)
+            ->where('certification_id', $certification)
+            ->firstOrFail();
 
         return Inertia::render('Teacher/Shells/Batch', [
             'certification' => $cert,
-            'analytics' => [
-                'cohort_name' => $batch->cohort_name,
-                'students' => $studentIds->count(),
-                'completed_modules' => $completed,
-            ],
+            'analytics' => $this->batchAnalytics->build($batch, $cert),
             'isMock' => false,
         ]);
     }

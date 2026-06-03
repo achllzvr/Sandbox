@@ -227,7 +227,7 @@ export default function TeacherShopModal({ cert, view, catalogIndex = 0, quantit
                         <form className="student-shop-flow" onSubmit={handleConfirmSubmit}>
                             <h3 className="student-shop-modal__title">Confirm voucher batch purchase</h3>
 
-                            <CheckoutPriceBreakdown unitPrice={cert.price} quantity={quantity} totalLabel="Batch total" />
+                            <CheckoutPriceBreakdown unitPrice={cert.price} quantity={quantity} totalLabel="Batch total" theme={theme} />
 
                             {checkoutError ? (
                                 <div className="student-mock-banner" role="alert">

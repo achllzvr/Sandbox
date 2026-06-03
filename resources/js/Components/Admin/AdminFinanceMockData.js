@@ -1,5 +1,3 @@
-// TODO[backend]: Replace all exports below with live API responses from FinanceController / WithdrawalController.
-
 export const MOCK_LEDGER_METRICS = {
     gross_volume: 5000,
     platform_net_profit: 1500,
@@ -91,7 +89,6 @@ export const MOCK_WEBHOOK_EVENTS = [
     },
 ];
 
-// TODO[backend]: Replace with AuditLogController when audit_logs table is populated.
 export const MOCK_AUDIT_LOGS = [
     {
         id: 1,

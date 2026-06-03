@@ -24,3 +24,25 @@ CREATE TABLE IF NOT EXISTS `module_quiz_attempts` (
     KEY `module_quiz_attempts_user_module_index` (`user_id`, `module_id`),
     KEY `module_quiz_attempts_module_id_foreign` (`module_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Student Review AI knowledge base (per certification)
+CREATE TABLE IF NOT EXISTS `certification_knowledge_bases` (
+    `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+    `certification_id` bigint unsigned NOT NULL,
+    `summary` longtext DEFAULT NULL,
+    `outline` json DEFAULT NULL,
+    `content_hash` varchar(64) NOT NULL DEFAULT '',
+    `status` enum('pending','ready','failed') NOT NULL DEFAULT 'pending',
+    `error_message` text DEFAULT NULL,
+    `generated_at` timestamp NULL DEFAULT NULL,
+    `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `certification_knowledge_bases_certification_id_unique` (`certification_id`),
+    KEY `certification_knowledge_bases_certification_id_foreign` (`certification_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Teacher voucher email delivery (group seat invites)
+ALTER TABLE `vouchers`
+    ADD COLUMN IF NOT EXISTS `recipient_email` varchar(255) DEFAULT NULL AFTER `used_by`,
+    ADD COLUMN IF NOT EXISTS `sent_to_email_at` timestamp NULL DEFAULT NULL AFTER `expires_at`;

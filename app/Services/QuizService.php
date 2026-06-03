@@ -82,10 +82,29 @@ class QuizService
                 'value' => $submission['value'] ?? null,
                 'is_correct' => $isCorrect,
                 'ai_feedback' => $aiFeedback,
+                'correct_answer' => $this->correctAnswerLabel($question),
             ];
         }
 
         return $records;
+    }
+
+    public function correctAnswerLabel(Question $question): ?string
+    {
+        $question->loadMissing('answers');
+        $type = $question->interaction_type ?? 'multiple_choice';
+
+        return match ($type) {
+            'multiple_choice' => $question->answers->firstWhere('is_correct', true)?->answer_text,
+            'true_false', 'true_false_ai' => $question->answers->firstWhere('is_correct', true)?->answer_text
+                ?? (($question->metadata['correct'] ?? null) === true ? 'True' : (($question->metadata['correct'] ?? null) === false ? 'False' : null)),
+            'matching' => collect($question->metadata['pairs'] ?? [])
+                ->map(fn ($pair) => ($pair['left'] ?? '').' → '.($pair['right'] ?? ''))
+                ->filter()
+                ->implode('; ') ?: null,
+            'sequence' => collect($question->metadata['correct_order'] ?? [])->implode(' → ') ?: null,
+            default => $question->answers->firstWhere('is_correct', true)?->answer_text,
+        };
     }
 
     public function passed(int $score, int $total): bool

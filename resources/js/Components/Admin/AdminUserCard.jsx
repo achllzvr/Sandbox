@@ -1,6 +1,5 @@
+import { Link, router } from '@inertiajs/react';
 import AdminBadge from '@/Components/Admin/AdminBadge';
-
-// TODO[backend]: Suspend, View, Archive — onAction opens placeholder modal (UserManagementController has no endpoints).
 
 function IconPause() {
     return (
@@ -58,12 +57,19 @@ function isPendingTeacher(user) {
     );
 }
 
-export default function AdminUserCard({ user, onReview, onAction, mode = 'management' }) {
+export default function AdminUserCard({ user, onReview, mode = 'management', processing = false }) {
     const initials = `${user.first_name?.charAt(0) || ''}${user.last_name?.charAt(0) || ''}`;
     const approvalsMode = mode === 'approvals';
     const canReview =
         user.role === 'teacher' &&
         (isPendingTeacher(user) || user.institutional_credentials_url);
+    const canManage = user.role !== 'admin';
+
+    function confirmAction(type) {
+        const label = type === 'suspend' ? 'suspend' : 'archive';
+        if (!confirm(`${label} ${user.first_name} ${user.last_name}?`)) return;
+        router.put(route(`admin.users.${type}`, user.id), {}, { preserveScroll: true });
+    }
 
     return (
         <article className="admin-user-card admin-card--chunky">
@@ -99,31 +105,29 @@ export default function AdminUserCard({ user, onReview, onAction, mode = 'manage
                         <span>{isPendingTeacher(user) ? 'Review' : 'View credentials'}</span>
                     </button>
                 )}
-                {!approvalsMode && (
+                {!approvalsMode && canManage && (
                     <>
-                        {/* TODO[backend]: suspend user */}
                         <button
                             type="button"
                             className="admin-action-btn admin-action-btn--warning"
-                            onClick={() => onAction?.('suspend', user)}
+                            disabled={processing || user.status === 'inactive'}
+                            onClick={() => confirmAction('suspend')}
                         >
                             <IconPause />
                             <span>Suspend</span>
                         </button>
-                        {/* TODO[backend]: view user detail page */}
-                        <button
-                            type="button"
+                        <Link
+                            href={route('admin.users.show', user.id)}
                             className="admin-action-btn admin-action-btn--info"
-                            onClick={() => onAction?.('view', user)}
                         >
                             <IconEye />
                             <span>View</span>
-                        </button>
-                        {/* TODO[backend]: archive user (soft delete) */}
+                        </Link>
                         <button
                             type="button"
                             className="admin-action-btn admin-action-btn--danger"
-                            onClick={() => onAction?.('archive', user)}
+                            disabled={processing}
+                            onClick={() => confirmAction('archive')}
                         >
                             <IconTrash />
                             <span>Archive</span>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Creator;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Creator\Concerns\AuthorizesCertificationEditing;
 use App\Http\Requests\Creator\StoreCertificationRequest;
 use App\Http\Requests\Creator\UpdateCertificationRequest;
 use App\Models\Certification;
@@ -13,6 +14,8 @@ use Inertia\Inertia;
 
 class CertificationController extends Controller
 {
+    use AuthorizesCertificationEditing;
+
     public function __construct(private CertificationService $certService)
     {
     }
@@ -65,9 +68,7 @@ class CertificationController extends Controller
 
     public function storeExamQuestions(\Illuminate\Http\Request $request, Certification $certification)
     {
-        if ($certification->created_by_user_id !== auth()->id()) {
-            abort(403);
-        }
+        $this->authorizeCertificationEditing($certification);
 
         $validated = $request->validate([
             'questions' => ['required', 'array', 'min:5'],
@@ -96,6 +97,8 @@ class CertificationController extends Controller
 
     public function update(UpdateCertificationRequest $request, Certification $certification)
     {
+        $this->authorizeCertificationEditing($certification);
+
         $data = $request->validated();
 
         if ($request->hasFile('cover_image')) {

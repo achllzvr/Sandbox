@@ -3,11 +3,13 @@
 namespace App\Services\Ai;
 
 use App\Models\Question;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 
 class GeminiGradingService
 {
+    public function __construct(private GeminiClient $geminiClient)
+    {
+    }
+
     public function gradeTrueFalseAi(Question $question, string $studentAnswer): array
     {
         $reference = trim((string) ($question->metadata['reference_true_statement'] ?? ''));
@@ -77,58 +79,27 @@ PROMPT;
             return null;
         }
 
-        $models = ['gemini-2.0-flash', 'gemini-1.5-flash-002', 'gemini-1.5-flash'];
+        try {
+            $decoded = $this->geminiClient->generateJson(
+                [['text' => $systemPrompt."\n\n".$userPrompt]],
+                $apiKey,
+                min(30, (int) config('services.gemini.timeout', 45)),
+            );
 
-        foreach ($models as $model) {
-            try {
-                $response = Http::timeout(30)->post(
-                    "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}",
-                    [
-                        'contents' => [
-                            [
-                                'role' => 'user',
-                                'parts' => [
-                                    ['text' => $systemPrompt."\n\n".$userPrompt],
-                                ],
-                            ],
-                        ],
-                        'generationConfig' => [
-                            'responseMimeType' => 'application/json',
-                        ],
-                    ],
-                );
-
-                if (! $response->successful()) {
-                    if (in_array($response->status(), [400, 401], true)) {
-                        break;
-                    }
-
-                    continue;
-                }
-
-                $text = $response->json('candidates.0.content.parts.0.text');
-
-                if (! is_string($text) || trim($text) === '') {
-                    continue;
-                }
-
-                $decoded = json_decode($this->stripJsonFence($text), true);
-
-                if (! is_array($decoded) || ! array_key_exists('is_correct', $decoded)) {
-                    continue;
-                }
-
-                return [
-                    'is_correct' => (bool) $decoded['is_correct'],
-                    'confidence' => isset($decoded['confidence']) ? (float) $decoded['confidence'] : null,
-                    'feedback' => isset($decoded['feedback']) ? (string) $decoded['feedback'] : null,
-                ];
-            } catch (\Throwable $e) {
-                Log::warning("Gemini grading failed for model {$model}: ".$e->getMessage());
+            if (! array_key_exists('is_correct', $decoded)) {
+                return null;
             }
-        }
 
-        return null;
+            return [
+                'is_correct' => (bool) $decoded['is_correct'],
+                'confidence' => isset($decoded['confidence']) ? (float) $decoded['confidence'] : null,
+                'feedback' => isset($decoded['feedback']) ? (string) $decoded['feedback'] : null,
+            ];
+        } catch (\RuntimeException) {
+            return null;
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     private function fallbackTrueFalse(string $reference, string $studentAnswer): array
@@ -185,17 +156,5 @@ PROMPT;
         }
 
         return strtolower($code);
-    }
-
-    private function stripJsonFence(string $text): string
-    {
-        if (preg_match('/^\s*```(?:json)?\s*(.*?)\s*```/s', $text, $matches)) {
-            return trim($matches[1]);
-        }
-
-        $text = preg_replace('/^```(?:json)?\s*/i', '', $text) ?? $text;
-        $text = preg_replace('/\s*```$/', '', $text) ?? $text;
-
-        return trim($text);
     }
 }

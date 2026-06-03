@@ -1,17 +1,3 @@
-/**
- * Admin Dashboard
- *
- * WIRED (backend + database):
- * - User/shell metric counts → AdminDashboardController
- * - Recent users list → users table
- * - Recent shells list → certifications table
- *
- * TODO (backend + database):
- * - Shell metric card links → add status query params to certifications index filter
- * - Enrollment trend chart → analytics API + enrollments table
- * - Users by role chart → analytics API
- * - Weekly revenue chart → finance/payments API
- */
 import { Head, Link } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import AdminBadge from '@/Components/Admin/AdminBadge';
@@ -47,14 +33,12 @@ const USER_METRICS = [
     },
 ];
 
-// TODO: Add status query filters to shell metric links (pending, published, declined).
 const SHELL_METRICS = [
     {
         key: 'total_certifications',
         label: 'Total shells',
         accent: '#cf7860',
         href: () => route('admin.certifications.index'),
-        // TODO[backend]: no filter applied — should link with ?status= or dedicated counts
     },
     {
         key: 'pending_certifications',
@@ -76,25 +60,14 @@ const SHELL_METRICS = [
     },
 ];
 
-// TODO: Replace MOCK_ENROLLMENT with live monthly enrollment data from the backend.
-const MOCK_ENROLLMENT = {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-    values: [42, 58, 71, 65, 88, 94],
-};
-
-// TODO: Replace MOCK_ROLE_SPLIT with live platform role distribution from the backend.
-const MOCK_ROLE_SPLIT = {
-    labels: ['Students', 'Creators', 'Teachers', 'Admins'],
-    values: [120, 18, 24, 4],
-};
-
-// TODO: Replace MOCK_REVENUE with live certification purchase totals from the backend.
-const MOCK_REVENUE = {
-    labels: ['W1', 'W2', 'W3', 'W4'],
-    values: [12, 19, 15, 28],
-};
-
-export default function Dashboard({ metrics, recent_certifications, recent_users }) {
+export default function Dashboard({
+    metrics,
+    recent_certifications,
+    recent_users,
+    enrollment_trend = { labels: [], values: [] },
+    role_split = { labels: [], values: [] },
+    weekly_revenue = { labels: [], values: [] },
+}) {
     function formatDate(d) {
         return new Date(d).toLocaleDateString('en-US', {
             month: 'short',
@@ -107,7 +80,6 @@ export default function Dashboard({ metrics, recent_certifications, recent_users
         <AdminLayout pageTitle="Dashboard">
             <Head title="Admin Dashboard" />
 
-            {/* TODO[backend]: Metric groups — counts wired; chart sections below use mock data only */}
             <div className="admin-metric-groups">
                 <AdminMetricGroup
                     title="Users"
@@ -123,34 +95,30 @@ export default function Dashboard({ metrics, recent_certifications, recent_users
                 />
             </div>
 
-            {/* TODO: Wire enrollment trend chart to live analytics API. */}
             <div className="admin-grid-3 admin-grid-3--charts">
                 <AdminLineChart
                     title="Enrollment trend"
-                    subtitle="TODO: Monthly enrollments across all shells"
-                    labels={MOCK_ENROLLMENT.labels}
-                    values={MOCK_ENROLLMENT.values}
+                    subtitle="Monthly enrollments (last 6 months)"
+                    labels={enrollment_trend.labels}
+                    values={enrollment_trend.values}
                     colors={CHART_COLORS}
                 />
-                {/* TODO: Wire users-by-role chart to live analytics API. */}
                 <AdminBarChart
                     title="Users by role"
-                    subtitle="TODO: Current platform role distribution"
-                    labels={MOCK_ROLE_SPLIT.labels}
-                    values={MOCK_ROLE_SPLIT.values}
+                    subtitle="Current platform role distribution"
+                    labels={role_split.labels}
+                    values={role_split.values}
                     colors={CHART_COLORS}
                 />
-                {/* TODO: Wire weekly revenue chart to live finance/analytics API. */}
                 <AdminBarChart
                     title="Weekly revenue"
-                    subtitle="TODO: Certification purchase totals (₱)"
-                    labels={MOCK_REVENUE.labels}
-                    values={MOCK_REVENUE.values}
+                    subtitle="Certification purchase totals (₱)"
+                    labels={weekly_revenue.labels}
+                    values={weekly_revenue.values}
                     colors={CHART_COLORS}
                 />
             </div>
 
-            {/* TODO[backend]: Recent users — wired via AdminDashboardController → users table */}
             <div className="admin-grid-2">
                 <div className="admin-card admin-card--chunky">
                     <div className="admin-card__header">
@@ -183,7 +151,6 @@ export default function Dashboard({ metrics, recent_certifications, recent_users
                     </div>
                 </div>
 
-                {/* TODO[backend]: Recent shells — wired via AdminDashboardController → certifications table */}
                 <div className="admin-card admin-card--chunky">
                     <div className="admin-card__header">
                         <h3>Recent shells</h3>
