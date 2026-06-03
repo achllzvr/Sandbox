@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Inertia\Inertia;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Validation\Rule;
+use Inertia\Inertia;
 
 class ProfileController extends Controller
 {
@@ -20,18 +23,46 @@ class ProfileController extends Controller
         ]);
     }
 
-    // TODO[backend]: Persist profile name/email to users table (split name into first_name/last_name/full_name).
     public function update(Request $request)
     {
-        // Add actual profile update logic here
-        return Redirect::route('profile.edit');
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+        ]);
+
+        $parts = preg_split('/\s+/', trim($validated['name']), 2) ?: ['', ''];
+        $firstName = $parts[0] ?? '';
+        $lastName = $parts[1] ?? '';
+
+        $user->update([
+            'first_name' => $firstName,
+            'last_name' => $lastName,
+            'email' => $validated['email'],
+        ]);
+
+        return Redirect::route('profile.edit')->with('status', 'profile-updated');
     }
 
-    // TODO[backend]: Implement account deletion with password confirmation (non-admin users only in UI).
     public function destroy(Request $request)
     {
-        // Add actual profile delete logic here
+        $request->validate([
+            'password' => ['required', 'current_password'],
+        ]);
+
+        $user = $request->user();
+
+        if ($user->isAdmin()) {
+            return back()->withErrors(['password' => 'Admin accounts cannot be deleted from this screen.']);
+        }
+
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        $user->delete();
+
         return Redirect::to('/');
     }
 }
-

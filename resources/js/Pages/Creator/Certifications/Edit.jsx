@@ -4,6 +4,7 @@ import AdminBadge from '@/Components/Admin/AdminBadge';
 import AdminModal from '@/Components/Admin/AdminModal';
 import ModuleContentPreview from '@/Components/ModuleContentPreview';
 import GenerateQuizModal from '@/Components/Creator/GenerateQuizModal';
+import CreatorQuestionFields from '@/Components/Creator/CreatorQuestionFields';
 import CreatorStatusPill from '@/Components/Creator/CreatorStatusPill';
 import {
     estimatedDurationForStore,
@@ -231,6 +232,8 @@ export default function Edit({ certification }) {
     const openQuizEditor = () => {
         const existingQuestions = (activeModule.questions || []).map(q => ({
             question_text: q.question_text,
+            interaction_type: q.interaction_type || 'multiple_choice',
+            metadata: q.metadata || null,
             answers: (q.answers || []).map(a => ({
                 answer_text: a.answer_text,
                 is_correct: !!a.is_correct
@@ -240,6 +243,8 @@ export default function Edit({ certification }) {
         if (existingQuestions.length === 0) {
             setQuestionsList(Array.from({ length: 5 }, () => ({
                 question_text: '',
+                interaction_type: 'multiple_choice',
+                metadata: null,
                 answers: [
                     { answer_text: '', is_correct: true },
                     { answer_text: '', is_correct: false },
@@ -267,8 +272,14 @@ export default function Edit({ certification }) {
                 alert(`Question ${i + 1} has empty text.`);
                 return;
             }
+
+            const type = q.interaction_type || 'multiple_choice';
+            if (type !== 'multiple_choice') {
+                continue;
+            }
+
             let correctCount = 0;
-            for (let j = 0; j < q.answers.length; j++) {
+            for (let j = 0; j < (q.answers || []).length; j++) {
                 if (!q.answers[j].answer_text.trim()) {
                     alert(`Choice option ${j + 1} for Question ${i + 1} is empty.`);
                     return;
@@ -292,6 +303,8 @@ export default function Edit({ certification }) {
     const addQuizQuestion = () => {
         setQuestionsList([...questionsList, {
             question_text: '',
+            interaction_type: 'multiple_choice',
+            metadata: null,
             answers: [
                 { answer_text: '', is_correct: true },
                 { answer_text: '', is_correct: false },
@@ -1137,19 +1150,14 @@ export default function Edit({ certification }) {
                                     <button type="button" onClick={() => removeQuizQuestion(qIdx)} className="admin-btn admin-btn--ghost admin-btn--sm">Remove</button>
                                 ) : null}
                             </div>
-                            <label className="admin-field">
-                                <span className="admin-field__label">Question</span>
-                                <input type="text" value={q.question_text} onChange={(e) => updateQuizQuestionText(qIdx, e.target.value)} className="input-field" required />
-                            </label>
-                            {[0, 1, 2, 3].map((aIdx) => (
-                                <label key={aIdx} className="admin-field">
-                                    <span className="admin-field__label">Choice {aIdx + 1}{q.answers[aIdx]?.is_correct ? ' (correct)' : ''}</span>
-                                    <div className="admin-inline-choice">
-                                        <input type="radio" name={`quiz-correct-${qIdx}`} checked={q.answers[aIdx]?.is_correct} onChange={() => setQuizCorrectAnswer(qIdx, aIdx)} />
-                                        <input type="text" value={q.answers[aIdx]?.answer_text ?? ''} onChange={(e) => updateQuizAnswerText(qIdx, aIdx, e.target.value)} className="input-field" required />
-                                    </div>
-                                </label>
-                            ))}
+                            <CreatorQuestionFields
+                                question={q}
+                                onChange={(next) => {
+                                    const list = [...questionsList];
+                                    list[qIdx] = next;
+                                    setQuestionsList(list);
+                                }}
+                            />
                         </div>
                     ))}
                     <button type="button" onClick={addQuizQuestion} className="admin-btn admin-btn--secondary admin-btn--block" style={{ marginTop: '12px' }}>+ Add question</button>

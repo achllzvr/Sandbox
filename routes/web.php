@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\CertificationApprovalController;
 use App\Http\Controllers\Admin\FinanceController;
 use App\Http\Controllers\AffiliationController;
+use App\Http\Controllers\Creator\AiQuizGenerationController;
 use App\Http\Controllers\Creator\AnalyticsController;
 use App\Http\Controllers\Creator\CertificationController;
 use App\Http\Controllers\Creator\CreatorDashboardController;
@@ -13,6 +14,8 @@ use App\Http\Controllers\Creator\ModuleContentController;
 use App\Http\Controllers\Creator\ModuleController;
 use App\Http\Controllers\Creator\QuestionController;
 use App\Http\Controllers\Creator\WithdrawalController;
+use App\Http\Controllers\Auth\PasswordController;
+use App\Http\Controllers\ContentStreamController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Student\DashboardController as StudentDashboardController;
 use App\Http\Controllers\Student\MarketplaceController;
@@ -72,7 +75,13 @@ Route::middleware(['auth', 'otp.verified'])->group(function () {
 
     Route::delete('/profile', [ProfileController::class, 'destroy'])
         ->name('profile.destroy');
+
+    Route::put('/password', [PasswordController::class, 'update'])
+        ->name('password.update');
 });
+
+Route::middleware(['auth', 'signed'])->get('/content/stream/{content}', [ContentStreamController::class, 'stream'])
+    ->name('content.stream');
 
 /*
 |--------------------------------------------------------------------------
@@ -138,6 +147,10 @@ Route::middleware(['auth', 'otp.verified', 'role:content_creator'])
         // Sandbox practice quiz (Short Test) route
         Route::post('modules/{module}/questions', [QuestionController::class, 'store'])
             ->name('modules.questions.store');
+
+        Route::post('ai/generate-quiz', [AiQuizGenerationController::class, 'generate'])
+            ->middleware('throttle:10,1')
+            ->name('ai.generate-quiz');
     });
 
 /*
@@ -206,15 +219,23 @@ Route::middleware(['auth', 'otp.verified', 'role:user'])
         Route::get('/shells/{id}', [\App\Http\Controllers\Student\MyShellController::class, 'show'])->name('shells.show');
 
         // Mark a module as complete (video/ppt progress)
-        Route::post('/shells/modules/{module}/complete', [\App\Http\Controllers\Student\MyShellController::class, 'completeModule'])->name('shells.modules.complete');
+        Route::post('/shells/modules/{module}/complete', [\App\Http\Controllers\Student\MyShellController::class, 'completeModule'])
+            ->middleware('enrolled')
+            ->name('shells.modules.complete');
 
-        // Quiz Submission
-        Route::post('/modules/{module}/quiz/check', [\App\Http\Controllers\Student\QuizController::class, 'check'])->name('modules.quiz.check');
-        Route::post('/modules/{module}/quiz/submit', [\App\Http\Controllers\Student\QuizController::class, 'submit'])->name('modules.quiz.submit');
+        Route::post('/modules/{module}/quiz/check', [\App\Http\Controllers\Student\QuizController::class, 'check'])
+            ->middleware(['enrolled', 'throttle:30,1'])
+            ->name('modules.quiz.check');
+        Route::post('/modules/{module}/quiz/submit', [\App\Http\Controllers\Student\QuizController::class, 'submit'])
+            ->middleware('enrolled')
+            ->name('modules.quiz.submit');
 
-        // Exam Submission
-        Route::post('/certifications/{certification}/exam/check', [\App\Http\Controllers\Student\ExamController::class, 'check'])->name('certifications.exam.check');
-        Route::post('/certifications/{certification}/exam/submit', [\App\Http\Controllers\Student\ExamController::class, 'submit'])->name('certifications.exam.submit');
+        Route::post('/certifications/{certification}/exam/check', [\App\Http\Controllers\Student\ExamController::class, 'check'])
+            ->middleware(['enrolled', 'throttle:30,1'])
+            ->name('certifications.exam.check');
+        Route::post('/certifications/{certification}/exam/submit', [\App\Http\Controllers\Student\ExamController::class, 'submit'])
+            ->middleware('enrolled')
+            ->name('certifications.exam.submit');
     });
 
 Route::middleware(['auth', 'otp.verified', 'role:user'])

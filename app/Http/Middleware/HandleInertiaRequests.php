@@ -3,32 +3,20 @@
 namespace App\Http\Middleware;
 
 use App\Models\UserModuleProgress;
+use App\Services\GamificationService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 use Tightenco\Ziggy\Ziggy;
 
 class HandleInertiaRequests extends Middleware
 {
-    /**
-     * The root template that is loaded on the first page visit.
-     *
-     * @var string
-     */
     protected $rootView = 'app';
 
-    /**
-     * Determine the current asset version.
-     */
     public function version(Request $request): string|null
     {
         return parent::version($request);
     }
 
-    /**
-     * Define the props that are shared by default.
-     *
-     * @return array<string, mixed>
-     */
     public function share(Request $request): array
     {
         return array_merge(parent::share($request), [
@@ -41,27 +29,7 @@ class HandleInertiaRequests extends Middleware
                     return null;
                 }
 
-                $completedSandboxes = UserModuleProgress::where('user_id', $user->id)
-                    ->where('is_completed', true)
-                    ->count();
-
-                $leaderboardPlacement = $completedSandboxes > 0 ? 14 : null;
-
-                return [
-                    'sand_dollars' => 1250,
-                    'streak_days' => 14,
-                    'rank' => $leaderboardPlacement ? 'Sandcastle Builder' : null,
-                    'leaderboard_placement' => $leaderboardPlacement,
-                    'completed_sandboxes' => $completedSandboxes,
-                    'progress_to_next_rank' => 75,
-                    'hermy_name' => $user->first_name,
-                    'hermy_avatar' => asset('images/Hermy.png'),
-                    'badges' => [
-                        ['id' => 1, 'label' => 'First Sandbox', 'icon' => '🐚'],
-                        ['id' => 2, 'label' => '7-Day Streak', 'icon' => '🔥'],
-                        ['id' => 3, 'label' => 'Quiz Ace', 'icon' => '⭐'],
-                    ],
-                ];
+                return app(GamificationService::class)->summaryForUser($user);
             },
             'teacherPortalSummary' => function () use ($request) {
                 $user = $request->user();
@@ -69,12 +37,20 @@ class HandleInertiaRequests extends Middleware
                     return null;
                 }
 
-                // TODO[backend]: Replace with real aggregates from cohorts/vouchers.
+                $teacherId = $user->id;
+                $totalStudents = \Illuminate\Support\Facades\DB::table('cohort_students')
+                    ->join('cohorts', 'cohorts.id', '=', 'cohort_students.cohort_id')
+                    ->where('cohorts.teacher_id', $teacherId)
+                    ->count();
+
+                $claimed = \App\Models\Voucher::where('teacher_id', $teacherId)->where('is_used', true)->count();
+                $unclaimed = \App\Models\Voucher::where('teacher_id', $teacherId)->where('is_used', false)->count();
+
                 return [
                     'affiliation' => $user->affiliation,
-                    'total_students' => 67,
-                    'vouchers_claimed' => 50,
-                    'vouchers_unclaimed' => 17,
+                    'total_students' => $totalStudents,
+                    'vouchers_claimed' => $claimed,
+                    'vouchers_unclaimed' => $unclaimed,
                 ];
             },
             'mustVerifyEmail' => fn () => $request->user() && $request->user()->email_verified_at === null,

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import QuizTypewriterText from '@/Components/Student/QuizTypewriterText';
+import StudentQuestionRenderer from '@/Components/Student/StudentQuestionRenderer';
 import useQuizRevealSequence from '@/hooks/useQuizRevealSequence';
 import { assetUrl } from '@/utils/assetUrl';
 
@@ -101,7 +102,14 @@ export default function StudentSandboxQuiz({
         .filter(Boolean)
         .join(' ');
 
+    const interactionType = currentQuestion.interaction_type || 'multiple_choice';
+    const isAlternateType = interactionType !== 'multiple_choice';
     const optionsLocked = !canSelectOptions || answerStatus !== 'unanswered';
+    const hasSelection = isAlternateType
+        ? (typeof selectedAnswer === 'string'
+            ? selectedAnswer.trim().length > 0
+            : selectedAnswer != null && selectedAnswer !== '')
+        : Boolean(selectedAnswer);
 
     return (
         <div className={sandboxClasses}>
@@ -149,7 +157,16 @@ export default function StudentSandboxQuiz({
                         aria-label="Answer choices"
                         aria-hidden={!showOptions}
                     >
-                        {currentQuestion.answers?.map((answer, index) => (
+                    {isAlternateType ? (
+                        <StudentQuestionRenderer
+                            question={currentQuestion}
+                            selectedAnswer={selectedAnswer}
+                            onSelectAnswer={onSelectAnswer}
+                            answerStatus={answerStatus}
+                            canSelectOptions={canSelectOptions}
+                        />
+                    ) : (
+                        currentQuestion.answers?.map((answer, index) => (
                             <button
                                 key={answer.id}
                                 type="button"
@@ -164,7 +181,8 @@ export default function StudentSandboxQuiz({
                             >
                                 <span className="student-quiz__option-text">{answer.answer_text}</span>
                             </button>
-                        ))}
+                        ))
+                    )}
                     </div>
                 </div>
 
@@ -175,11 +193,11 @@ export default function StudentSandboxQuiz({
                     {answerStatus === 'unanswered' ? (
                         <button
                             type="button"
-                            disabled={!selectedAnswer || !showOptions || isCheckingAnswer}
+                            disabled={!hasSelection || !showOptions || isCheckingAnswer}
                             onClick={onCheckAnswer}
-                            className={`student-quiz__cta ${selectedAnswer && showOptions && !isCheckingAnswer ? 'student-quiz__cta--primary' : 'student-quiz__cta--disabled'}`}
+                            className={`student-quiz__cta ${hasSelection && showOptions && !isCheckingAnswer ? 'student-quiz__cta--primary' : 'student-quiz__cta--disabled'}`}
                         >
-                            {isCheckingAnswer ? 'Checking…' : selectedAnswer ? 'Check' : 'Select an answer'}
+                            {isCheckingAnswer ? 'Checking…' : hasSelection ? 'Check' : 'Select an answer'}
                         </button>
                     ) : answerStatus === 'correct' || isFinalExam ? (
                         <button

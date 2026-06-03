@@ -50,20 +50,6 @@ export default function UpdatePasswordForm({ className, variant = 'default' }) {
                 </h2>
                 <p className={isAdmin ? 'admin-profile-card__subtitle' : usesSandboxField ? 'student-profile-form__subtitle' : 'mt-1 text-sm text-gray-600'}>
                     Ensure your account is using a long, random password to stay secure.
-                    {isAdmin && (
-                        <>
-                            {' '}
-                            <span className="admin-todo-badge admin-todo-badge--inline">
-                                TODO: password.update route
-                            </span>
-                        </>
-                    )}
-                    {isStudent && (
-                        <>
-                            {' '}
-                            <span className="student-todo-badge">TODO</span>
-                        </>
-                    )}
                 </p>
             </header>
 

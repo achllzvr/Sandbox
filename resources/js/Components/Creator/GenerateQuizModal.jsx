@@ -186,13 +186,27 @@ export default function GenerateQuizModal({
     function handleGenerate(e) {
         e.preventDefault();
         const count = parseInt(questionCount, 10);
+        if (!pdfFile) {
+            return;
+        }
+
         setIsGenerating(true);
 
-        window.setTimeout(() => {
-            setPreviewQuestions(buildMockQuestions(questionPool, count));
+        const formData = new FormData();
+        formData.append('pdf', pdfFile);
+        formData.append('count', String(count));
+        formData.append('mode', isFinalExam ? 'final_exam' : 'short_test');
+
+        window.axios.post(route('creator.ai.generate-quiz'), formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        }).then(({ data }) => {
+            setPreviewQuestions(data.questions || []);
             setIsGenerating(false);
             setStep('preview');
-        }, 1200);
+        }).catch(() => {
+            setIsGenerating(false);
+            window.alert('Could not generate questions from the PDF. Please try again.');
+        });
     }
 
     function handleApplyMock() {
@@ -231,15 +245,14 @@ export default function GenerateQuizModal({
                     ) : null}
                     {step === 'preview' ? (
                         <button type="button" onClick={handleApplyMock} className="admin-btn admin-btn--primary">
-                            Use sample questions
+                            Use generated questions
                         </button>
                     ) : null}
                 </>
             )}
         >
-            <div className="admin-flash admin-flash--warning" style={{ marginBottom: '16px' }}>
-                <strong>TODO:</strong> Connect AI document analysis to generate questions from uploaded PDFs.
-                This flow uses mock data for now.
+            <div className="admin-flash admin-flash--info" style={{ marginBottom: '16px' }}>
+                Upload a PDF to draft questions via the AI document analyzer. You can review and edit before saving.
             </div>
 
             {step === 'count' ? (
@@ -292,7 +305,7 @@ export default function GenerateQuizModal({
                     <div className="admin-toolbar" style={{ marginBottom: '12px' }}>
                         <span className="admin-badge admin-badge--draft">
                             <Sparkles size={14} strokeWidth={2.25} aria-hidden="true" />
-                            Mock preview · {previewQuestions.length} Qs
+                            Generated preview · {previewQuestions.length} Qs
                         </span>
                         {pdfFile ? <span className="admin-list-row__meta">Source: {pdfFile.name}</span> : null}
                     </div>

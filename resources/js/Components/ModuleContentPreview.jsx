@@ -1,7 +1,11 @@
 import PptxViewer from '@/Components/PptxViewer';
 import { assetUrl } from '@/utils/assetUrl';
 
-export function moduleStorageUrl(relativePath) {
+export function moduleStorageUrl(relativePath, streamUrl = null) {
+    if (streamUrl) {
+        return streamUrl;
+    }
+
     if (!relativePath) {
         return null;
     }
@@ -40,7 +44,7 @@ export default function ModuleContentPreview({
     if (item.type === 'video') {
         return (
             <video
-                src={moduleStorageUrl(item.file_url)}
+                src={moduleStorageUrl(item.file_url, item.stream_url)}
                 controls
                 className={videoClassName}
                 {...videoProps}
@@ -48,16 +52,16 @@ export default function ModuleContentPreview({
         );
     }
 
-    if (item.type === 'presentation' && item.file_url) {
+    if (item.type === 'presentation' && (item.file_url || item.stream_url)) {
         return (
             <div className={pptxClassName || undefined}>
-                <PptxViewer fileUrl={moduleStorageUrl(item.file_url)} />
+                <PptxViewer fileUrl={moduleStorageUrl(item.file_url, item.stream_url)} />
             </div>
         );
     }
 
-    if (item.type === 'document' && item.file_url) {
-        const pdfUrl = moduleStorageUrl(item.file_url);
+    if (item.type === 'document' && (item.file_url || item.stream_url)) {
+        const pdfUrl = moduleStorageUrl(item.file_url, item.stream_url);
 
         return (
             <div className="admin-preview-pdf">

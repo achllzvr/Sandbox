@@ -61,9 +61,9 @@ INSERT INTO certifications (
     submitted_at, created_by_user_id, approved_by, approved_at, created_at, updated_at
 ) VALUES
 (1, 'FULL DEMO', '10 sandboxes, 4 units, quizzes on #3/#7/#10, final exam.', 'Demo', 'Beginner', '2 hours', 'shell-covers/full-demo.jpg', '#f08070', 'Full student journey.', 'None', '["demo"]', 0.00, 70, 'published', NOW(), 12, 3, NOW(), NOW(), NOW()),
-(2, 'REACT BASICS', 'React components, JSX, state, hooks.', 'Technology', 'Beginner', '4 hours', 'shell-covers/react-basics.jpg', '#60b0f0', 'Build UI with React.', 'HTML & JS', '["react"]', 0.00, 75, 'published', NOW(), 12, 3, NOW(), NOW(), NOW()),
-(3, 'JAVA BASICS', 'Java OOP and collections.', 'Technology', 'Intermediate', '6 hours', 'shell-covers/java-basics.jpg', '#f07060', 'Core Java skills.', 'Programming logic', '["java"]', 499.00, 75, 'published', NOW(), 12, 3, NOW(), NOW(), NOW()),
-(4, 'LARAVEL BASICS', 'Routes, Eloquent, Blade.', 'Technology', 'Intermediate', '5 hours', 'shell-covers/laravel-basics.jpg', '#f02020', 'Laravel MVC.', 'PHP basics', '["laravel"]', 799.00, 75, 'published', NOW(), 12, 3, NOW(), NOW(), NOW());
+(2, 'REACT BASICS', '10 sandboxes, 4 units, quizzes on #3/#5, final exam.', 'Technology', 'Beginner', '4 hours', 'shell-covers/react-basics.jpg', '#60b0f0', 'Build UI with React.', 'HTML & JS', '["react"]', 0.00, 75, 'published', NOW(), 12, 3, NOW(), NOW(), NOW()),
+(3, 'JAVA BASICS', '10 sandboxes, 4 units, quizzes on #3/#5, final exam.', 'Technology', 'Intermediate', '6 hours', 'shell-covers/java-basics.jpg', '#f07060', 'Core Java skills.', 'Programming logic', '["java"]', 499.00, 75, 'published', NOW(), 12, 3, NOW(), NOW(), NOW()),
+(4, 'LARAVEL BASICS', '10 sandboxes, 4 units, quizzes on #3/#5, final exam.', 'Technology', 'Intermediate', '5 hours', 'shell-covers/laravel-basics.jpg', '#f02020', 'Laravel MVC.', 'PHP basics', '["laravel"]', 799.00, 75, 'published', NOW(), 12, 3, NOW(), NOW(), NOW());
 
 INSERT INTO enrollments (user_id, certification_id, access_type, status, enrolled_at, created_at, updated_at) VALUES
 (9, 1, 'admin_grant', 'active', NOW(), NOW(), NOW()),
@@ -76,10 +76,16 @@ INSERT INTO lessons (id, certification_id, created_by_user_id, title, descriptio
 (14, 1, 12, 'UNIT 4 — CHECKPOINT', 'Review.', 4),
 (21, 2, 12, 'UNIT 1 — REACT FUNDAMENTALS', 'Components.', 1),
 (22, 2, 12, 'UNIT 2 — STATE & HOOKS', 'Hooks.', 2),
+(23, 2, 12, 'UNIT 3 — REACT PATTERNS', 'Patterns and performance.', 3),
+(24, 2, 12, 'UNIT 4 — REACT CAPSTONE', 'Capstone review.', 4),
 (31, 3, 12, 'UNIT 1 — JAVA CORE', 'OOP.', 1),
 (32, 3, 12, 'UNIT 2 — COLLECTIONS', 'Collections.', 2),
+(33, 3, 12, 'UNIT 3 — JAVA ADVANCED', 'Advanced Java.', 3),
+(34, 3, 12, 'UNIT 4 — JAVA CAPSTONE', 'Capstone review.', 4),
 (41, 4, 12, 'UNIT 1 — LARAVEL MVC', 'MVC.', 1),
-(42, 4, 12, 'UNIT 2 — ELOQUENT & BLADE', 'DB & views.', 2);
+(42, 4, 12, 'UNIT 2 — ELOQUENT & BLADE', 'DB & views.', 2),
+(43, 4, 12, 'UNIT 3 — LARAVEL ADVANCED', 'Advanced Laravel.', 3),
+(44, 4, 12, 'UNIT 4 — LARAVEL CAPSTONE', 'Capstone review.', 4);
 
 INSERT INTO modules (id, lesson_id, uploaded_by_user_id, uploaded_by_content_creator_id, title, description, strict_completion, order_index, sequence) VALUES
 (101, 11, 12, 12, 'Welcome to the Sandbox', NULL, 0, 1, 1),
@@ -106,7 +112,22 @@ INSERT INTO modules (id, lesson_id, uploaded_by_user_id, uploaded_by_content_cre
 (402, 41, 12, 12, 'Routing & Controllers', NULL, 0, 2, 2),
 (403, 41, 12, 12, 'Routing Quiz', NULL, 0, 3, 3),
 (404, 42, 12, 12, 'Eloquent ORM', NULL, 0, 1, 4),
-(405, 42, 12, 12, 'Blade & Views Quiz', NULL, 0, 2, 5);
+(405, 42, 12, 12, 'Blade & Views Quiz', NULL, 0, 2, 5),
+(206, 23, 12, 12, 'Context API', NULL, 0, 1, 6),
+(207, 23, 12, 12, 'Performance Tips', NULL, 0, 2, 7),
+(208, 23, 12, 12, 'Testing Basics', NULL, 0, 3, 8),
+(209, 24, 12, 12, 'Project Workshop', NULL, 0, 1, 9),
+(210, 24, 12, 12, 'React Capstone Review', NULL, 0, 2, 10),
+(306, 33, 12, 12, 'Generics & Streams', NULL, 0, 1, 6),
+(307, 33, 12, 12, 'Exception Handling', NULL, 0, 2, 7),
+(308, 33, 12, 12, 'File I/O', NULL, 0, 3, 8),
+(309, 34, 12, 12, 'Java Workshop', NULL, 0, 1, 9),
+(310, 34, 12, 12, 'Java Capstone Review', NULL, 0, 2, 10),
+(406, 43, 12, 12, 'Middleware & Requests', NULL, 0, 1, 6),
+(407, 43, 12, 12, 'Validation & Policies', NULL, 0, 2, 7),
+(408, 43, 12, 12, 'Queues & Jobs', NULL, 0, 3, 8),
+(409, 44, 12, 12, 'Laravel Workshop', NULL, 0, 1, 9),
+(410, 44, 12, 12, 'Laravel Capstone Review', NULL, 0, 2, 10);
 
 INSERT INTO module_content (module_id, uploaded_by_user_id, content_type, title, file_url, order_index) VALUES
 (101, 12, 'youtube_embed', 'Welcome', 'https://www.youtube.com/embed/EngW7tLk6R8', 1),
@@ -125,7 +146,22 @@ INSERT INTO module_content (module_id, uploaded_by_user_id, content_type, title,
 (304, 12, 'youtube_embed', 'Collections', 'https://www.youtube.com/embed/eIrMbAQSU34', 1),
 (401, 12, 'youtube_embed', 'Laravel intro', 'https://www.youtube.com/embed/Imx223jqqEE', 1),
 (402, 12, 'youtube_embed', 'Routing', 'https://www.youtube.com/embed/Imx223jqqEE', 1),
-(404, 12, 'youtube_embed', 'Eloquent', 'https://www.youtube.com/embed/Imx223jqqEE', 1);
+(404, 12, 'youtube_embed', 'Eloquent', 'https://www.youtube.com/embed/Imx223jqqEE', 1),
+(206, 12, 'youtube_embed', 'Context API', 'https://www.youtube.com/embed/Tn6-PIqc4UM', 1),
+(207, 12, 'youtube_embed', 'Performance', 'https://www.youtube.com/embed/Tn6-PIqc4UM', 1),
+(208, 12, 'youtube_embed', 'Testing', 'https://www.youtube.com/embed/Tn6-PIqc4UM', 1),
+(209, 12, 'youtube_embed', 'Workshop', 'https://www.youtube.com/embed/Tn6-PIqc4UM', 1),
+(210, 12, 'youtube_embed', 'Capstone', 'https://www.youtube.com/embed/Tn6-PIqc4UM', 1),
+(306, 12, 'youtube_embed', 'Generics', 'https://www.youtube.com/embed/eIrMbAQSU34', 1),
+(307, 12, 'youtube_embed', 'Exceptions', 'https://www.youtube.com/embed/eIrMbAQSU34', 1),
+(308, 12, 'youtube_embed', 'File I/O', 'https://www.youtube.com/embed/eIrMbAQSU34', 1),
+(309, 12, 'youtube_embed', 'Workshop', 'https://www.youtube.com/embed/eIrMbAQSU34', 1),
+(310, 12, 'youtube_embed', 'Capstone', 'https://www.youtube.com/embed/eIrMbAQSU34', 1),
+(406, 12, 'youtube_embed', 'Middleware', 'https://www.youtube.com/embed/Imx223jqqEE', 1),
+(407, 12, 'youtube_embed', 'Validation', 'https://www.youtube.com/embed/Imx223jqqEE', 1),
+(408, 12, 'youtube_embed', 'Queues', 'https://www.youtube.com/embed/Imx223jqqEE', 1),
+(409, 12, 'youtube_embed', 'Workshop', 'https://www.youtube.com/embed/Imx223jqqEE', 1),
+(410, 12, 'youtube_embed', 'Capstone', 'https://www.youtube.com/embed/Imx223jqqEE', 1);
 
 -- ── FULL DEMO questions ───────────────────────────────────────────────────────
 INSERT INTO questions (id, module_id, certification_id, created_by_user_id, question_type, question_text, order_index) VALUES

@@ -181,11 +181,16 @@ export default function Show() {
     const buildSubmission = useCallback(
         (questions) => {
             const current = questions[quizIndex];
-            if (!current || !selectedAnswer) {
+            if (!current || selectedAnswer == null || selectedAnswer === '') {
                 return userAnswers;
             }
             const withoutCurrent = userAnswers.filter((a) => a.question_id !== current.id);
-            return [...withoutCurrent, { question_id: current.id, selected_option: selectedAnswer }];
+            const interactionType = current.interaction_type || 'multiple_choice';
+            const payload = interactionType === 'multiple_choice'
+                ? { question_id: current.id, selected_option: selectedAnswer }
+                : { question_id: current.id, value: selectedAnswer };
+
+            return [...withoutCurrent, payload];
         },
         [quizIndex, selectedAnswer, userAnswers],
     );
@@ -385,7 +390,12 @@ export default function Show() {
 
         const handleCheckAnswer = async () => {
             const current = questions[quizIndex];
-            if (!selectedAnswer || isCheckingAnswer) {
+            const interactionType = current?.interaction_type || 'multiple_choice';
+            const hasAnswer = interactionType === 'multiple_choice'
+                ? Boolean(selectedAnswer)
+                : selectedAnswer != null && selectedAnswer !== '';
+
+            if (!hasAnswer || isCheckingAnswer) {
                 return;
             }
 
@@ -396,10 +406,11 @@ export default function Show() {
             setIsCheckingAnswer(true);
 
             try {
-                const { data } = await window.axios.post(checkRoute, {
-                    question_id: current.id,
-                    selected_option: selectedAnswer,
-                });
+                const payload = interactionType === 'multiple_choice'
+                    ? { question_id: current.id, selected_option: selectedAnswer }
+                    : { question_id: current.id, value: selectedAnswer };
+
+                const { data } = await window.axios.post(checkRoute, payload);
 
                 if (data.correct) {
                     setAnswerStatus('correct');

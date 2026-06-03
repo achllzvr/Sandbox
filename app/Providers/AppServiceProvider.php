@@ -28,6 +28,12 @@ class AppServiceProvider extends ServiceProvider
     {
         Certification::observe(CertificationObserver::class);
 
+        try {
+            app(\App\Services\GamificationService::class)->seedDefaultAchievements();
+        } catch (\Throwable) {
+            // Tables may not exist until migrations run.
+        }
+
         // Ensure asset()/route() URLs match the real browser path (e.g. /Sandbox/public on XAMPP).
         if (! $this->app->runningInConsole()) {
             $request = $this->app->make('request');

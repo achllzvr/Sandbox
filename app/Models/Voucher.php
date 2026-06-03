@@ -7,16 +7,27 @@ use Illuminate\Database\Eloquent\Model;
 class Voucher extends Model
 {
     protected $fillable = [
+        'enrollment_request_id',
+        'teacher_id',
+        'cohort_id',
+        'certification_id',
         'code',
-        'discount_type',
-        'discount_value',
-        'max_uses',
-        'uses_count',
+        'is_used',
+        'used_by',
+        'issued_at',
+        'used_at',
         'expires_at',
-        'created_by_admin_id',
     ];
 
     protected $casts = [
-        'expires_at' => 'date',
+        'is_used' => 'boolean',
+        'issued_at' => 'datetime',
+        'used_at' => 'datetime',
+        'expires_at' => 'datetime',
     ];
+
+    public function usedByUser()
+    {
+        return $this->belongsTo(User::class, 'used_by');
+    }
 }

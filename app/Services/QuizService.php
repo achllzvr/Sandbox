@@ -7,9 +7,8 @@ use App\Models\Question;
 
 class QuizService
 {
-    /**
-     * Calculate the score based on the submitted answers.
-     */
+    public function __construct(private QuestionGradingService $gradingService) {}
+
     public function calculateScore(Module $module, array $submittedAnswers): int
     {
         $score = 0;
@@ -17,11 +16,11 @@ class QuizService
         foreach ($submittedAnswers as $submission) {
             $question = Question::with('answers')->find($submission['question_id']);
             if (! $question || $question->module_id !== $module->id) {
-                continue; // Skip invalid questions
+                continue;
             }
 
-            $selectedAnswer = collect($question->answers)->firstWhere('id', $submission['selected_option']);
-            if ($selectedAnswer && $selectedAnswer->is_correct) {
+            $payload = $submission['selected_option'] ?? $submission['value'] ?? $submission;
+            if ($this->gradingService->grade($question, $payload)) {
                 $score++;
             }
         }
@@ -29,10 +28,7 @@ class QuizService
         return $score;
     }
 
-    /**
-     * Check a single answer without revealing which option is correct.
-     */
-    public function isAnswerCorrect(int $questionId, int $selectedOptionId, Module $module): bool
+    public function isAnswerCorrect(int $questionId, array $submission, Module $module): bool
     {
         $question = Question::with('answers')->find($questionId);
 
@@ -40,14 +36,11 @@ class QuizService
             return false;
         }
 
-        $selectedAnswer = $question->answers->firstWhere('id', $selectedOptionId);
+        $payload = $submission['selected_option'] ?? $submission['value'] ?? $submission;
 
-        return $selectedAnswer && $selectedAnswer->is_correct;
+        return $this->gradingService->grade($question, $payload);
     }
 
-    /**
-     * Calculate gamification rewards (Sand Dollars).
-     */
     public function calculateSandDollars(int $score, int $totalQuestions): int
     {
         if ($totalQuestions === 0) {
@@ -56,7 +49,6 @@ class QuizService
 
         $percentage = ($score / $totalQuestions) * 100;
 
-        // Award logic: 50 Sand Dollars for a perfect score, otherwise proportional.
         if ($percentage == 100) {
             return 50;
         } elseif ($percentage >= 80) {

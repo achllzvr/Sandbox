@@ -5,12 +5,21 @@ namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
 use App\Models\Certification;
 use App\Models\Enrollment;
+use App\Services\ContentStreamService;
+use App\Services\EnrollmentService;
+use App\Services\GamificationService;
 use App\Support\StudentQuizPayload;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class MyShellController extends Controller
 {
+    public function __construct(
+        private EnrollmentService $enrollmentService,
+        private ContentStreamService $contentStreamService,
+        private GamificationService $gamificationService,
+    ) {}
+
     public function show(Request $request, $id)
     {
         $user = $request->user();
@@ -100,7 +109,7 @@ class MyShellController extends Controller
         ];
 
         return Inertia::render('Student/Shells/Show', [
-            'certification' => StudentQuizPayload::certification($certification),
+            'certification' => StudentQuizPayload::certification($certification, $user->id, $this->contentStreamService),
             'progress' => $progress,
             'moduleProgress' => $moduleProgress,
             'shellMeta' => $shellMeta,
@@ -116,11 +125,15 @@ class MyShellController extends Controller
     public function completeModule(Request $request, \App\Models\Module $module)
     {
         $user = $request->user();
+        $this->enrollmentService->assertEnrolledForModule($user, $module);
 
         \App\Models\UserModuleProgress::updateOrCreate(
             ['user_id' => $user->id, 'module_id' => $module->id],
             ['is_completed' => 1, 'completed_at' => now()]
         );
+
+        $this->gamificationService->recordActivity($user);
+        $this->gamificationService->award($user, 5, 'module_complete', \App\Models\Module::class, $module->id);
 
         return redirect()->back()->with('success', 'Module marked as completed!');
     }
