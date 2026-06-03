@@ -3,21 +3,37 @@
 namespace App\Services;
 
 use App\Models\Question;
+use App\Services\Ai\CodeGradingService;
+use App\Services\Ai\StatementEquivalenceGrader;
 
 class QuestionGradingService
 {
     public function grade(Question $question, mixed $submission): bool
     {
+        return $this->gradeWithDetails($question, $submission)['is_correct'];
+    }
+
+    public function gradeWithDetails(Question $question, mixed $submission): array
+    {
         $type = $question->interaction_type ?? 'multiple_choice';
 
         return match ($type) {
-            'matching' => $this->gradeMatching($question, $submission),
-            'sequence' => $this->gradeSequence($question, $submission),
-            'true_false' => $this->gradeTrueFalse($question, $submission),
-            'true_false_ai' => app(StatementEquivalenceGrader::class)->grade($question, (string) $submission),
-            'code_complete' => app(CodeGradingService::class)->grade($question, (string) $submission),
-            default => $this->gradeMultipleChoice($question, $submission),
+            'matching' => $this->wrapBoolean($this->gradeMatching($question, $submission)),
+            'sequence' => $this->wrapBoolean($this->gradeSequence($question, $submission)),
+            'true_false' => $this->wrapBoolean($this->gradeTrueFalse($question, $submission)),
+            'true_false_ai' => app(StatementEquivalenceGrader::class)->gradeWithDetails($question, (string) $submission),
+            'code_complete' => app(CodeGradingService::class)->gradeWithDetails($question, (string) $submission),
+            default => $this->wrapBoolean($this->gradeMultipleChoice($question, $submission)),
         };
+    }
+
+    private function wrapBoolean(bool $isCorrect): array
+    {
+        return [
+            'is_correct' => $isCorrect,
+            'confidence' => null,
+            'feedback' => null,
+        ];
     }
 
     private function gradeMultipleChoice(Question $question, mixed $submission): bool

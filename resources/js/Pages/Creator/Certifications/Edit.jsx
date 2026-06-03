@@ -4,8 +4,10 @@ import AdminBadge from '@/Components/Admin/AdminBadge';
 import AdminModal from '@/Components/Admin/AdminModal';
 import ModuleContentPreview from '@/Components/ModuleContentPreview';
 import GenerateQuizModal from '@/Components/Creator/GenerateQuizModal';
+import CreatorGeminiPanel from '@/Components/Creator/CreatorGeminiPanel';
 import CreatorQuestionFields from '@/Components/Creator/CreatorQuestionFields';
 import CreatorStatusPill from '@/Components/Creator/CreatorStatusPill';
+import { showAppToastError } from '@/Utils/appToast';
 import {
     estimatedDurationForStore,
     formatEstimatedDurationLabel,
@@ -41,7 +43,7 @@ const COMPONENT_TYPE_LABELS = {
     youtube_embed: 'YouTube embed',
 };
 
-export default function Edit({ certification }) {
+export default function Edit({ certification, hasSystemApiKey = false }) {
     const { uploadLimits, errors: pageErrors } = usePage().props;
     // ── Extract modules from default lesson ────────────────
     const defaultLesson = certification.lessons?.[0] || null;
@@ -67,6 +69,8 @@ export default function Edit({ certification }) {
     const [showGenerateShortTestModal, setShowGenerateShortTestModal] = useState(false);
     const [showGenerateExamModal, setShowGenerateExamModal] = useState(false);
     const [showExamRequirementsModal, setShowExamRequirementsModal] = useState(false);
+    const [quizTab, setQuizTab] = useState('edit');
+    const [examTab, setExamTab] = useState('edit');
 
     // ── Forms ──────────────────────────────────────────────
     const addSandboxForm = useForm({
@@ -285,6 +289,7 @@ export default function Edit({ certification }) {
         } else {
             setQuestionsList(existingQuestions);
         }
+        setQuizTab('edit');
         setShowQuizModal(true);
     };
 
@@ -297,7 +302,7 @@ export default function Edit({ certification }) {
         });
 
         if (validationError) {
-            alert(validationError);
+            showAppToastError(validationError);
             return;
         }
 
@@ -307,7 +312,7 @@ export default function Edit({ certification }) {
             onSuccess: () => setShowQuizModal(false),
             onError: (errors) => {
                 const firstError = Object.values(errors)[0];
-                alert(typeof firstError === 'string' ? firstError : 'Could not save the short test. Check your questions and try again.');
+                showAppToastError(typeof firstError === 'string' ? firstError : 'Could not save the short test. Check your questions and try again.');
             },
             preserveScroll: true,
         });
@@ -375,13 +380,14 @@ export default function Edit({ certification }) {
         } else {
             setExamQuestionsList(existingQuestions);
         }
+        setExamTab('edit');
         setShowExamModal(true);
     };
 
     const submitExam = (e) => {
         e.preventDefault();
         if (examQuestionsList.length < 5) {
-            alert('Final exam must contain at least 5 questions.');
+            showAppToastError('Final exam must contain at least 5 questions.');
             return;
         }
 
@@ -389,19 +395,19 @@ export default function Edit({ certification }) {
         for (let i = 0; i < examQuestionsList.length; i++) {
             const q = examQuestionsList[i];
             if (!q.question_text.trim()) {
-                alert(`Question ${i + 1} has empty text.`);
+                showAppToastError(`Question ${i + 1} has empty text.`);
                 return;
             }
             let correctCount = 0;
             for (let j = 0; j < q.answers.length; j++) {
                 if (!q.answers[j].answer_text.trim()) {
-                    alert(`Choice option ${j + 1} for Question ${i + 1} is empty.`);
+                    showAppToastError(`Choice option ${j + 1} for Question ${i + 1} is empty.`);
                     return;
                 }
                 if (q.answers[j].is_correct) correctCount++;
             }
             if (correctCount !== 1) {
-                alert(`Question ${i + 1} must have exactly one correct answer selected.`);
+                showAppToastError(`Question ${i + 1} must have exactly one correct answer selected.`);
                 return;
             }
         }
@@ -513,43 +519,71 @@ export default function Edit({ certification }) {
         setShowGenerateExamModal(true);
     };
 
-    const applyGeneratedShortTest = (mockQuestions) => {
-        setQuestionsList(mockQuestions);
+    const applyGeneratedShortTest = (generatedQuestions, mode = 'replace') => {
+        if (mode === 'append') {
+            setQuestionsList((prev) => [...prev, ...generatedQuestions]);
+        } else {
+            setQuestionsList(generatedQuestions);
+        }
+        setQuizTab('edit');
         setShowQuizModal(true);
     };
 
-    const applyGeneratedExam = (mockQuestions) => {
-        setExamQuestionsList(mockQuestions);
+    const applyGeneratedExam = (generatedQuestions, mode = 'replace') => {
+        if (mode === 'append') {
+            setExamQuestionsList((prev) => [...prev, ...generatedQuestions]);
+        } else {
+            setExamQuestionsList(generatedQuestions);
+        }
+        setExamTab('edit');
         setShowExamModal(true);
+    };
+
+    const handleGeminiImportQuiz = (questions, mode) => {
+        if (mode === 'append') {
+            setQuestionsList((prev) => [...prev, ...questions]);
+        } else {
+            setQuestionsList(questions);
+        }
+        setQuizTab('edit');
+    };
+
+    const handleGeminiImportExam = (questions, mode) => {
+        if (mode === 'append') {
+            setExamQuestionsList((prev) => [...prev, ...questions]);
+        } else {
+            setExamQuestionsList(questions);
+        }
+        setExamTab('edit');
     };
 
     const submitForReview = () => {
         if (sortedModules.length < MIN_MODULES) {
-            alert(`Please configure at least ${MIN_MODULES} sandbox modules before submitting.`);
+            showAppToastError(`Please configure at least ${MIN_MODULES} sandbox modules before submitting.`);
             return;
         }
 
         if (quizOnlySandboxCount < MIN_QUIZ_ONLY_SANDBOXES) {
-            alert(`Please configure at least ${MIN_QUIZ_ONLY_SANDBOXES} quiz-only sandboxes (short test only, no uploaded materials).`);
+            showAppToastError(`Please configure at least ${MIN_QUIZ_ONLY_SANDBOXES} quiz-only sandboxes (short test only, no uploaded materials).`);
             return;
         }
 
         for (const mod of sortedModules) {
             const totalComponents = (mod.contents || []).length + ((mod.questions || []).length > 0 ? 1 : 0);
             if (totalComponents === 0) {
-                alert(`Sandbox "${mod.title}" must have at least one component (file or practice quiz) before submitting.`);
+                showAppToastError(`Sandbox "${mod.title}" must have at least one component (file or practice quiz) before submitting.`);
                 return;
             }
 
             const qCount = (mod.questions || []).length;
             if (qCount > 0 && qCount < 5) {
-                alert(`Practice quiz for Sandbox "${mod.title}" must have at least 5 questions.`);
+                showAppToastError(`Practice quiz for Sandbox "${mod.title}" must have at least 5 questions.`);
                 return;
             }
         }
 
         if ((certification.exam_questions || []).length < 5) {
-            alert('Please configure the Final Exam with at least 5 questions before submitting.');
+            showAppToastError('Please configure the Final Exam with at least 5 questions before submitting.');
             return;
         }
 
@@ -1135,6 +1169,9 @@ export default function Edit({ certification }) {
                 show={showGenerateShortTestModal}
                 onClose={() => setShowGenerateShortTestModal(false)}
                 mode="short_test"
+                hasSystemApiKey={hasSystemApiKey}
+                moduleId={activeModule?.id}
+                moduleContents={activeModule?.contents || []}
                 onApplyMock={applyGeneratedShortTest}
             />
 
@@ -1142,6 +1179,7 @@ export default function Edit({ certification }) {
                 show={showGenerateExamModal}
                 onClose={() => setShowGenerateExamModal(false)}
                 mode="final_exam"
+                hasSystemApiKey={hasSystemApiKey}
                 onApplyMock={applyGeneratedExam}
             />
 
@@ -1182,16 +1220,27 @@ export default function Edit({ certification }) {
 
             <AdminModal
                 show={showQuizModal}
-                onClose={() => setShowQuizModal(false)}
+                onClose={() => { setShowQuizModal(false); setQuizTab('edit'); }}
                 title="Modify short test"
                 size="xl"
-                footer={(
+                footer={quizTab === 'edit' ? (
                     <>
-                        <button type="button" onClick={() => setShowQuizModal(false)} className="admin-btn admin-btn--ghost">Cancel</button>
+                        <button type="button" onClick={() => { setShowQuizModal(false); setQuizTab('edit'); }} className="admin-btn admin-btn--ghost">Cancel</button>
                         <button type="submit" form="quiz-form" className="admin-btn admin-btn--primary">Finish</button>
                     </>
+                ) : (
+                    <button type="button" onClick={() => { setShowQuizModal(false); setQuizTab('edit'); }} className="admin-btn admin-btn--ghost">Close</button>
                 )}
             >
+                <div className="admin-segmented" style={{ marginBottom: '16px' }}>
+                    <button type="button" className={`admin-segmented__btn ${quizTab === 'edit' ? 'admin-segmented__btn--active' : ''}`} onClick={() => setQuizTab('edit')}>
+                        Question editor
+                    </button>
+                    <button type="button" className={`admin-segmented__btn ${quizTab === 'ai' ? 'admin-segmented__btn--active' : ''}`} onClick={() => setQuizTab('ai')}>
+                        <Sparkles size={14} strokeWidth={2.25} aria-hidden="true" /> AI generator
+                    </button>
+                </div>
+                {quizTab === 'edit' ? (
                 <form id="quiz-form" onSubmit={submitQuiz} noValidate>
                     {questionsList.map((q, qIdx) => (
                         <div key={qIdx} className="admin-question-block">
@@ -1213,20 +1262,40 @@ export default function Edit({ certification }) {
                     ))}
                     <button type="button" onClick={addQuizQuestion} className="admin-btn admin-btn--secondary admin-btn--block" style={{ marginTop: '12px' }}>+ Add question</button>
                 </form>
+                ) : (
+                    <CreatorGeminiPanel
+                        hasSystemApiKey={hasSystemApiKey}
+                        moduleId={activeModule?.id}
+                        moduleContents={activeModule?.contents || []}
+                        onImport={handleGeminiImportQuiz}
+                        importLabel="Generate quiz questions"
+                    />
+                )}
             </AdminModal>
 
             <AdminModal
                 show={showExamModal}
-                onClose={() => setShowExamModal(false)}
+                onClose={() => { setShowExamModal(false); setExamTab('edit'); }}
                 title="Final exam"
                 size="xl"
-                footer={(
+                footer={examTab === 'edit' ? (
                     <>
-                        <button type="button" onClick={() => setShowExamModal(false)} className="admin-btn admin-btn--ghost">Cancel</button>
+                        <button type="button" onClick={() => { setShowExamModal(false); setExamTab('edit'); }} className="admin-btn admin-btn--ghost">Cancel</button>
                         <button type="submit" form="exam-form" className="admin-btn admin-btn--primary">Finish</button>
                     </>
+                ) : (
+                    <button type="button" onClick={() => { setShowExamModal(false); setExamTab('edit'); }} className="admin-btn admin-btn--ghost">Close</button>
                 )}
             >
+                <div className="admin-segmented" style={{ marginBottom: '16px' }}>
+                    <button type="button" className={`admin-segmented__btn ${examTab === 'edit' ? 'admin-segmented__btn--active' : ''}`} onClick={() => setExamTab('edit')}>
+                        Question editor
+                    </button>
+                    <button type="button" className={`admin-segmented__btn ${examTab === 'ai' ? 'admin-segmented__btn--active' : ''}`} onClick={() => setExamTab('ai')}>
+                        <Sparkles size={14} strokeWidth={2.25} aria-hidden="true" /> AI generator
+                    </button>
+                </div>
+                {examTab === 'edit' ? (
                 <form id="exam-form" onSubmit={submitExam}>
                     {examQuestionsList.map((q, qIdx) => (
                         <div key={qIdx} className="admin-question-block">
@@ -1253,6 +1322,13 @@ export default function Edit({ certification }) {
                     ))}
                     <button type="button" onClick={addExamQuestion} className="admin-btn admin-btn--secondary admin-btn--block" style={{ marginTop: '12px' }}>+ Add exam question</button>
                 </form>
+                ) : (
+                    <CreatorGeminiPanel
+                        hasSystemApiKey={hasSystemApiKey}
+                        onImport={handleGeminiImportExam}
+                        importLabel="Generate exam questions"
+                    />
+                )}
             </AdminModal>
         </CreatorLayout>
     );

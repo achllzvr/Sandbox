@@ -1,6 +1,7 @@
-import { Link, usePage } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import { LayoutDashboard, Shell, ShoppingBag } from 'lucide-react';
 import TeacherWorkspace from '@/Components/Teacher/TeacherWorkspace';
+import AppToastProvider from '@/Components/AppToastProvider';
 import { assetUrl } from '@/utils/assetUrl';
 
 const NAV_ITEMS = [
@@ -10,8 +11,6 @@ const NAV_ITEMS = [
 ];
 
 export default function TeacherLayout({ children, activeNav, layoutMode = 'standard', workspaceModifier }) {
-    const { flash, errors = {} } = usePage().props;
-    const checkoutError = errors.checkout;
     const usesWorkspace = layoutMode === 'shell' || layoutMode === 'select' || layoutMode === 'shop-detail';
     const isShellPage = layoutMode === 'shell' || layoutMode === 'shop-detail';
 
@@ -27,6 +26,7 @@ export default function TeacherLayout({ children, activeNav, layoutMode = 'stand
     }
 
     return (
+        <AppToastProvider>
         <div className={`student-shell ${isShellPage ? 'student-shell--shell-page' : ''}`}>
             <aside className="student-nav student-fade-in-up" aria-label="Teacher navigation">
                 <div className="student-nav__inner">
@@ -72,21 +72,7 @@ export default function TeacherLayout({ children, activeNav, layoutMode = 'stand
                     children
                 )}
             </main>
-
-            {(flash?.success || flash?.error || checkoutError || flash?.teacher_purchase_success || flash?.voucher_email_sent) ? (
-                <div
-                    className={`student-flash student-flash--floating ${flash?.error || checkoutError ? 'student-flash--error' : 'student-flash--success'} student-fade-in-up`}
-                    role="status"
-                >
-                    {flash?.error ||
-                        checkoutError ||
-                        flash?.success ||
-                        (flash.teacher_purchase_success
-                            ? `Purchase complete — ${flash.teacher_purchase_success.quantity} voucher${flash.teacher_purchase_success.quantity === 1 ? '' : 's'}.`
-                            : null) ||
-                        (flash.voucher_email_sent ? `Voucher sent to ${flash.voucher_email_sent.email}.` : null)}
-                </div>
-            ) : null}
         </div>
+        </AppToastProvider>
     );
 }

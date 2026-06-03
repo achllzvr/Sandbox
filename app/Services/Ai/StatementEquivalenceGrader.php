@@ -6,31 +6,17 @@ use App\Models\Question;
 
 class StatementEquivalenceGrader
 {
-    public function grade(Question $question, string $studentAnswer): bool
+    public function __construct(private GeminiGradingService $geminiGradingService)
     {
-        $reference = (string) ($question->metadata['reference_true_statement'] ?? '');
-        $threshold = (float) config('ai.similarity_threshold', 0.72);
-
-        if ($reference === '' || trim($studentAnswer) === '') {
-            return false;
-        }
-
-        $score = $this->similarity($reference, $studentAnswer);
-
-        return $score >= $threshold;
     }
 
-    private function similarity(string $reference, string $student): float
+    public function grade(Question $question, string $studentAnswer): bool
     {
-        $ref = strtolower(trim($reference));
-        $ans = strtolower(trim($student));
+        return $this->gradeWithDetails($question, $studentAnswer)['is_correct'];
+    }
 
-        if ($ref === $ans) {
-            return 1.0;
-        }
-
-        similar_text($ref, $ans, $percent);
-
-        return $percent / 100;
+    public function gradeWithDetails(Question $question, string $studentAnswer): array
+    {
+        return $this->geminiGradingService->gradeTrueFalseAi($question, $studentAnswer);
     }
 }

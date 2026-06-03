@@ -7,6 +7,8 @@ const INTERACTION_TYPES = [
     { value: 'code_complete', label: 'Code completion' },
 ];
 
+export { INTERACTION_TYPES };
+
 export default function CreatorQuestionFields({ question, onChange }) {
     const type = question.interaction_type || 'multiple_choice';
     const metadata = question.metadata || {};

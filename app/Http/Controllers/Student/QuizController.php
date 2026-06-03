@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
 use App\Models\Module;
+use App\Models\ModuleQuizAttempt;
 use App\Models\UserModuleProgress;
 use App\Services\EnrollmentService;
 use App\Services\GamificationService;
@@ -16,7 +17,8 @@ class QuizController extends Controller
         private QuizService $quizService,
         private EnrollmentService $enrollmentService,
         private GamificationService $gamificationService,
-    ) {}
+    ) {
+    }
 
     public function submit(Request $request, Module $module)
     {
@@ -30,16 +32,41 @@ class QuizController extends Controller
             'answers.*.value' => 'nullable',
         ]);
 
+        $moduleType = $this->quizService->classifyModule($module);
+
+        if ($moduleType === 'quiz') {
+            $hasAttempt = ModuleQuizAttempt::where('user_id', $user->id)
+                ->where('module_id', $module->id)
+                ->exists();
+
+            if ($hasAttempt) {
+                abort(403, 'This quiz has already been submitted and cannot be retaken.');
+            }
+        }
+
+        $answerRecords = $this->quizService->buildAttemptAnswers($module, $validated['answers']);
+        $score = collect($answerRecords)->where('is_correct', true)->count();
+        $totalQuestions = count($answerRecords);
+        $passed = $this->quizService->passed($score, $totalQuestions);
+
         $existing = UserModuleProgress::where('user_id', $user->id)
             ->where('module_id', $module->id)
             ->first();
 
-        if ($existing?->is_completed) {
-            return back()->with('info', 'This sandbox has already been completed.');
-        }
+        $priorAttemptCount = ModuleQuizAttempt::where('user_id', $user->id)
+            ->where('module_id', $module->id)
+            ->count();
 
-        $score = $this->quizService->calculateScore($module, $validated['answers']);
-        $totalQuestions = count($validated['answers']);
+        ModuleQuizAttempt::create([
+            'user_id' => $user->id,
+            'module_id' => $module->id,
+            'attempt_number' => $priorAttemptCount + 1,
+            'score' => $score,
+            'total' => $totalQuestions,
+            'passed' => $passed,
+            'answers_json' => $answerRecords,
+            'completed_at' => now(),
+        ]);
 
         $sandDollars = $this->quizService->calculateSandDollars($score, $totalQuestions);
         if ($sandDollars > 0) {
@@ -59,16 +86,29 @@ class QuizController extends Controller
 
         $this->gamificationService->recordActivity($user);
 
+        $bestScore = max($score, (int) ($existing?->score ?? 0));
+
         UserModuleProgress::updateOrCreate(
             ['user_id' => $user->id, 'module_id' => $module->id],
             [
-                'score' => $score,
+                'score' => $bestScore,
                 'is_completed' => 1,
-                'completed_at' => now(),
+                'completed_at' => $existing?->completed_at ?? now(),
             ]
         );
 
-        return back()->with('success', "Sandbox Completed! +{$sandDollars} Sand Dollars");
+        return back()->with([
+            'success' => "Sandbox Completed! +{$sandDollars} Sand Dollars",
+            'assessment_result' => [
+                'type' => $moduleType,
+                'module_id' => $module->id,
+                'score' => $score,
+                'total' => $totalQuestions,
+                'passed' => $passed,
+                'attempt_number' => $priorAttemptCount + 1,
+                'answers' => $answerRecords,
+            ],
+        ]);
     }
 
     public function check(Request $request, Module $module)

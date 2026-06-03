@@ -6,31 +6,17 @@ use App\Models\Question;
 
 class CodeGradingService
 {
-    public function grade(Question $question, string $studentCode): bool
+    public function __construct(private GeminiGradingService $geminiGradingService)
     {
-        $meta = $question->metadata ?? [];
-        $expected = trim((string) ($meta['expected_output'] ?? ''));
-        $language = strtolower((string) ($meta['language'] ?? 'php'));
-
-        if ($expected === '') {
-            return false;
-        }
-
-        $normalizedStudent = $this->normalize($studentCode, $language);
-        $normalizedExpected = $this->normalize($expected, $language);
-
-        return $normalizedStudent === $normalizedExpected;
     }
 
-    private function normalize(string $code, string $language): string
+    public function grade(Question $question, string $studentCode): bool
     {
-        $code = trim($code);
-        $code = preg_replace('/\s+/', ' ', $code) ?? $code;
+        return $this->gradeWithDetails($question, $studentCode)['is_correct'];
+    }
 
-        if ($language === 'php') {
-            $code = str_replace([';', ' {', '{ ', ' }', '} '], ['', '{', '{', '}', '}'], $code);
-        }
-
-        return strtolower($code);
+    public function gradeWithDetails(Question $question, string $studentCode): array
+    {
+        return $this->geminiGradingService->gradeCodeComplete($question, $studentCode);
     }
 }

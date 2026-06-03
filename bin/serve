@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+HOST="${SANDBOX_SERVE_HOST:-127.0.0.1}"
+PORT="${SANDBOX_SERVE_PORT:-8000}"
+INI="${ROOT}/php-dev.ini"
+SERVER="${ROOT}/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php"
+
+echo "Sandbox dev server: http://${HOST}:${PORT}"
+echo "Upload limits: 64M (via php-dev.ini)"
+
+exec php -c "${INI}" -S "${HOST}:${PORT}" -t "${ROOT}/public" "${SERVER}"

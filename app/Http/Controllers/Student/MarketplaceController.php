@@ -5,13 +5,21 @@ namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
 use App\Models\Certification;
 use App\Models\Enrollment;
+use App\Models\EnrollmentRequest;
+use App\Services\XenditService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class MarketplaceController extends Controller
 {
+    public function __construct(private XenditService $xenditService)
+    {
+    }
+
     public function index(Request $request)
     {
+        $this->syncPaymentReturn($request);
+
         $search = trim((string) $request->input('search', ''));
         $category = (string) $request->input('category', 'all');
         $sort = (string) $request->input('sort', 'price-asc');
@@ -86,6 +94,36 @@ class MarketplaceController extends Controller
             'categories' => $categories,
             'enrolledCertificationIds' => $enrolledCertificationIds,
         ]);
+    }
+
+    private function syncPaymentReturn(Request $request): void
+    {
+        if (! $request->filled('payment_reference') || ! $this->xenditService->isConfigured()) {
+            return;
+        }
+
+        $enrollmentRequest = EnrollmentRequest::where('payment_reference', $request->payment_reference)
+            ->where('user_id', $request->user()->id)
+            ->where('request_type', 'direct_purchase')
+            ->first();
+
+        if (! $enrollmentRequest) {
+            return;
+        }
+
+        $syncStatus = $this->xenditService->syncEnrollmentRequestPayment($enrollmentRequest);
+
+        if ($syncStatus === 'paid') {
+            session()->flash('shop_success', $enrollmentRequest->certification_id);
+            session()->flash('success', 'Payment confirmed. You are enrolled and can start learning.');
+        } elseif ($syncStatus === 'pending') {
+            session()->flash(
+                'error',
+                'Xendit is still processing this payment. Wait a few seconds and refresh, or complete checkout in test mode.',
+            );
+        } elseif ($syncStatus === 'failed' || $syncStatus === 'expired') {
+            session()->flash('error', 'This checkout did not complete. Start a new enrollment from the shop.');
+        }
     }
 
     private function escapeLike(string $value): string

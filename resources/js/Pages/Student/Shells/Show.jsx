@@ -10,16 +10,21 @@ import StudentLayout from '@/Layouts/StudentLayout';
 import { clearExamDraft, hasExamDraft, loadExamDraft, saveExamDraft } from '@/utils/examProgressStorage';
 import { resolveShellMapTheme } from '@/utils/shellThemes';
 import { assetUrl } from '@/utils/assetUrl';
+import { showAppToastError } from '@/Utils/appToast';
 
 export default function Show() {
     const {
         certification,
         progress,
         moduleProgress = {},
+        moduleTypes = {},
+        attemptHistory = {},
+        latestQuizAttempts = {},
         shellMeta: shellMetaProp,
         examStatus = {},
         certificate = null,
         auth,
+        flash,
     } = usePage().props;
 
     const userId = auth?.user?.id;
@@ -45,6 +50,7 @@ export default function Show() {
     const [examDraftAvailable, setExamDraftAvailable] = useState(() => hasExamDraft(certification.id, userId));
     const [isCheckingAnswer, setIsCheckingAnswer] = useState(false);
     const [flowKey, setFlowKey] = useState('map');
+    const [assessmentResult, setAssessmentResult] = useState(null);
 
     const allModules = certification.lessons.flatMap((lesson) => lesson.modules);
     const isCompleted = (moduleId) => progress.completed_module_ids?.includes(moduleId);
@@ -80,8 +86,38 @@ export default function Show() {
     }, []);
 
     const reloadShellProgress = useCallback(() => {
-        router.reload({ only: ['progress', 'moduleProgress', 'examStatus', 'certificate'], preserveScroll: true });
+        router.reload({
+            only: ['progress', 'moduleProgress', 'moduleTypes', 'attemptHistory', 'latestQuizAttempts', 'examStatus', 'certificate'],
+            preserveScroll: true,
+        });
     }, []);
+
+    const getModuleType = useCallback(
+        (module) => {
+            if (!module) {
+                return 'content_only';
+            }
+            if (moduleTypes[module.id]) {
+                return moduleTypes[module.id];
+            }
+            const hasQuiz = (module.questions?.length ?? 0) >= 5;
+            const hasContent = (module.contents?.length ?? 0) > 0;
+            if (hasQuiz && hasContent) {
+                return 'test';
+            }
+            if (hasQuiz) {
+                return 'quiz';
+            }
+            return 'content_only';
+        },
+        [moduleTypes],
+    );
+
+    useEffect(() => {
+        if (flash?.assessment_result) {
+            setAssessmentResult(flash.assessment_result);
+        }
+    }, [flash?.assessment_result]);
 
     useEffect(() => {
         if (!isTakingFinalExam || !userId) {
@@ -155,27 +191,42 @@ export default function Show() {
     );
 
     const openModule = useCallback(
-        (module, { review = false } = {}) => {
+        (module, { review = false, retake = false } = {}) => {
             resetSession();
+            setAssessmentResult(null);
             setViewingModule(module);
-            setIsReviewMode(review);
-            setFlowKey(`module-${module.id}-${review ? 'review' : 'play'}`);
+            setIsReviewMode(review && !retake);
+            setFlowKey(`module-${module.id}-${retake ? 'retake' : review ? 'review' : 'play'}`);
+
+            const moduleType = getModuleType(module);
+            const latestAttempt = latestQuizAttempts[module.id];
+
+            if (review && latestAttempt) {
+                setAssessmentResult({
+                    type: moduleType,
+                    module_id: module.id,
+                    score: latestAttempt.score,
+                    total: latestAttempt.total,
+                    passed: latestAttempt.passed,
+                    answers: latestAttempt.answers ?? [],
+                });
+                setIsViewingResults(true);
+                setFlowKey(`results-${module.id}`);
+                return;
+            }
 
             if (review) {
                 const saved = moduleProgress[module.id];
-                const hasQuiz = module.questions?.length > 0;
-                const hasContent = module.contents?.length > 0;
-
-                if (hasQuiz && !hasContent) {
+                if (moduleType === 'quiz' || moduleType === 'test') {
                     setScore(saved?.score ?? 0);
                     setIsViewingResults(true);
                     setFlowKey(`results-${module.id}`);
-                } else if (hasContent) {
+                } else if (module.contents?.length > 0) {
                     setContentFinished(true);
                 }
             }
         },
-        [moduleProgress, resetSession],
+        [getModuleType, latestQuizAttempts, moduleProgress, resetSession],
     );
 
     const buildSubmission = useCallback(
@@ -310,18 +361,42 @@ export default function Show() {
         );
     }
 
-    if (isViewingResults && viewingModule) {
-        const saved = moduleProgress[viewingModule.id];
+    if (isViewingResults && (viewingModule || assessmentResult?.type === 'exam')) {
+        const result = assessmentResult ?? {};
+        const isExamResults = result.type === 'exam';
+        const resultModule = isExamResults ? null : viewingModule;
+        const saved = resultModule ? moduleProgress[resultModule.id] : null;
+        const moduleType = resultModule ? getModuleType(resultModule) : 'exam';
+        const resultScore = result.score ?? saved?.score ?? score;
+        const resultTotal = result.total ?? resultModule?.questions?.length ?? certification.exam_questions?.length ?? 0;
+        const resultAnswers = result.answers ?? [];
+        const resultQuestions = isExamResults ? certification.exam_questions : resultModule?.questions;
+
         return (
             <>
-                <Head title={`${viewingModule.title} — Results`} />
+                <Head title={isExamResults ? 'Final Exam Results' : `${resultModule?.title ?? 'Sandbox'} — Results`} />
                 <div key={flowKey} style={themeVars}>
                     <StudentQuizResults
-                        module={viewingModule}
-                        score={saved?.score ?? score}
-                        total={viewingModule.questions?.length ?? 0}
-                        reviewOnly
-                        onBack={exitToShellMap}
+                        module={resultModule ?? { title: 'Final exam' }}
+                        questions={resultQuestions}
+                        score={resultScore}
+                        total={resultTotal}
+                        passed={result.passed ?? null}
+                        answers={resultAnswers}
+                        assessmentType={isExamResults ? 'exam' : moduleType}
+                        reviewOnly={isReviewMode && moduleType !== 'test'}
+                        onRetake={
+                            moduleType === 'test' && resultModule
+                                ? () => openModule(resultModule, { retake: true })
+                                : null
+                        }
+                        onBack={() => {
+                            if (isExamResults && result.passed) {
+                                openCertificate();
+                                return;
+                            }
+                            exitToShellMap();
+                        }}
                     />
                 </div>
             </>
@@ -351,25 +426,25 @@ export default function Show() {
                 router.post(route('student.certifications.exam.submit', certification.id), { answers: finalAnswersList }, {
                     preserveScroll: true,
                     preserveState: true,
-                    onSuccess: () => {
+                    onSuccess: (page) => {
                         clearExamDraft(certification.id, userId);
                         setExamDraftAvailable(false);
-                        setExamFinishScore({ score, total: questions.length });
+                        const result = page.props.flash?.assessment_result;
+                        setAssessmentResult(result ?? { type: 'exam', score, total: questions.length, answers: [] });
                         setIsTakingFinalExam(false);
                         setIsViewingQuiz(false);
-                        setFlowKey('exam-finish');
-                        setIsViewingExamFinish(true);
-                        router.reload({
-                            only: ['progress', 'moduleProgress', 'examStatus', 'certificate'],
-                            preserveScroll: true,
-                        });
+                        setViewingModule(null);
+                        setFlowKey('exam-results');
+                        setIsViewingResults(true);
+                        reloadShellProgress();
                     },
-                    onError: () => {
+                    onError: (errors) => {
                         clearExamDraft(certification.id, userId);
                         setExamDraftAvailable(false);
                         setIsTakingFinalExam(false);
                         reloadShellProgress();
-                        alert('Final exam failed! Review the sandboxes and try again.');
+                        const message = errors?.exam ?? 'Final exam failed! Review the sandboxes and try again.';
+                        showAppToastError(message);
                     },
                 });
                 return;
@@ -378,12 +453,27 @@ export default function Show() {
             router.post(route('student.modules.quiz.submit', viewingModule.id), { answers: finalAnswersList }, {
                 preserveScroll: true,
                 preserveState: true,
-                onSuccess: () => {
+                onSuccess: (page) => {
+                    const result = page.props.flash?.assessment_result;
+                    const moduleType = getModuleType(viewingModule);
+                    setAssessmentResult(
+                        result ?? {
+                            type: moduleType,
+                            module_id: viewingModule.id,
+                            score,
+                            total: questions.length,
+                            answers: finalAnswersList,
+                        },
+                    );
                     setIsViewingQuiz(false);
                     setUserAnswers([]);
-                    setFlowKey(`summary-${viewingModule.id}`);
-                    setIsViewingSummary(true);
+                    setFlowKey(`results-${viewingModule.id}`);
+                    setIsViewingResults(true);
                     reloadShellProgress();
+                },
+                onError: (errors) => {
+                    const message = errors?.message ?? 'Could not submit this assessment.';
+                    showAppToastError(message);
                 },
             });
         };
@@ -423,16 +513,14 @@ export default function Show() {
                     setAnswerStatus('incorrect');
                 }
             } catch {
-                alert('Could not check your answer. Please try again.');
+                showAppToastError('Could not check your answer. Please try again.');
             } finally {
                 setIsCheckingAnswer(false);
             }
         };
 
         const handleNext = () => {
-            const finalAnswersList = isTakingFinalExam || answerStatus === 'correct'
-                ? buildSubmission(questions)
-                : userAnswers;
+            const finalAnswersList = buildSubmission(questions);
             setUserAnswers(finalAnswersList);
 
             if (quizIndex >= questions.length - 1) {
@@ -581,7 +669,9 @@ export default function Show() {
                 <div className="student-sandbox__content student-sandbox__content--material student-enter-stagger">
                     {isReviewMode && (
                         <p className="student-sandbox__review-banner student-enter__item" style={{ '--student-enter-index': 0 }}>
-                            Review mode — quiz results are saved and cannot be retaken.
+                            {getModuleType(viewingModule) === 'test'
+                                ? 'Review mode — browse materials and past results. Use Retake on the map for a new attempt.'
+                                : 'Review mode — quiz results are saved and cannot be retaken.'}
                         </p>
                     )}
 
@@ -680,15 +770,59 @@ export default function Show() {
             <StudentShellMap
                 certification={certification}
                 progress={progress}
+                moduleTypes={moduleTypes}
+                attemptHistory={attemptHistory}
+                moduleProgress={moduleProgress}
                 shellMeta={shellMeta}
                 examStatus={examStatus}
                 examDraftAvailable={examDraftAvailable}
                 selectHref={route('student.dashboard', { select: 1 })}
                 onPlayModule={(module, options = {}) => {
                     const completed = isCompleted(module.id);
-                    openModule(module, { review: options.review || completed });
+                    if (options.retake) {
+                        openModule(module, { retake: true });
+                        return;
+                    }
+                    openModule(module, { review: options.review || (completed && !options.retake) });
                 }}
-                onTakeFinalExam={() => setExamIntroOpen(true)}
+                onTakeFinalExam={() => {
+                    if (examStatus.has_attempted && !examStatus.has_passed) {
+                        setAssessmentResult({
+                            type: 'exam',
+                            score: examStatus.latest_score,
+                            total: examStatus.latest_total,
+                            passed: examStatus.latest_passed,
+                            answers: examStatus.latestAttempt?.answers ?? [],
+                        });
+                        setIsViewingResults(true);
+                        setFlowKey('exam-results');
+                        return;
+                    }
+                    if (examStatus.has_attempted && examStatus.has_passed) {
+                        setAssessmentResult({
+                            type: 'exam',
+                            score: examStatus.latest_score,
+                            total: examStatus.latest_total,
+                            passed: true,
+                            answers: examStatus.latestAttempt?.answers ?? [],
+                        });
+                        setIsViewingResults(true);
+                        setFlowKey('exam-results');
+                        return;
+                    }
+                    setExamIntroOpen(true);
+                }}
+                onViewExamResults={() => {
+                    setAssessmentResult({
+                        type: 'exam',
+                        score: examStatus.latest_score,
+                        total: examStatus.latest_total,
+                        passed: examStatus.latest_passed,
+                        answers: examStatus.latestAttempt?.answers ?? [],
+                    });
+                    setIsViewingResults(true);
+                    setFlowKey('exam-results');
+                }}
                 onViewCertificate={() => {
                     resetSession();
                     setFlowKey('certificate');
@@ -703,6 +837,9 @@ export default function Show() {
                 shellMeta={shellMeta}
                 onConfirm={() => {
                     setExamIntroOpen(false);
+                    if (examStatus.has_attempted) {
+                        return;
+                    }
                     beginFinalExam({ resume: examDraftAvailable || hasExamDraft(certification.id, userId) });
                 }}
                 onCancel={() => setExamIntroOpen(false)}

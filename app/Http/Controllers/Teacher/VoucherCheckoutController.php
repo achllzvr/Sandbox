@@ -3,11 +3,12 @@
 namespace App\Http\Controllers\Teacher;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Teacher\VoucherPurchaseRequest;
+use App\Http\Requests\Teacher\BulkCheckoutRequest;
 use App\Models\Certification;
 use App\Models\EnrollmentRequest;
 use App\Services\TeacherVoucherProvisioningService;
 use App\Services\XenditService;
+use App\Support\CheckoutTotals;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -16,19 +17,26 @@ class VoucherCheckoutController extends Controller
     public function __construct(
         private XenditService $xenditService,
         private TeacherVoucherProvisioningService $provisioningService,
-    ) {}
+    ) {
+    }
 
-    public function store(VoucherPurchaseRequest $request)
+    public function store(BulkCheckoutRequest $request)
     {
         $certification = Certification::findOrFail($request->certification_id);
-        $totalCost = round((float) $certification->price * (int) $request->quantity, 2);
+        $quantity = (int) $request->quantity;
+        $totalCost = CheckoutTotals::compute($certification, $quantity);
+
+        if (! CheckoutTotals::matchesExpected((float) $request->expected_total, $totalCost)) {
+            return $this->checkoutError('Checkout total does not match the shell price. Refresh and try again.');
+        }
+
         $paymentReference = 'SBX-TCH-'.strtoupper(Str::random(12));
 
         $enrollmentRequest = EnrollmentRequest::create([
             'user_id' => auth()->id(),
             'certification_id' => $certification->id,
             'request_type' => 'teacher_bulk',
-            'quantity' => $request->quantity,
+            'quantity' => $quantity,
             'amount' => $totalCost,
             'status' => 'pending',
             'payment_reference' => $paymentReference,
@@ -37,7 +45,7 @@ class VoucherCheckoutController extends Controller
 
         try {
             if ($totalCost <= 0) {
-                return $this->completeFreeCheckout($enrollmentRequest, $certification, $request->quantity);
+                return $this->completeFreeCheckout($enrollmentRequest, $certification, $quantity);
             }
 
             if (! $this->xenditService->isConfigured()) {

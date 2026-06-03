@@ -25,6 +25,46 @@ class XenditService
         Certification $certification,
         User $teacher,
     ): array {
+        return $this->createCheckoutInvoice(
+            $enrollmentRequest,
+            $certification,
+            $teacher,
+            'Bulk Certification Vouchers: '.$certification->title,
+            route('teacher.shop.index', [
+                'payment_reference' => $enrollmentRequest->payment_reference,
+            ]),
+            route('teacher.shop.index'),
+        );
+    }
+
+    public function createDirectPurchaseInvoice(
+        EnrollmentRequest $enrollmentRequest,
+        Certification $certification,
+        User $student,
+    ): array {
+        return $this->createCheckoutInvoice(
+            $enrollmentRequest,
+            $certification,
+            $student,
+            'Shell Enrollment: '.$certification->title,
+            route('marketplace.index', [
+                'payment_reference' => $enrollmentRequest->payment_reference,
+            ]),
+            route('marketplace.index'),
+        );
+    }
+
+    /**
+     * @return array{invoice_id: string, invoice_url: string}
+     */
+    private function createCheckoutInvoice(
+        EnrollmentRequest $enrollmentRequest,
+        Certification $certification,
+        User $payer,
+        string $description,
+        string $successRedirectUrl,
+        string $failureRedirectUrl,
+    ): array {
         $this->assertConfigured();
 
         $response = Http::withHeaders([
@@ -33,12 +73,10 @@ class XenditService
             ->post($this->apiUrl('/v2/invoices'), [
                 'external_id' => $enrollmentRequest->payment_reference,
                 'amount' => (float) $enrollmentRequest->amount,
-                'description' => 'Bulk Certification Vouchers: '.$certification->title,
-                'payer_email' => $teacher->email,
-                'success_redirect_url' => route('teacher.shop.index', [
-                    'payment_reference' => $enrollmentRequest->payment_reference,
-                ]),
-                'failure_redirect_url' => route('teacher.shop.index'),
+                'description' => $description,
+                'payer_email' => $payer->email,
+                'success_redirect_url' => $successRedirectUrl,
+                'failure_redirect_url' => $failureRedirectUrl,
                 'currency' => 'PHP',
             ]);
 
@@ -77,7 +115,7 @@ class XenditService
             return 'paid';
         }
 
-        if ($enrollmentRequest->request_type !== 'teacher_bulk') {
+        if (! in_array($enrollmentRequest->request_type, ['teacher_bulk', 'direct_purchase'], true)) {
             return 'unknown';
         }
 
@@ -89,10 +127,7 @@ class XenditService
         $status = strtoupper((string) ($invoice['status'] ?? ''));
 
         if ($this->isPaidStatus($status)) {
-            app(TeacherVoucherProvisioningService::class)->provisionFromXenditInvoice(
-                $enrollmentRequest->fresh(),
-                $invoice,
-            );
+            $this->provisionPaidEnrollmentRequest($enrollmentRequest->fresh(), $invoice);
 
             return 'paid';
         }
@@ -126,9 +161,7 @@ class XenditService
             return;
         }
 
-        $enrollmentRequest = EnrollmentRequest::where('payment_reference', $externalId)
-            ->where('request_type', 'teacher_bulk')
-            ->first();
+        $enrollmentRequest = EnrollmentRequest::where('payment_reference', $externalId)->first();
 
         if (! $enrollmentRequest) {
             Log::warning('Xendit webhook: enrollment request not found', ['external_id' => $externalId]);
@@ -136,10 +169,26 @@ class XenditService
             return;
         }
 
-        app(TeacherVoucherProvisioningService::class)->provisionFromXenditInvoice(
-            $enrollmentRequest,
-            $invoice,
-        );
+        $this->provisionPaidEnrollmentRequest($enrollmentRequest, $invoice);
+    }
+
+    private function provisionPaidEnrollmentRequest(EnrollmentRequest $enrollmentRequest, array $invoice): void
+    {
+        if ($enrollmentRequest->request_type === 'teacher_bulk') {
+            app(TeacherVoucherProvisioningService::class)->provisionFromXenditInvoice(
+                $enrollmentRequest,
+                $invoice,
+            );
+
+            return;
+        }
+
+        if ($enrollmentRequest->request_type === 'direct_purchase') {
+            app(StudentDirectPurchaseProvisioningService::class)->provisionFromXenditInvoice(
+                $enrollmentRequest,
+                $invoice,
+            );
+        }
     }
 
     public function webhookTokenMatches(?string $providedToken): bool

@@ -2,6 +2,7 @@ import { Link, useForm } from '@inertiajs/react';
 import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { useEffect } from 'react';
 import { resolveShopTheme } from '@/utils/shellThemes';
+import CheckoutPriceBreakdown, { computeCheckoutTotal } from '@/Components/CheckoutPriceBreakdown';
 import {
     formatShopPrice,
     shopBadgeLabel,
@@ -37,6 +38,7 @@ export default function StudentShopModal({
     view,
     catalogIndex = 0,
     flashError = null,
+    checkoutError = null,
     onClose,
     onBack,
     onOpenEnroll,
@@ -46,6 +48,7 @@ export default function StudentShopModal({
 
     const enrollForm = useForm({
         certification_id: cert?.id ?? null,
+        expected_total: 0,
         payment_method: 'xendit',
         tos_action_irreversible: false,
         tos_privacy_act: false,
@@ -65,6 +68,7 @@ export default function StudentShopModal({
 
         enrollForm.setData({
             certification_id: cert.id,
+            expected_total: computeCheckoutTotal(cert.price, 1),
             payment_method: 'xendit',
             tos_action_irreversible: false,
             tos_privacy_act: false,
@@ -124,6 +128,13 @@ export default function StudentShopModal({
                             <form className="student-shop-flow" onSubmit={handleEnrollSubmit}>
                                 <h3 className="student-shop-modal__title">You are enrolling</h3>
                                 <ShopCertBadge cert={cert} theme={theme} />
+                                <CheckoutPriceBreakdown unitPrice={cert.price} />
+
+                                {(checkoutError || enrollForm.errors.checkout) && (
+                                    <div className="student-shop-alert student-shop-alert--error">
+                                        {checkoutError || enrollForm.errors.checkout}
+                                    </div>
+                                )}
 
                                 <label className="student-shop-check">
                                     <input

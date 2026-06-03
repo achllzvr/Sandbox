@@ -2,6 +2,7 @@ import { Head, Link } from '@inertiajs/react';
 import StudentShellCard from '@/Components/Student/StudentShellCard';
 import StudentShellMap from '@/Components/Student/StudentShellMap';
 import StudentLayout from '@/Layouts/StudentLayout';
+import { showAppToastError, showAppToast } from '@/Utils/appToast';
 
 export default function Dashboard({
     myShells = [],
@@ -69,10 +70,10 @@ export default function Dashboard({
                     shellMeta={shellMeta}
                     selectHref={selectHref}
                     onPlayModule={() => {
-                        window.alert('Enroll in this shell from the shop to play sandboxes.');
+                        showAppToast('info', 'Enroll in this shell from the shop to play sandboxes.');
                     }}
                     onTakeFinalExam={() => {
-                        window.alert('Complete all sandboxes to unlock the final exam.');
+                        showAppToast('info', 'Complete all sandboxes to unlock the final exam.');
                     }}
                 />
             ) : (

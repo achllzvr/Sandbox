@@ -199,7 +199,7 @@ export default function StudentSandboxQuiz({
                         >
                             {isCheckingAnswer ? 'Checking…' : hasSelection ? 'Check' : 'Select an answer'}
                         </button>
-                    ) : answerStatus === 'correct' || isFinalExam ? (
+                    ) : (
                         <button
                             type="button"
                             onClick={onNext}
@@ -212,10 +212,6 @@ export default function StudentSandboxQuiz({
                                     ? 'Submit exam'
                                     : 'Finish sandbox'
                                 : 'Continue'}
-                        </button>
-                    ) : (
-                        <button type="button" onClick={onRetry} className="student-quiz__cta student-quiz__cta--retry">
-                            Try again
                         </button>
                     )}
                 </div>

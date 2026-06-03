@@ -5,17 +5,18 @@ use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\CertificationApprovalController;
 use App\Http\Controllers\Admin\FinanceController;
 use App\Http\Controllers\AffiliationController;
+use App\Http\Controllers\Auth\PasswordController;
+use App\Http\Controllers\ContentStreamController;
 use App\Http\Controllers\Creator\AiQuizGenerationController;
 use App\Http\Controllers\Creator\AnalyticsController;
 use App\Http\Controllers\Creator\CertificationController;
 use App\Http\Controllers\Creator\CreatorDashboardController;
+use App\Http\Controllers\Creator\GeminiController;
 use App\Http\Controllers\Creator\LearningMaterialController;
 use App\Http\Controllers\Creator\ModuleContentController;
 use App\Http\Controllers\Creator\ModuleController;
 use App\Http\Controllers\Creator\QuestionController;
 use App\Http\Controllers\Creator\WithdrawalController;
-use App\Http\Controllers\Auth\PasswordController;
-use App\Http\Controllers\ContentStreamController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Student\DashboardController as StudentDashboardController;
 use App\Http\Controllers\Student\MarketplaceController;
@@ -151,6 +152,10 @@ Route::middleware(['auth', 'otp.verified', 'role:content_creator'])
         Route::post('ai/generate-quiz', [AiQuizGenerationController::class, 'generate'])
             ->middleware('throttle:10,1')
             ->name('ai.generate-quiz');
+
+        Route::post('gemini/generate-questions', [GeminiController::class, 'generateQuestions'])
+            ->middleware('throttle:10,1')
+            ->name('gemini.generate-questions');
     });
 
 /*
@@ -257,7 +262,7 @@ Route::middleware(['auth', 'otp.verified', 'role:teacher'])
 
         Route::get('/shop', [\App\Http\Controllers\Teacher\TeacherShopController::class, 'index'])->name('shop.index');
         Route::redirect('/purchasing', '/teacher/shop')->name('purchasing');
-        Route::get('/vouchers', function (\Illuminate\Http\Request $request) {
+        Route::get('/vouchers', function (Illuminate\Http\Request $request) {
             return redirect()->route('teacher.shop.index', $request->query());
         })->name('vouchers');
         Route::redirect('/shop-legacy', '/teacher/shop');

@@ -2,6 +2,7 @@ import { Link, router, useForm, usePage } from '@inertiajs/react';
 import { ArrowLeft, CheckCircle2, Minus, Plus } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { resolveShopTheme } from '@/utils/shellThemes';
+import CheckoutPriceBreakdown, { computeCheckoutTotal } from '@/Components/CheckoutPriceBreakdown';
 import { shopBadgeLabel, shopIsGithubVerified, shopProviderLine } from '@/utils/shopCatalog';
 
 function ShopCertBadge({ cert, theme, className = '' }) {
@@ -113,6 +114,7 @@ export default function TeacherShopModal({ cert, view, catalogIndex = 0, quantit
             {
                 certification_id: cert.id,
                 quantity,
+                expected_total: computeCheckoutTotal(cert.price, quantity),
             },
             {
                 preserveScroll: true,
@@ -224,6 +226,8 @@ export default function TeacherShopModal({ cert, view, catalogIndex = 0, quantit
                     {view === 'batch_confirm' ? (
                         <form className="student-shop-flow" onSubmit={handleConfirmSubmit}>
                             <h3 className="student-shop-modal__title">Confirm voucher batch purchase</h3>
+
+                            <CheckoutPriceBreakdown unitPrice={cert.price} quantity={quantity} totalLabel="Batch total" />
 
                             {checkoutError ? (
                                 <div className="student-mock-banner" role="alert">

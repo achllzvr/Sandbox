@@ -29,6 +29,9 @@ export default function RegisterTeacher({ affiliations = [] }) {
         contact_no: '',
         affiliation: '',
         credential_proof: null,
+        id_front: null,
+        id_back: null,
+        authorization_letter: null,
     });
 
     useEffect(() => {
@@ -48,13 +51,17 @@ export default function RegisterTeacher({ affiliations = [] }) {
                 setIsFilled(!!username.trim());
                 break;
             case 3:
-                setIsFilled(!!data.birthday && !!data.contact_no.trim() && !!data.affiliation.trim());
+                setIsFilled(
+                    !!data.birthday &&
+                        !!data.contact_no.trim() &&
+                        !!data.affiliation.trim() &&
+                        termsAccepted,
+                );
                 break;
             case 4:
-                setIsFilled(!!data.affiliation.trim() && termsAccepted);
-                break;
-            case 5:
-                setIsFilled(!!data.credential_proof);
+                setIsFilled(
+                    !!data.credential_proof && !!data.id_front && !!data.id_back && !!data.authorization_letter,
+                );
                 break;
             default:
                 setIsFilled(false);
@@ -115,37 +122,28 @@ export default function RegisterTeacher({ affiliations = [] }) {
                 setLocalErrors({ form: 'Please complete all fields' });
                 return;
             }
-            setStep(4);
-            return;
-        }
-
-        if (step === 4) {
             if (!termsAccepted) {
                 setLocalErrors({ terms: 'You must accept the terms' });
                 return;
             }
-            setStep(5);
+            setStep(4);
             return;
         }
 
         post(route('register.teacher.store'), { forceFormData: true });
     };
 
-    const progressMap = { 1: 20, 2: 40, 3: 60, 4: 80, 5: 100 };
+    const progressMap = { 1: 25, 2: 50, 3: 75, 4: 100 };
 
     return (
         <>
             <Head title="Create your Affiliated Hermit — Sandbox" />
             <AuthLayout
-                title={
-                    step === 4
-                        ? 'Affiliation verification'
-                        : 'Create your Affiliated Hermit'
-                }
+                title={step === 4 ? 'Upload verification documents' : 'Create your Affiliated Hermit'}
                 subtitle={
-                    step === 4
-                        ? 'Enter the name for your affiliated organization/ institution for us to verify if an affiliation already exists.'
-                        : step === 5
+                    step === 3
+                        ? 'Tell us about your affiliation and confirm the terms below.'
+                        : step === 4
                           ? 'Upload the required documents for verification.'
                           : null
                 }
@@ -229,8 +227,7 @@ export default function RegisterTeacher({ affiliations = [] }) {
                                 onInlineAction={generateUsername}
                             />
                             <p className="auth-helper-text">
-                                <strong>Make it yours!</strong> You can change your username every
-                                31 days.
+                                <strong>Make it yours!</strong> You can change your username every 31 days.
                             </p>
                         </>
                     )}
@@ -259,21 +256,7 @@ export default function RegisterTeacher({ affiliations = [] }) {
                             />
                             <AffiliationAutocomplete
                                 name="affiliation"
-                                placeholder="Affiliation"
-                                value={data.affiliation}
-                                onChange={(val) => setData('affiliation', val)}
-                                error={errors.affiliation}
-                                required
-                                initialOptions={affiliations}
-                            />
-                        </>
-                    )}
-
-                    {step === 4 && (
-                        <>
-                            <AffiliationAutocomplete
-                                name="affiliation_verify"
-                                placeholder="Organization/ Institution"
+                                placeholder="Organization / Institution"
                                 value={data.affiliation}
                                 onChange={(val) => setData('affiliation', val)}
                                 error={errors.affiliation}
@@ -288,9 +271,8 @@ export default function RegisterTeacher({ affiliations = [] }) {
                                         onChange={(e) => setTermsAccepted(e.target.checked)}
                                     />
                                     <span>
-                                        I agree to the Terms and Conditions and consent to the
-                                        processing of my personal data in accordance with the Data
-                                        Privacy Act.
+                                        I agree to the Terms and Conditions and consent to the processing of my personal
+                                        data in accordance with the Data Privacy Act.
                                     </span>
                                 </label>
                             </div>
@@ -300,19 +282,34 @@ export default function RegisterTeacher({ affiliations = [] }) {
                         </>
                     )}
 
-                    {step === 5 && (
+                    {step === 4 && (
                         <>
                             <FileUpload
                                 label="Professional Headshot"
                                 fileName={data.credential_proof?.name}
-                                onChange={(e) =>
-                                    setData('credential_proof', e.target.files?.[0] || null)
-                                }
+                                onChange={(e) => setData('credential_proof', e.target.files?.[0] || null)}
                                 error={errors.credential_proof}
                             />
-                            <FileUpload label="Front of ID" />
-                            <FileUpload label="Back of ID" />
-                            <FileUpload label="Authorization Letter" />
+                            <FileUpload
+                                label="Front of ID"
+                                fileName={data.id_front?.name}
+                                onChange={(e) => setData('id_front', e.target.files?.[0] || null)}
+                                error={errors.id_front}
+                            />
+                            <FileUpload
+                                label="Back of ID"
+                                fileName={data.id_back?.name}
+                                onChange={(e) => setData('id_back', e.target.files?.[0] || null)}
+                                error={errors.id_back}
+                            />
+                            <FileUpload
+                                label="Authorization Letter"
+                                fileName={data.authorization_letter?.name}
+                                onChange={(e) =>
+                                    setData('authorization_letter', e.target.files?.[0] || null)
+                                }
+                                error={errors.authorization_letter}
+                            />
                         </>
                     )}
 
@@ -320,7 +317,7 @@ export default function RegisterTeacher({ affiliations = [] }) {
                         progressPercent={progressMap[step]}
                         isFilled={isFilled}
                         isLoading={processing}
-                        finalLabel={step === 5 ? 'Create Shell' : 'Next Step'}
+                        finalLabel={step === 4 ? 'Create Shell' : 'Next Step'}
                     >
                         Next Step
                     </ProgressButton>

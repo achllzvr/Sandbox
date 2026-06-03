@@ -32,8 +32,8 @@ class ExamService
             }
 
             $answerRecords[] = [
-                'question_id' => $submission['question_id'],
-                'selected_answer_id' => $submission['selected_option'],
+                'question_id' => (int) $submission['question_id'],
+                'selected_answer_id' => (int) $submission['selected_option'],
                 'is_correct' => $isCorrect,
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -82,10 +82,18 @@ class ExamService
             }
         }
 
+        $answerBreakdown = collect($answerRecords)->map(fn ($record) => [
+            'question_id' => $record['question_id'],
+            'selected_option' => $record['selected_answer_id'],
+            'is_correct' => (bool) $record['is_correct'],
+            'ai_feedback' => null,
+        ])->values()->all();
+
         return [
             'score' => $score,
             'total_questions' => $totalQuestions,
             'passed' => $passed,
+            'answers' => $answerBreakdown,
         ];
     }
 
@@ -94,16 +102,30 @@ class ExamService
      */
     public function isAnswerCorrect(int $questionId, int $selectedOptionId, Certification $certification): bool
     {
+        return $this->checkAnswer($questionId, $selectedOptionId, $certification)['correct'];
+    }
+
+    public function checkAnswer(int $questionId, int $selectedOptionId, Certification $certification): array
+    {
         $question = Question::with('answers')->find($questionId);
 
         if (! $question
             || $question->certification_id !== $certification->id
             || $question->question_type !== 'final_exam') {
-            return false;
+            return [
+                'correct' => false,
+                'feedback' => null,
+                'confidence' => null,
+            ];
         }
 
         $selectedAnswer = $question->answers->firstWhere('id', $selectedOptionId);
+        $isCorrect = $selectedAnswer && $selectedAnswer->is_correct;
 
-        return $selectedAnswer && $selectedAnswer->is_correct;
+        return [
+            'correct' => (bool) $isCorrect,
+            'feedback' => null,
+            'confidence' => null,
+        ];
     }
 }

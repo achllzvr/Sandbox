@@ -10,11 +10,11 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import AdminCollapsedSidebarItem from '@/Components/Admin/AdminCollapsedSidebarItem';
+import AppToastProvider from '@/Components/AppToastProvider';
 import { AdminThemeProvider, useAdminTheme } from '@/hooks/useAdminTheme';
 import { assetUrl } from '@/utils/assetUrl';
 
 const SIDEBAR_KEY = 'sandbox-creator-sidebar-collapsed';
-const TOAST_DURATION_MS = 3000;
 
 const NAV_ITEMS = [
     { label: 'Dashboard', routeName: 'creator.dashboard', key: 'dashboard', Icon: LayoutDashboard },
@@ -42,40 +42,14 @@ export default function CreatorLayout({ children, activeNav, pageTitle }) {
 }
 
 function CreatorLayoutShell({ children, activeNav, pageTitle }) {
-    const { auth, flash } = usePage().props;
+    const { auth } = usePage().props;
     const user = auth.user;
     const { theme, highContrast } = useAdminTheme();
     const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
-    const [toasts, setToasts] = useState([]);
 
     useEffect(() => {
         window.localStorage.setItem(SIDEBAR_KEY, sidebarCollapsed ? '1' : '0');
     }, [sidebarCollapsed]);
-
-    useEffect(() => {
-        const next = [];
-
-        if (flash?.success) {
-            next.push({ id: `success-${Date.now()}`, type: 'success', message: flash.success });
-        }
-
-        if (flash?.error) {
-            next.push({ id: `error-${Date.now()}`, type: 'error', message: flash.error });
-        }
-
-        if (next.length === 0) {
-            return undefined;
-        }
-
-        setToasts(next);
-
-        const timer = window.setTimeout(() => {
-            setToasts((current) => current.map((toast) => ({ ...toast, leaving: true })));
-            window.setTimeout(() => setToasts([]), 250);
-        }, TOAST_DURATION_MS);
-
-        return () => window.clearTimeout(timer);
-    }, [flash?.success, flash?.error]);
 
     const expandSidebar = useCallback(() => {
         setSidebarCollapsed(false);
@@ -119,6 +93,7 @@ function CreatorLayoutShell({ children, activeNav, pageTitle }) {
     }
 
     return (
+        <AppToastProvider>
         <div
             className={`admin-shell creator-studio-shell ${sidebarCollapsed ? 'admin-shell--sidebar-collapsed' : ''}`}
             data-admin-theme={theme}
@@ -262,20 +237,7 @@ function CreatorLayoutShell({ children, activeNav, pageTitle }) {
 
                 <main className="admin-content admin-content--animated">{children}</main>
             </div>
-
-            {toasts.length > 0 ? (
-                <div className="creator-toast-stack admin-fade-in-up" role="status" aria-live="polite">
-                    {toasts.map((toast) => (
-                        <div
-                            key={toast.id}
-                            className={`creator-toast creator-toast--${toast.type} ${toast.leaving ? 'creator-toast--leaving' : ''}`}
-                            role="alert"
-                        >
-                            {toast.message}
-                        </div>
-                    ))}
-                </div>
-            ) : null}
         </div>
+        </AppToastProvider>
     );
 }

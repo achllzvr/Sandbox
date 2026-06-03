@@ -11,9 +11,13 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     public const ROLE_ADMIN = 'admin';
+
     public const ROLE_STAFF = 'content_creator';
+
     public const ROLE_CONTENT_CREATOR = 'content_creator';
+
     public const ROLE_TEACHER = 'teacher';
+
     public const ROLE_USER = 'user';
 
     protected $fillable = [
@@ -28,6 +32,9 @@ class User extends Authenticatable
         'is_active',
         'status',
         'institutional_credentials_url',
+        'id_front_url',
+        'id_back_url',
+        'authorization_letter_url',
         'verified_by',
         'verified_at',
         'sand_dollars',
@@ -46,13 +53,14 @@ class User extends Authenticatable
         'sand_dollars' => 'integer',
         'is_active' => 'boolean',
     ];
+
     protected $appends = [
         'full_name',
     ];
 
     public function getFullNameAttribute(): string
     {
-        return trim($this->first_name . ' ' . $this->last_name);
+        return trim($this->first_name.' '.$this->last_name);
     }
 
     public function certifications()
@@ -140,9 +148,9 @@ class User extends Authenticatable
     }
 
    public function isVerifiedTeacher()
-{
-    return $this->isTeacher() && ! is_null($this->verified_at);
-}
+   {
+       return $this->isTeacher() && ! is_null($this->verified_at);
+   }
 
     public function isActive(): bool
     {

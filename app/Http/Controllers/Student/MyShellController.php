@@ -5,9 +5,12 @@ namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
 use App\Models\Certification;
 use App\Models\Enrollment;
+use App\Models\Module;
+use App\Models\ModuleQuizAttempt;
 use App\Services\ContentStreamService;
 use App\Services\EnrollmentService;
 use App\Services\GamificationService;
+use App\Services\QuizService;
 use App\Support\StudentQuizPayload;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -18,13 +21,14 @@ class MyShellController extends Controller
         private EnrollmentService $enrollmentService,
         private ContentStreamService $contentStreamService,
         private GamificationService $gamificationService,
-    ) {}
+        private QuizService $quizService,
+    ) {
+    }
 
     public function show(Request $request, $id)
     {
         $user = $request->user();
 
-        // Verify the user is enrolled in this certification
         $enrollment = Enrollment::where('user_id', $user->id)
             ->where('certification_id', $id)
             ->first();
@@ -33,8 +37,6 @@ class MyShellController extends Controller
             abort(403, 'You are not enrolled in this Shell.');
         }
 
-        // Load the certification with its nested lessons and modules (and their contents/questions/answers)
-        // Also load final exam questions (certifications level)
         $certification = Certification::with([
             'lessons.modules.contents',
             'lessons.modules.questions.answers',
@@ -42,11 +44,13 @@ class MyShellController extends Controller
             'creator',
         ])->findOrFail($id);
 
-        // Get the IDs of all modules the user has completed
+        $allModules = $certification->lessons->flatMap->modules;
+        $moduleIds = $allModules->pluck('id');
+
         $completedModuleIds = $user->completedModules()->pluck('modules.id')->toArray();
 
         $moduleProgressRows = \App\Models\UserModuleProgress::where('user_id', $user->id)
-            ->whereIn('module_id', $certification->lessons->flatMap->modules->pluck('id'))
+            ->whereIn('module_id', $moduleIds)
             ->get()
             ->keyBy('module_id');
 
@@ -56,10 +60,53 @@ class MyShellController extends Controller
             'completed_at' => $row->completed_at,
         ])->all();
 
-        // Calculate total modules
-        $totalModules = $certification->lessons->sum(function ($lesson) {
-            return $lesson->modules->count();
-        });
+        $moduleTypes = $allModules->mapWithKeys(function (Module $module) {
+            return [$module->id => $this->quizService->classifyModule($module)];
+        })->all();
+
+        $quizAttempts = ModuleQuizAttempt::where('user_id', $user->id)
+            ->whereIn('module_id', $moduleIds)
+            ->orderBy('module_id')
+            ->orderBy('attempt_number')
+            ->get()
+            ->groupBy('module_id');
+
+        $attemptHistory = [];
+        foreach ($allModules as $module) {
+            if (($moduleTypes[$module->id] ?? '') !== 'test') {
+                continue;
+            }
+
+            $attempts = $quizAttempts->get($module->id, collect());
+            if ($attempts->isEmpty()) {
+                continue;
+            }
+
+            $attemptHistory[$module->id] = $attempts->map(fn (ModuleQuizAttempt $attempt) => [
+                'attempt_number' => $attempt->attempt_number,
+                'score' => $attempt->score,
+                'total' => $attempt->total,
+                'passed' => $attempt->passed,
+                'completed_at' => $attempt->completed_at,
+                'answers' => $attempt->answers_json ?? [],
+            ])->values()->all();
+        }
+
+        $latestQuizAttempts = [];
+        foreach ($quizAttempts as $moduleId => $attempts) {
+            $latest = $attempts->sortByDesc('attempt_number')->first();
+            if ($latest) {
+                $latestQuizAttempts[$moduleId] = [
+                    'score' => $latest->score,
+                    'total' => $latest->total,
+                    'passed' => $latest->passed,
+                    'attempt_number' => $latest->attempt_number,
+                    'answers' => $latest->answers_json ?? [],
+                ];
+            }
+        }
+
+        $totalModules = $allModules->count();
 
         $progress = [
             'completed_modules' => count($completedModuleIds),
@@ -85,13 +132,36 @@ class MyShellController extends Controller
         $latestAttempt = $examAttempts->first();
         $hasPassedExam = $hasCertificate || $examAttempts->contains(fn ($row) => (bool) $row->passed);
 
+        $latestAttemptBreakdown = null;
+        if ($latestAttempt) {
+            $answerRows = \Illuminate\Support\Facades\DB::table('exam_attempt_answers')
+                ->where('attempt_id', $latestAttempt->id)
+                ->get();
+
+            $latestAttemptBreakdown = [
+                'id' => $latestAttempt->id,
+                'score' => $latestAttempt->score,
+                'total' => $latestAttempt->total_questions,
+                'passed' => (bool) $latestAttempt->passed,
+                'attempted_at' => $latestAttempt->attempted_at,
+                'answers' => $answerRows->map(fn ($row) => [
+                    'question_id' => (int) $row->question_id,
+                    'selected_option' => $row->selected_answer_id ? (int) $row->selected_answer_id : null,
+                    'is_correct' => (bool) $row->is_correct,
+                    'ai_feedback' => null,
+                ])->values()->all(),
+            ];
+        }
+
         $examStatus = [
             'has_passed' => $hasPassedExam,
             'has_certificate' => $hasCertificate,
+            'has_attempted' => $examAttempts->isNotEmpty(),
             'attempt_count' => $examAttempts->count(),
             'latest_score' => $latestAttempt?->score,
             'latest_total' => $latestAttempt?->total_questions,
             'latest_passed' => (bool) ($latestAttempt?->passed ?? false),
+            'latestAttempt' => $latestAttemptBreakdown,
         ];
 
         $shellMeta = [
@@ -112,6 +182,9 @@ class MyShellController extends Controller
             'certification' => StudentQuizPayload::certification($certification, $user->id, $this->contentStreamService),
             'progress' => $progress,
             'moduleProgress' => $moduleProgress,
+            'moduleTypes' => $moduleTypes,
+            'attemptHistory' => $attemptHistory,
+            'latestQuizAttempts' => $latestQuizAttempts,
             'shellMeta' => $shellMeta,
             'examStatus' => $examStatus,
             'certificate' => $certificateRow ? [
@@ -122,7 +195,7 @@ class MyShellController extends Controller
         ]);
     }
 
-    public function completeModule(Request $request, \App\Models\Module $module)
+    public function completeModule(Request $request, Module $module)
     {
         $user = $request->user();
         $this->enrollmentService->assertEnrolledForModule($user, $module);
@@ -133,7 +206,7 @@ class MyShellController extends Controller
         );
 
         $this->gamificationService->recordActivity($user);
-        $this->gamificationService->award($user, 5, 'module_complete', \App\Models\Module::class, $module->id);
+        $this->gamificationService->award($user, 5, 'module_complete', Module::class, $module->id);
 
         return redirect()->back()->with('success', 'Module marked as completed!');
     }

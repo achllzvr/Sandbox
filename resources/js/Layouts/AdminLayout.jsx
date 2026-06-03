@@ -3,6 +3,7 @@ import { LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import AdminCollapsedSidebarItem from '@/Components/Admin/AdminCollapsedSidebarItem';
 import AdminNavIcon from '@/Components/Admin/AdminNavIcon';
+import AppToastProvider from '@/Components/AppToastProvider';
 import { AdminThemeProvider, useAdminTheme } from '@/hooks/useAdminTheme';
 import { assetUrl } from '@/utils/assetUrl';
 
@@ -34,7 +35,7 @@ export default function AdminLayout({ children, pageTitle, topbarEnd }) {
 }
 
 function AdminLayoutShell({ children, pageTitle, topbarEnd }) {
-    const { auth, flash } = usePage().props;
+    const { auth } = usePage().props;
     const user = auth.user;
     const { theme, highContrast } = useAdminTheme();
     const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
@@ -79,6 +80,7 @@ function AdminLayoutShell({ children, pageTitle, topbarEnd }) {
     }
 
     return (
+        <AppToastProvider>
         <div
             className={`admin-shell ${sidebarCollapsed ? 'admin-shell--sidebar-collapsed' : ''}`}
             data-admin-theme={theme}
@@ -248,19 +250,9 @@ function AdminLayoutShell({ children, pageTitle, topbarEnd }) {
                     </div>
                 </header>
 
-                {(flash?.success || flash?.error) && (
-                    <div className="admin-flash-wrap admin-fade-in-up admin-fade-in-up--delay-1">
-                        {flash?.success && (
-                            <div className="admin-flash admin-flash--success">{flash.success}</div>
-                        )}
-                        {flash?.error && (
-                            <div className="admin-flash admin-flash--error">{flash.error}</div>
-                        )}
-                    </div>
-                )}
-
                 <main className="admin-content admin-content--animated">{children}</main>
             </div>
         </div>
+        </AppToastProvider>
     );
 }

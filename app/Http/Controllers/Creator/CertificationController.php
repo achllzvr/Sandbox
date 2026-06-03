@@ -3,55 +3,71 @@
 namespace App\Http\Controllers\Creator;
 
 use App\Http\Controllers\Controller;
-use Inertia\Inertia;
+use App\Http\Requests\Creator\StoreCertificationRequest;
+use App\Http\Requests\Creator\UpdateCertificationRequest;
 use App\Models\Certification;
 use App\Services\CertificationService;
 use App\Services\CertificationThemeService;
-use App\Http\Requests\Creator\StoreCertificationRequest;
-use App\Http\Requests\Creator\UpdateCertificationRequest;
 use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
 
-class CertificationController extends Controller {
-    public function __construct(private CertificationService $certService) {}
+class CertificationController extends Controller
+{
+    public function __construct(private CertificationService $certService)
+    {
+    }
 
-    public function index() {
+    public function index()
+    {
         return Inertia::render('Creator/Certifications/Index', [
             'certifications' => auth()->user()->certifications()->latest()->get(['id', 'title', 'description', 'status', 'thumbnail', 'accent_color', 'created_at']),
         ]);
     }
 
-    public function create() {
+    public function create()
+    {
         return Inertia::render('Creator/Certifications/Create');
     }
 
-    public function store(StoreCertificationRequest $request) {
+    public function store(StoreCertificationRequest $request)
+    {
         $cert = auth()->user()->certifications()->create(array_merge($request->validated(), ['status' => 'draft']));
-        
+
         // Create default lesson
         $cert->lessons()->create([
             'title' => 'Course Modules',
             'description' => 'Default lesson containing all modules',
-            'created_by_user_id' => auth()->id()
+            'created_by_user_id' => auth()->id(),
         ]);
 
         return redirect()->route('creator.certifications.edit', $cert)->with('success', 'Certification created!');
     }
 
-    public function edit(Certification $certification) {
-        if ($certification->created_by_user_id !== auth()->id()) abort(403);
+    public function edit(Certification $certification)
+    {
+        if ($certification->created_by_user_id !== auth()->id()) {
+            abort(403);
+        }
 
         $certification->load([
-            'learningMaterials.quizQuestions.answers', 
+            'learningMaterials.quizQuestions.answers',
             'examQuestions.answers',
             'quizQuestions.answers',
             'lessons.modules.contents',
-            'lessons.modules.questions.answers'
+            'lessons.modules.questions.answers',
         ]);
-        return Inertia::render('Creator/Certifications/Edit', ['certification' => $certification]);
+
+        return Inertia::render('Creator/Certifications/Edit', [
+            'certification' => $certification,
+            'hasSystemApiKey' => ! empty(config('services.gemini.key')),
+        ]);
     }
 
-    public function storeExamQuestions(\Illuminate\Http\Request $request, Certification $certification) {
-        if ($certification->created_by_user_id !== auth()->id()) abort(403);
+    public function storeExamQuestions(\Illuminate\Http\Request $request, Certification $certification)
+    {
+        if ($certification->created_by_user_id !== auth()->id()) {
+            abort(403);
+        }
 
         $validated = $request->validate([
             'questions' => ['required', 'array', 'min:5'],
@@ -78,7 +94,8 @@ class CertificationController extends Controller {
         return redirect()->back()->with('success', 'Final Exam questions saved successfully!');
     }
 
-    public function update(UpdateCertificationRequest $request, Certification $certification) {
+    public function update(UpdateCertificationRequest $request, Certification $certification)
+    {
         $data = $request->validated();
 
         if ($request->hasFile('cover_image')) {
@@ -96,14 +113,17 @@ class CertificationController extends Controller {
         return redirect()->back()->with('success', 'Certification updated!');
     }
 
-    public function submit(Certification $certification) {
-        if ($certification->created_by_user_id !== auth()->id()) abort(403);
+    public function submit(Certification $certification)
+    {
+        if ($certification->created_by_user_id !== auth()->id()) {
+            abort(403);
+        }
         try {
             $this->certService->submitForApproval($certification);
+
             return redirect()->back()->with('success', 'Certification submitted for approval!');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());
         }
     }
 }
-

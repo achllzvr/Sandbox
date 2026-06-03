@@ -30,36 +30,37 @@ class TeacherRegistrationController extends Controller
 
     public function store(TeacherRegisterRequest $request)
     {
-        // Store credential file
-        $credentialPath = $request
-            ->file('credential_proof')
-            ->store('credentials', 'public');
+        $credentialPath = $request->file('credential_proof')->store('credentials', 'public');
+        $idFrontPath = $request->file('id_front')->store('teacher-verification', 'public');
+        $idBackPath = $request->file('id_back')->store('teacher-verification', 'public');
+        $authorizationLetterPath = $request->file('authorization_letter')->store('teacher-verification', 'public');
 
         $user = User::create([
-            'first_name'  => $request->first_name,
-            'last_name'   => $request->last_name,
-            'email'       => $request->email,
-            'password'    => Hash::make($request->password),
-            'birthday'    => $request->birthday,
-            'contact_no'  => $request->contact_no,
+            'first_name' => $request->first_name,
+            'last_name' => $request->last_name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'birthday' => $request->birthday,
+            'contact_no' => $request->contact_no,
             'affiliation' => $request->affiliation,
-            'role'        => 'teacher',
-            'status'      => 'pending_verification',
+            'role' => 'teacher',
+            'status' => 'pending_verification',
             'institutional_credentials_url' => $credentialPath,
-            // email_verified_at is NULL until OTP verified
+            'id_front_url' => $idFrontPath,
+            'id_back_url' => $idBackPath,
+            'authorization_letter_url' => $authorizationLetterPath,
         ]);
 
         $otp = (string) random_int(100000, 999999);
 
         session([
             'otp_data' => [
-                'code'         => $otp,
-                'email'        => $user->email,
-                'expires_at'   => now()->addMinutes(10)
-                                    ->timestamp,
-                'attempts'     => 0,
+                'code' => $otp,
+                'email' => $user->email,
+                'expires_at' => now()->addMinutes(10)->timestamp,
+                'attempts' => 0,
                 'resend_count' => 0,
-            ]
+            ],
         ]);
 
         $email = $user->email;
@@ -72,7 +73,5 @@ class TeacherRegistrationController extends Controller
         Auth::login($user);
 
         return redirect()->route('verification.notice');
-        // status stays 'pending_verification' even after OTP.
-        // Only admin can set it to 'active'.
     }
 }

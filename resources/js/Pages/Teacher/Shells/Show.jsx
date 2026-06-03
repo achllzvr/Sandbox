@@ -9,6 +9,7 @@ import TeacherPurchaseHistoryModal from '@/Components/Teacher/TeacherPurchaseHis
 import TeacherSendVoucherModal from '@/Components/Teacher/TeacherSendVoucherModal';
 import TeacherVoucherManager from '@/Components/Teacher/TeacherVoucherManager';
 import TeacherLayout from '@/Layouts/TeacherLayout';
+import { showAppToast } from '@/Utils/appToast';
 import { assetUrl } from '@/utils/assetUrl';
 import {
     shopBadgeLabel,
@@ -160,7 +161,7 @@ export default function Show({
                         onToggleSelectAll={handleToggleSelectAll}
                         onSendEmail={handleSendEmail}
                         onCancelSelection={() => setSelectedIds([])}
-                        onUnlockExams={() => window.alert('TODO[backend]: Unlock final exams for selected vouchers.')}
+                        onUnlockExams={() => showAppToast('info', 'Unlock final exams for selected vouchers — coming soon.')}
                     />
                 </div>
 

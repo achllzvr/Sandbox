@@ -1,6 +1,7 @@
-import { Link, usePage } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import { Shell, ShoppingBag, Trophy, Users } from 'lucide-react';
 import StudentWorkspace from '@/Components/Student/StudentWorkspace';
+import AppToastProvider from '@/Components/AppToastProvider';
 import { assetUrl } from '@/utils/assetUrl';
 
 const NAV_ITEMS = [
@@ -11,7 +12,6 @@ const NAV_ITEMS = [
 ];
 
 export default function StudentLayout({ children, activeNav, layoutMode = 'standard', workspaceModifier }) {
-    const { flash } = usePage().props;
     const usesWorkspace = layoutMode === 'shell' || layoutMode === 'select';
     const isShellPage = layoutMode === 'shell';
 
@@ -27,6 +27,7 @@ export default function StudentLayout({ children, activeNav, layoutMode = 'stand
     }
 
     return (
+        <AppToastProvider>
         <div className={`student-shell ${isShellPage ? 'student-shell--shell-page' : ''}`}>
             <aside className="student-nav student-fade-in-up" aria-label="Student navigation">
                 <div className="student-nav__inner">
@@ -72,15 +73,7 @@ export default function StudentLayout({ children, activeNav, layoutMode = 'stand
                     children
                 )}
             </main>
-
-            {flash?.success || flash?.error ? (
-                <div
-                    className={`student-flash student-flash--floating ${flash.success ? 'student-flash--success' : 'student-flash--error'} student-fade-in-up`}
-                    role="status"
-                >
-                    {flash.success || flash.error}
-                </div>
-            ) : null}
         </div>
+        </AppToastProvider>
     );
 }

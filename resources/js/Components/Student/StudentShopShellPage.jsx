@@ -1,5 +1,6 @@
 import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { useState } from 'react';
+import { showAppToast } from '@/Utils/appToast';
 import { assetUrl } from '@/utils/assetUrl';
 import { resolveShopTheme } from '@/utils/shellThemes';
 import {
@@ -64,7 +65,7 @@ export default function StudentShopShellPage({ cert, catalogIndex = 0, onBack, o
                 <button
                     type="button"
                     className="student-shop-shell-page__quick-test"
-                    onClick={() => window.alert('Diagnostic pre-assessment coming soon.')}
+                    onClick={() => showAppToast('info', 'Diagnostic pre-assessment coming soon.')}
                 >
                     Try a quick test
                 </button>

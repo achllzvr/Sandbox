@@ -2,7 +2,6 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\UserModuleProgress;
 use App\Services\GamificationService;
 use App\Support\UploadLimits;
 use Illuminate\Http\Request;
@@ -58,11 +57,14 @@ class HandleInertiaRequests extends Middleware
             'status' => fn () => $request->session()->get('status'),
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
-                'error'   => fn () => $request->session()->get('error'),
+                'error' => fn () => $request->session()->get('error'),
+                'info' => fn () => $request->session()->get('info'),
+                'warning' => fn () => $request->session()->get('warning'),
                 'shop_success' => fn () => $request->session()->get('shop_success'),
                 'teacher_purchase_success' => fn () => $request->session()->get('teacher_purchase_success'),
                 'voucher_email_sent' => fn () => $request->session()->get('voucher_email_sent'),
                 'xendit_checkout_url' => fn () => $request->session()->get('xendit_checkout_url'),
+                'assessment_result' => fn () => $request->session()->get('assessment_result'),
             ],
             'uploadLimits' => fn () => UploadLimits::forFrontend(),
             'ziggy' => function () use ($request) {

@@ -10,7 +10,7 @@ import { groupShopCatalog } from '@/utils/shopCatalog';
 const FALLBACK_CATEGORIES = ['Java', 'Laravel', 'React'];
 
 export default function Index({ certifications, filters = {}, categories = [], enrolledCertificationIds = [] }) {
-    const { flash } = usePage().props;
+    const { flash, errors: pageErrors = {} } = usePage().props;
     const [selectedCert, setSelectedCert] = useState(null);
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [pageMode, setPageMode] = useState('browse');
@@ -76,6 +76,21 @@ export default function Index({ certifications, filters = {}, categories = [], e
 
         return () => clearTimeout(timer);
     }, [search, filters.search, category, sort, applyFilters]);
+
+    useEffect(() => {
+        const checkoutUrl = flash?.xendit_checkout_url;
+        if (checkoutUrl) {
+            window.location.assign(checkoutUrl);
+        }
+    }, [flash?.xendit_checkout_url]);
+
+    useEffect(() => {
+        if (!pageErrors.checkout) {
+            return;
+        }
+
+        setModalView('enroll_tos');
+    }, [pageErrors.checkout]);
 
     useEffect(() => {
         if (!flash?.shop_success) {
@@ -288,6 +303,7 @@ export default function Index({ certifications, filters = {}, categories = [], e
                     view={modalView}
                     catalogIndex={selectedIndex}
                     flashError={flash?.error}
+                    checkoutError={pageErrors.checkout}
                     onClose={closeModal}
                     onBack={handleModalBack}
                     onOpenEnroll={openEnrollmentToS}

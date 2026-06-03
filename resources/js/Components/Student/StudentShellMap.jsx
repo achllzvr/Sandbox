@@ -50,27 +50,61 @@ function layoutCurveNodes(count) {
     return { nodes, height, path };
 }
 
-function SandboxBubble({ module, globalIndex, totalModules, completed, unlocked, onPlay }) {
+function resolveModuleType(module, moduleTypes) {
+    if (moduleTypes?.[module.id]) {
+        return moduleTypes[module.id];
+    }
+    const hasQuiz = (module.questions?.length ?? 0) >= 5;
+    const hasContent = (module.contents?.length ?? 0) > 0;
+    if (hasQuiz && hasContent) {
+        return 'test';
+    }
+    if (hasQuiz) {
+        return 'quiz';
+    }
+    return 'content_only';
+}
+
+function SandboxBubble({ module, globalIndex, totalModules, completed, unlocked, moduleTypes = {}, attemptHistory = {}, moduleProgress = {}, onPlay }) {
+    const moduleType = resolveModuleType(module, moduleTypes);
+    const history = attemptHistory[module.id] ?? [];
+    const bestScore = moduleProgress[module.id]?.score;
+    const isTest = moduleType === 'test';
+    const isQuiz = moduleType === 'quiz';
+
     const stateClass = completed
         ? 'student-shell-map__bubble--done'
         : unlocked
           ? 'student-shell-map__bubble--ready'
           : 'student-shell-map__bubble--locked';
 
+    let subcopy = completed
+        ? `Lesson ${globalIndex + 1} of ${totalModules}`
+        : unlocked
+          ? `Lesson ${globalIndex + 1} of ${totalModules}`
+          : 'Complete all sandboxes above to unlock this!';
+
+    if (completed && isTest && history.length > 0) {
+        subcopy = `Best score ${bestScore ?? history[history.length - 1]?.score}/${history[history.length - 1]?.total} · ${history.length} attempt${history.length === 1 ? '' : 's'}`;
+    } else if (completed && isQuiz) {
+        subcopy = `Quiz complete · ${bestScore ?? '—'}/${module.questions?.length ?? 0}`;
+    }
+
     return (
         <div className={`student-shell-map__bubble ${stateClass}`} role="dialog" aria-label={module.title}>
             <h3 className="student-shell-map__bubble-title">{module.title}</h3>
-            <p className="student-shell-map__bubble-sub">
-                {completed
-                    ? `Lesson ${globalIndex + 1} of ${totalModules}`
-                    : unlocked
-                      ? `Lesson ${globalIndex + 1} of ${totalModules}`
-                      : 'Complete all sandboxes above to unlock this!'}
-            </p>
+            <p className="student-shell-map__bubble-sub">{subcopy}</p>
             {completed ? (
-                <button type="button" className="student-shell-map__play-btn student-shell-map__play-btn--review" onClick={() => onPlay?.(module, { review: true })}>
-                    Review
-                </button>
+                <div className="student-shell-map__bubble-actions">
+                    <button type="button" className="student-shell-map__play-btn student-shell-map__play-btn--review" onClick={() => onPlay?.(module, { review: true })}>
+                        {isQuiz ? 'View results' : 'Review'}
+                    </button>
+                    {isTest && (
+                        <button type="button" className="student-shell-map__play-btn student-shell-map__play-btn--retake" onClick={() => onPlay?.(module, { retake: true })}>
+                            Retake test
+                        </button>
+                    )}
+                </div>
             ) : unlocked ? (
                 <button type="button" className="student-shell-map__play-btn" onClick={() => onPlay?.(module)}>
                     Start
@@ -82,8 +116,14 @@ function SandboxBubble({ module, globalIndex, totalModules, completed, unlocked,
     );
 }
 
-function FinalExamBubble({ isAllCompleted, examStatus = {}, hasDraft = false, onTakeFinalExam, onViewCertificate }) {
-    const { has_passed: hasPassed = false, attempt_count: attemptCount = 0 } = examStatus;
+function FinalExamBubble({ isAllCompleted, examStatus = {}, hasDraft = false, onTakeFinalExam, onViewCertificate, onViewExamResults }) {
+    const {
+        has_passed: hasPassed = false,
+        has_attempted: hasAttempted = false,
+        attempt_count: attemptCount = 0,
+        latest_score: latestScore,
+        latest_total: latestTotal,
+    } = examStatus;
 
     let ctaLabel = 'Start final exam';
     let ctaAction = onTakeFinalExam;
@@ -93,6 +133,10 @@ function FinalExamBubble({ isAllCompleted, examStatus = {}, hasDraft = false, on
         ctaLabel = 'View Hermit certificate';
         ctaAction = onViewCertificate;
         subcopy = 'You passed! View your Hermit certificate anytime.';
+    } else if (hasAttempted) {
+        ctaLabel = 'View exam results';
+        ctaAction = onViewExamResults ?? onTakeFinalExam;
+        subcopy = `Final exam submitted · Score ${latestScore ?? '—'}/${latestTotal ?? '—'}`;
     } else if (hasDraft) {
         ctaLabel = 'Continue final exam';
         subcopy = 'Pick up where you left off — your progress is saved.';
@@ -166,6 +210,9 @@ function MapNodeStack({
 export default function StudentShellMap({
     certification,
     progress,
+    moduleTypes = {},
+    attemptHistory = {},
+    moduleProgress = {},
     shellMeta = {},
     examStatus = {},
     examDraftAvailable = false,
@@ -173,6 +220,7 @@ export default function StudentShellMap({
     onPlayModule,
     onTakeFinalExam,
     onViewCertificate,
+    onViewExamResults,
 }) {
     const allModules = useMemo(
         () => certification.lessons.flatMap((lesson) => lesson.modules),
@@ -397,6 +445,9 @@ export default function StudentShellMap({
                                                     totalModules={allModules.length}
                                                     completed={completed}
                                                     unlocked={unlocked}
+                                                    moduleTypes={moduleTypes}
+                                                    attemptHistory={attemptHistory}
+                                                    moduleProgress={moduleProgress}
                                                     onPlay={onPlayModule}
                                                 />
                                             </MapNodeStack>
@@ -434,6 +485,7 @@ export default function StudentShellMap({
                                     hasDraft={examDraftAvailable}
                                     onTakeFinalExam={onTakeFinalExam}
                                     onViewCertificate={onViewCertificate}
+                                    onViewExamResults={onViewExamResults}
                                 />
                             </MapNodeStack>
                         </div>
