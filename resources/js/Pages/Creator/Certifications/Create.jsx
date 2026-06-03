@@ -1,147 +1,108 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import CreatorLayout from '@/Layouts/CreatorLayout';
-import TextInput from '@/Components/TextInput';
-import InputError from '@/Components/InputError';
+import {
+    estimatedDurationForStore,
+    formatEstimatedDurationLabel,
+} from '@/utils/estimatedDuration';
 
-/*
- * ==============================================================================
- * BACKEND INTEGRATION NOTES FOR MIKE & AHMAD:
- * ==============================================================================
- * Controller: app/Http/Controllers/Creator/CertificationController.php @ create / store
- * Expected Payload on Submit:
- * { title, category, price, description }
- * Action: Create the initial database record, then redirect to the Shell Builder (Edit.jsx) 
- * so the creator can start adding modules.
- * ==============================================================================
- */
-
-export default function CreatorShellCreate({ auth, categories = ['Programming', 'Design', 'Business', 'Marketing'] }) {
-    const { data, setData, post, processing, errors } = useForm({
+export default function Create() {
+    const { data, setData, post, processing, errors, transform } = useForm({
         title: '',
-        category: 'Programming',
-        price: '',
         description: '',
+        category: '',
+        difficulty: 'Beginner',
+        estimated_duration: '',
+        learning_objectives: '',
+        prerequisites: '',
+        tags: [],
     });
 
-    const submit = (e) => {
+    transform((formData) => ({
+        ...formData,
+        estimated_duration: estimatedDurationForStore(formData.estimated_duration),
+    }));
+
+    const durationPreview = formatEstimatedDurationLabel(data.estimated_duration);
+
+    const handleSubmit = (e) => {
         e.preventDefault();
-        // Posts to backend, which should redirect to the builder (edit route) upon success
         post(route('creator.certifications.store'));
     };
 
     return (
-        <CreatorLayout user={auth.user} hideNavigation={true}>
-            <Head title="Draft New Shell" />
+        <CreatorLayout activeNav="shells" pageTitle="Create new shell">
+            <Head title="Create New Shell" />
 
-            {/* Builder Header (Matches the Edit.jsx Builder Nav) */}
-            <nav className="bg-white border-b border-stone-200 h-16 flex items-center justify-between px-6 sticky top-0 z-50">
-                <div className="flex items-center gap-4">
-                    <Link href={route('creator.certifications.index')} className="text-stone-400 hover:text-stone-900 font-bold transition-colors">
-                        &larr; Cancel
-                    </Link>
-                    <span className="text-stone-300">|</span>
-                    <span className="font-black text-stone-900 text-sm">Step 1: Shell Initialization</span>
+            <div className="admin-card admin-card--chunky">
+                <div className="admin-card__header">
+                    <h3>Shell request</h3>
+                    <Link href={route('creator.certifications.index')} className="admin-btn admin-btn--ghost admin-btn--sm">Back to shells</Link>
                 </div>
-            </nav>
+                <form onSubmit={handleSubmit} className="admin-card__body">
+                    <label className="admin-field">
+                        <span className="admin-field__label">Title *</span>
+                        <input type="text" value={data.title} onChange={(e) => setData('title', e.target.value)} className="input-field" required />
+                        {errors.title ? <p className="admin-field__hint" style={{ color: 'var(--admin-danger-text)' }}>{errors.title}</p> : null}
+                    </label>
 
-            <div className="py-12 bg-[#F9F8F6] min-h-screen selection:bg-orange-500 selection:text-white flex flex-col items-center">
-                
-                {/* Hero / Header */}
-                <div className="text-center mb-10 max-w-2xl px-4">
-                    <div className="w-16 h-16 bg-orange-100 text-orange-500 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-6 shadow-sm">
-                        💡
+                    <div className="admin-form-grid">
+                        <label className="admin-field">
+                            <span className="admin-field__label">Category *</span>
+                            <select value={data.category} onChange={(e) => setData('category', e.target.value)} className="input-field" required>
+                                <option value="">Select category</option>
+                                <option value="Technology">Technology</option>
+                                <option value="Business">Business</option>
+                                <option value="Design">Design</option>
+                                <option value="Marketing">Marketing</option>
+                            </select>
+                        </label>
+                        <label className="admin-field">
+                            <span className="admin-field__label">Difficulty *</span>
+                            <select value={data.difficulty} onChange={(e) => setData('difficulty', e.target.value)} className="input-field" required>
+                                <option value="Beginner">Beginner</option>
+                                <option value="Intermediate">Intermediate</option>
+                                <option value="Advanced">Advanced</option>
+                            </select>
+                        </label>
                     </div>
-                    <h1 className="text-3xl md:text-4xl font-black text-stone-900 tracking-tight mb-3">
-                        Draft a new Certification
-                    </h1>
-                    <p className="text-lg text-stone-500 font-medium">
-                        Set up the basic details for your new Shell. You will add the curriculum, modules, and quizzes in the next step.
-                    </p>
-                </div>
 
-                {/* Focused Form Card */}
-                <div className="w-full max-w-2xl px-4">
-                    <div className="bg-white rounded-[2rem] border border-stone-200 shadow-xl shadow-stone-200/50 overflow-hidden">
-                        <form onSubmit={submit} className="p-8 sm:p-10 space-y-6">
-                            
-                            <div>
-                                <label className="block text-sm font-bold text-stone-700 mb-1.5">Certification Title *</label>
-                                <TextInput
-                                    type="text"
-                                    value={data.title}
-                                    onChange={(e) => setData('title', e.target.value)}
-                                    placeholder="e.g. Masterclass: Advanced UI/UX Design"
-                                    className="w-full bg-stone-50 focus:bg-white border-stone-200 focus:border-orange-500 focus:ring-orange-500 rounded-xl text-lg font-bold text-stone-900"
-                                    required
-                                    autoFocus
-                                />
-                                <InputError message={errors.title} className="mt-2" />
-                            </div>
+                    <label className="admin-field">
+                        <span className="admin-field__label">Description *</span>
+                        <textarea rows={4} value={data.description} onChange={(e) => setData('description', e.target.value)} className="input-field" required />
+                    </label>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label className="block text-sm font-bold text-stone-700 mb-1.5">Category *</label>
-                                    <select
-                                        value={data.category}
-                                        onChange={(e) => setData('category', e.target.value)}
-                                        className="w-full bg-stone-50 focus:bg-white border-stone-200 focus:border-orange-500 focus:ring-orange-500 rounded-xl font-medium text-stone-700"
-                                        required
-                                    >
-                                        {categories.map(cat => (
-                                            <option key={cat} value={cat}>{cat}</option>
-                                        ))}
-                                    </select>
-                                    <InputError message={errors.category} className="mt-2" />
-                                </div>
+                    <label className="admin-field">
+                        <span className="admin-field__label">Estimated time (hours)</span>
+                        <input
+                            type="number"
+                            min="0"
+                            step="0.5"
+                            value={data.estimated_duration}
+                            onChange={(e) => setData('estimated_duration', e.target.value)}
+                            className="input-field"
+                            placeholder="e.g. 120"
+                        />
+                        {durationPreview ? (
+                            <p className="admin-field__hint">
+                                Displays as: <strong>{durationPreview}</strong>
+                            </p>
+                        ) : (
+                            <p className="admin-field__hint">Enter hours to see how learners will see the duration (e.g. 120 hours · ≈ 3 weeks at 40 hrs/week).</p>
+                        )}
+                    </label>
 
-                                <div>
-                                    <label className="block text-sm font-bold text-stone-700 mb-1.5">Pricing (PHP) *</label>
-                                    <div className="relative">
-                                        <span className="absolute left-4 top-2.5 text-stone-400 font-bold">₱</span>
-                                        <TextInput
-                                            type="number"
-                                            value={data.price}
-                                            onChange={(e) => setData('price', e.target.value)}
-                                            placeholder="1500"
-                                            min="0"
-                                            step="0.01"
-                                            className="w-full pl-10 bg-stone-50 focus:bg-white border-stone-200 focus:border-orange-500 focus:ring-orange-500 rounded-xl font-bold"
-                                            required
-                                        />
-                                    </div>
-                                    <InputError message={errors.price} className="mt-2" />
-                                </div>
-                            </div>
+                    <label className="admin-field">
+                        <span className="admin-field__label">Learning objectives</span>
+                        <textarea rows={3} value={data.learning_objectives} onChange={(e) => setData('learning_objectives', e.target.value)} className="input-field" placeholder="What will students learn?" />
+                    </label>
 
-                            <div>
-                                <label className="block text-sm font-bold text-stone-700 mb-1.5">Short Description</label>
-                                <textarea
-                                    value={data.description}
-                                    onChange={(e) => setData('description', e.target.value)}
-                                    placeholder="Briefly describe what students will learn in this certification..."
-                                    rows="4"
-                                    className="w-full bg-stone-50 focus:bg-white border-stone-200 focus:border-orange-500 focus:ring-orange-500 rounded-xl resize-none font-medium text-stone-700"
-                                ></textarea>
-                                <InputError message={errors.description} className="mt-2" />
-                            </div>
-
-                            <div className="pt-6 border-t border-stone-100 mt-8">
-                                <button 
-                                    type="submit" 
-                                    disabled={processing}
-                                    className="w-full bg-stone-900 hover:bg-orange-500 text-white font-black text-lg py-4 rounded-xl shadow-lg transition-all disabled:opacity-50 active:scale-[0.98] flex items-center justify-center gap-2"
-                                >
-                                    {processing ? 'Initializing...' : 'Initialize Shell & Open Builder &rarr;'}
-                                </button>
-                                <p className="text-center text-xs font-bold text-stone-400 mt-4">
-                                    You can change all of these details later in the Builder.
-                                </p>
-                            </div>
-
-                        </form>
+                    <div className="admin-btn-group" style={{ justifyContent: 'flex-end' }}>
+                        <Link href={route('creator.certifications.index')} className="admin-btn admin-btn--ghost">Cancel</Link>
+                        <button type="submit" disabled={processing} className="admin-btn admin-btn--primary">
+                            {processing ? 'Creating…' : 'Save & continue'}
+                        </button>
                     </div>
-                </div>
-                
+                </form>
             </div>
         </CreatorLayout>
     );

@@ -1,142 +1,265 @@
 import { Link, usePage } from '@inertiajs/react';
-import Dropdown from '@/Components/Dropdown';
+import { LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import AdminCollapsedSidebarItem from '@/Components/Admin/AdminCollapsedSidebarItem';
+import AdminNavIcon from '@/Components/Admin/AdminNavIcon';
+import { AdminThemeProvider, useAdminTheme } from '@/hooks/useAdminTheme';
+import { assetUrl } from '@/utils/assetUrl';
+
+const SIDEBAR_KEY = 'sandbox-admin-sidebar-collapsed';
 
 const NAV_ITEMS = [
-    { label: 'Dashboard',      icon: '📊', routeName: 'admin.dashboard' },
-    { label: 'Users',           icon: '👥', routeName: 'admin.users.index' },
-    { label: 'Certifications',  icon: '📜', routeName: 'admin.certifications.index' },
-    { label: 'Teachers',        icon: '🎓', routeName: 'admin.teachers.index' },
-    { label: 'Audit Logs',      icon: '📋', routeName: 'admin.audit-logs.index' },
-    { label: 'Finance',         icon: '💰', routeName: 'admin.finance.index' },
+    { label: 'Dashboard', icon: 'dashboard', routeName: 'admin.dashboard' },
+    { label: 'Users', icon: 'users', routeName: 'admin.users.index' },
+    { label: 'Certifications', icon: 'certifications', routeName: 'admin.certifications.index' },
+    { label: 'Audit Logs', icon: 'audit', routeName: 'admin.audit-logs.index' },
+    { label: 'Finance', icon: 'finance', routeName: 'admin.finance.index' },
 ];
 
-export default function AdminLayout({ children, pageTitle }) {
+function readSidebarCollapsed() {
+    if (typeof window === 'undefined') {
+        return false;
+    }
+    return window.localStorage.getItem(SIDEBAR_KEY) === '1';
+}
+
+export default function AdminLayout({ children, pageTitle, topbarEnd }) {
+    return (
+        <AdminThemeProvider>
+            <AdminLayoutShell pageTitle={pageTitle} topbarEnd={topbarEnd}>
+                {children}
+            </AdminLayoutShell>
+        </AdminThemeProvider>
+    );
+}
+
+function AdminLayoutShell({ children, pageTitle, topbarEnd }) {
     const { auth, flash } = usePage().props;
     const user = auth.user;
+    const { theme, highContrast } = useAdminTheme();
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
+
+    useEffect(() => {
+        window.localStorage.setItem(SIDEBAR_KEY, sidebarCollapsed ? '1' : '0');
+    }, [sidebarCollapsed]);
+
+    const expandSidebar = useCallback(() => {
+        setSidebarCollapsed(false);
+    }, []);
+
+    const toggleSidebar = useCallback((event) => {
+        event.stopPropagation();
+        setSidebarCollapsed((current) => !current);
+    }, []);
+
+    function handleSidebarEmptyClick(event) {
+        if (!sidebarCollapsed) {
+            return;
+        }
+        if (event.target.closest('.admin-sidebar-collapsed-item, .admin-sidebar__collapse')) {
+            return;
+        }
+        expandSidebar();
+    }
 
     function isActive(routeName) {
         try {
-            return route().current(routeName) || route().current(routeName + '.*');
+            return route().current(routeName) || route().current(`${routeName}.*`);
         } catch {
             return false;
         }
     }
 
+    function resolveRoute(routeName) {
+        try {
+            return route(routeName);
+        } catch {
+            return '#';
+        }
+    }
+
     return (
-        <div className="min-h-screen flex bg-stone-100">
-            {/* ── Sidebar ────────────────────────────────── */}
-            <aside className="w-64 bg-stone-900 text-stone-300 flex flex-col fixed inset-y-0 left-0 z-40">
-                {/* Logo */}
-                <div className="h-16 flex items-center gap-3 px-5 border-b border-stone-800">
-                    <div className="w-8 h-8 bg-amber-500 rounded flex items-center justify-center text-white font-bold text-sm">
-                        S
-                    </div>
-                    <div>
-                        <span className="font-bold text-white text-sm tracking-tight">Sandbox</span>
-                        <span className="ml-2 text-[10px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider">
-                            Admin
-                        </span>
-                    </div>
+        <div
+            className={`admin-shell ${sidebarCollapsed ? 'admin-shell--sidebar-collapsed' : ''}`}
+            data-admin-theme={theme}
+            data-admin-contrast={theme === 'light' && highContrast ? 'high' : undefined}
+        >
+            <aside
+                className={`admin-sidebar ${sidebarCollapsed ? 'admin-sidebar--collapsed' : ''}`}
+                onClick={handleSidebarEmptyClick}
+            >
+                <div className="admin-sidebar__brand">
+                    {sidebarCollapsed ? (
+                        <div className="admin-sidebar__brand-link admin-sidebar__brand-link--icon-only">
+                            <img
+                                src={assetUrl('images/Hermy.png')}
+                                alt="Sandbox"
+                                className="admin-sidebar__logo-img"
+                                width={36}
+                                height={36}
+                            />
+                        </div>
+                    ) : (
+                        <Link href={route('admin.dashboard')} className="admin-sidebar__brand-link">
+                            <img
+                                src={assetUrl('images/Hermy.png')}
+                                alt=""
+                                className="admin-sidebar__logo-img"
+                                width={36}
+                                height={36}
+                            />
+                            <div className="admin-sidebar__brand-text">
+                                <span className="admin-sidebar__logo-text">Sandbox</span>
+                                <span className="admin-sidebar__badge">Administration</span>
+                            </div>
+                        </Link>
+                    )}
+                    <button
+                        type="button"
+                        className="admin-sidebar__collapse"
+                        onClick={toggleSidebar}
+                        aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                        aria-expanded={!sidebarCollapsed}
+                    >
+                        {sidebarCollapsed ? (
+                            <PanelLeftOpen
+                                className="admin-sidebar__collapse-icon"
+                                size={18}
+                                stroke="currentColor"
+                                fill="none"
+                                strokeWidth={2}
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                aria-hidden="true"
+                            />
+                        ) : (
+                            <PanelLeftClose
+                                className="admin-sidebar__collapse-icon"
+                                size={18}
+                                stroke="currentColor"
+                                fill="none"
+                                strokeWidth={2}
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                aria-hidden="true"
+                            />
+                        )}
+                    </button>
                 </div>
 
-                {/* Nav links */}
-                <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+                <nav className="admin-sidebar__nav" aria-label="Admin navigation">
                     {NAV_ITEMS.map((item) => {
                         const active = isActive(item.routeName);
-                        let href;
-                        try {
-                            href = route(item.routeName);
-                        } catch {
-                            href = '#';
+                        const href = resolveRoute(item.routeName);
+
+                        if (sidebarCollapsed) {
+                            return (
+                                <AdminCollapsedSidebarItem
+                                    key={item.routeName}
+                                    label={item.label}
+                                    href={href}
+                                    className={`admin-nav-link ${active ? 'admin-nav-link--active' : ''}`}
+                                >
+                                    <AdminNavIcon name={item.icon} />
+                                    <span className="admin-nav-link__label">{item.label}</span>
+                                </AdminCollapsedSidebarItem>
+                            );
                         }
+
                         return (
                             <Link
                                 key={item.routeName}
                                 href={href}
-                                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                                    active
-                                        ? 'bg-amber-500/15 text-amber-400'
-                                        : 'text-stone-400 hover:bg-stone-800 hover:text-stone-200'
-                                }`}
+                                className={`admin-nav-link ${active ? 'admin-nav-link--active' : ''}`}
                             >
-                                <span className="text-base">{item.icon}</span>
-                                {item.label}
+                                <AdminNavIcon name={item.icon} />
+                                <span className="admin-nav-link__label">{item.label}</span>
                             </Link>
                         );
                     })}
                 </nav>
 
-                {/* Bottom user info + Logout */}
-                <div className="px-4 py-4 border-t border-stone-800">
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="w-9 h-9 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400 font-bold text-sm">
-                            {user.first_name?.charAt(0)}{user.last_name?.charAt(0)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-stone-200 truncate">
-                                {user.first_name} {user.last_name}
-                            </p>
-                            <p className="text-xs text-stone-500 truncate">{user.email}</p>
-                        </div>
-                    </div>
-                    <Link
-                        href={route('logout')}
-                        method="post"
-                        as="button"
-                        className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-stone-400 hover:bg-red-500/10 hover:text-red-400 transition-colors"
-                    >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                        </svg>
-                        Log Out
-                    </Link>
+                <div className="admin-sidebar__footer">
+                    {sidebarCollapsed ? (
+                        <>
+                            <AdminCollapsedSidebarItem
+                                label="Profile settings"
+                                href={route('profile.edit')}
+                                className="admin-sidebar__user admin-sidebar__user-link admin-sidebar__user-link--icon-only"
+                            >
+                                <span className="admin-sidebar__avatar">
+                                    {user.first_name?.charAt(0)}
+                                    {user.last_name?.charAt(0)}
+                                </span>
+                            </AdminCollapsedSidebarItem>
+                            <AdminCollapsedSidebarItem
+                                label="Sign out"
+                                href={route('logout')}
+                                method="post"
+                                className="admin-sidebar__logout admin-sidebar__logout--icon-only"
+                            >
+                                <LogOut
+                                    className="admin-sidebar__collapse-icon"
+                                    size={18}
+                                    stroke="currentColor"
+                                    fill="none"
+                                    strokeWidth={2}
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    aria-hidden="true"
+                                />
+                            </AdminCollapsedSidebarItem>
+                        </>
+                    ) : (
+                        <>
+                            <Link href={route('profile.edit')} className="admin-sidebar__user admin-sidebar__user-link">
+                                <span className="admin-sidebar__avatar">
+                                    {user.first_name?.charAt(0)}
+                                    {user.last_name?.charAt(0)}
+                                </span>
+                                <div className="admin-sidebar__user-meta">
+                                    <p className="admin-sidebar__user-name">
+                                        {user.first_name} {user.last_name}
+                                    </p>
+                                    <p className="admin-sidebar__user-email">{user.email}</p>
+                                </div>
+                            </Link>
+                            <Link
+                                href={route('logout')}
+                                method="post"
+                                as="button"
+                                className="admin-sidebar__logout"
+                            >
+                                <span className="admin-sidebar__logout-text">Sign out</span>
+                            </Link>
+                        </>
+                    )}
                 </div>
             </aside>
 
-            {/* ── Main content ───────────────────────────── */}
-            <div className="flex-1 ml-64 flex flex-col min-h-screen">
-                {/* Top bar */}
-                <header className="h-16 bg-white border-b border-stone-200 flex items-center justify-between px-6 sticky top-0 z-30">
-                    <h1 className="text-lg font-bold text-stone-900">
-                        {pageTitle || 'Admin'}
-                    </h1>
-
-                    <Dropdown>
-                        <Dropdown.Trigger>
-                            <button className="flex items-center gap-2 text-sm text-stone-600 hover:text-stone-900 transition-colors">
-                                {user.first_name} {user.last_name}
-                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                                </svg>
-                            </button>
-                        </Dropdown.Trigger>
-                        <Dropdown.Content>
-                            <Dropdown.Link href={route('profile.edit')}>Profile</Dropdown.Link>
-                            <Dropdown.Link href={route('logout')} method="post" as="button">
-                                Log Out
-                            </Dropdown.Link>
-                        </Dropdown.Content>
-                    </Dropdown>
+            <div className="admin-main">
+                <header className="admin-topbar admin-fade-in-up">
+                    <div className="admin-topbar__heading">
+                        <p className="admin-topbar__eyebrow">Admin console</p>
+                        <h1 className="admin-page-title">{pageTitle || 'Admin'}</h1>
+                    </div>
+                    <div className="admin-topbar__actions">
+                        {topbarEnd && <div className="admin-topbar__end">{topbarEnd}</div>}
+                    </div>
                 </header>
 
-                {/* Flash messages */}
-                <div className="px-6 pt-4">
-                    {flash?.success && (
-                        <div className="mb-4 rounded-xl bg-green-50 border border-green-200 p-4 text-sm text-green-700 font-medium">
-                            {flash.success}
-                        </div>
-                    )}
-                    {flash?.error && (
-                        <div className="mb-4 rounded-xl bg-red-50 border border-red-200 p-4 text-sm text-red-700 font-medium">
-                            {flash.error}
-                        </div>
-                    )}
-                </div>
+                {(flash?.success || flash?.error) && (
+                    <div className="admin-flash-wrap admin-fade-in-up admin-fade-in-up--delay-1">
+                        {flash?.success && (
+                            <div className="admin-flash admin-flash--success">{flash.success}</div>
+                        )}
+                        {flash?.error && (
+                            <div className="admin-flash admin-flash--error">{flash.error}</div>
+                        )}
+                    </div>
+                )}
 
-                {/* Page content */}
-                <main className="flex-1 px-6 pb-8">
-                    {children}
-                </main>
+                <main className="admin-content admin-content--animated">{children}</main>
             </div>
         </div>
     );

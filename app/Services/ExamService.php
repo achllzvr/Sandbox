@@ -5,16 +5,12 @@ namespace App\Services;
 use App\Models\Certification;
 use App\Models\Question;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class ExamService
 {
     /**
      * Grade the exam and save the attempt.
-     * 
-     * @param int $userId
-     * @param Certification $certification
-     * @param array $submittedAnswers
-     * @return array
      */
     public function gradeAndSaveAttempt(int $userId, Certification $certification, array $submittedAnswers): array
     {
@@ -24,13 +20,13 @@ class ExamService
 
         foreach ($submittedAnswers as $submission) {
             $question = Question::with('answers')->find($submission['question_id']);
-            if (!$question) {
+            if (! $question) {
                 continue;
             }
 
             $selectedAnswer = collect($question->answers)->firstWhere('id', $submission['selected_option']);
             $isCorrect = $selectedAnswer && $selectedAnswer->is_correct ? 1 : 0;
-            
+
             if ($isCorrect) {
                 $score++;
             }
@@ -65,10 +61,49 @@ class ExamService
         }
         DB::table('exam_attempt_answers')->insert($answerRecords);
 
+        if ($passed) {
+            $existing = DB::table('certificates')
+                ->where('user_id', $userId)
+                ->where('certification_id', $certification->id)
+                ->where('status', 'valid')
+                ->exists();
+
+            if (! $existing) {
+                DB::table('certificates')->insert([
+                    'user_id' => $userId,
+                    'certification_id' => $certification->id,
+                    'exam_attempt_id' => $attemptId,
+                    'certificate_code' => 'HERMIT-'.strtoupper(Str::random(10)),
+                    'status' => 'valid',
+                    'issued_at' => now(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
+
         return [
             'score' => $score,
             'total_questions' => $totalQuestions,
             'passed' => $passed,
         ];
+    }
+
+    /**
+     * Check a single exam answer without revealing which option is correct.
+     */
+    public function isAnswerCorrect(int $questionId, int $selectedOptionId, Certification $certification): bool
+    {
+        $question = Question::with('answers')->find($questionId);
+
+        if (! $question
+            || $question->certification_id !== $certification->id
+            || $question->question_type !== 'final_exam') {
+            return false;
+        }
+
+        $selectedAnswer = $question->answers->firstWhere('id', $selectedOptionId);
+
+        return $selectedAnswer && $selectedAnswer->is_correct;
     }
 }

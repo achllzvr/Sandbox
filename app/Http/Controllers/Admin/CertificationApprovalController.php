@@ -5,50 +5,72 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UpdateCertificationStatusRequest;
 use App\Models\Certification;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class CertificationApprovalController extends Controller
 {
-    public function index()
+    // TODO[backend]: Add archive() and restore() endpoints for certification management card actions.
+
+    public function index(Request $request)
     {
-        $certifications = Certification::query()
-            ->where('status', 'pending_review')
+        $query = Certification::query()
             ->with([
                 'creator:id,first_name,last_name',
                 'approver:id,first_name,last_name',
                 'lessons.modules.contents',
                 'quizQuestions',
-                'examQuestions'
+                'examQuestions',
             ])
-            ->latest()
-            ->get()
-            ->map(function (Certification $certification) {
-                // Calculate modules and contents
-                $moduleCount = $certification->lessons->sum(function($lesson) { return $lesson->modules->count(); });
-                
-                return [
-                    'id' => $certification->id,
-                    'title' => $certification->title,
-                    'description' => $certification->description,
-                    'category' => $certification->category,
-                    'difficulty' => $certification->difficulty,
-                    'status' => $certification->status,
-                    'created_at' => $certification->created_at,
-                    'submitted_at' => $certification->submitted_at,
-                    'decline_reason' => $certification->decline_reason,
-                    'remarks' => $certification->remarks,
-                    'approved_at' => $certification->approved_at,
-                    'creator' => $certification->creator,
-                    'approver' => $certification->approver,
-                    'module_count' => $moduleCount,
-                    'quiz_questions_count' => $certification->quizQuestions->count(),
-                    'exam_questions_count' => $certification->examQuestions->count(),
-                ];
+            ->latest();
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%")
+                    ->orWhere('category', 'like', "%{$search}%")
+                    ->orWhereHas('creator', function ($q) use ($search) {
+                        $q->where('first_name', 'like', "%{$search}%")
+                            ->orWhere('last_name', 'like', "%{$search}%");
+                    });
             });
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $certifications = $query->get()->map(fn (Certification $certification) => $this->formatCertificationSummary($certification));
 
         return Inertia::render('Admin/Certifications/Index', [
             'certifications' => $certifications,
+            'filters' => $request->only(['search', 'status']),
         ]);
+    }
+
+    private function formatCertificationSummary(Certification $certification): array
+    {
+        $moduleCount = $certification->lessons->sum(fn ($lesson) => $lesson->modules->count());
+
+        return [
+            'id' => $certification->id,
+            'title' => $certification->title,
+            'description' => $certification->description,
+            'category' => $certification->category,
+            'difficulty' => $certification->difficulty,
+            'status' => $certification->status,
+            'created_at' => $certification->created_at,
+            'submitted_at' => $certification->submitted_at,
+            'decline_reason' => $certification->decline_reason,
+            'remarks' => $certification->remarks,
+            'approved_at' => $certification->approved_at,
+            'creator' => $certification->creator,
+            'approver' => $certification->approver,
+            'module_count' => $moduleCount,
+            'quiz_questions_count' => $certification->quizQuestions->count(),
+            'exam_questions_count' => $certification->examQuestions->count(),
+        ];
     }
 
     public function show(Certification $certification)

@@ -58,3 +58,10 @@ CREATE TABLE `enrollments` (
   CONSTRAINT `enrollments_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   CONSTRAINT `enrollments_ibfk_2` FOREIGN KEY (`certification_id`) REFERENCES `certifications` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- 5. Default landing shell preference
+ALTER TABLE `users`
+  ADD COLUMN `default_certification_id` int(11) DEFAULT NULL AFTER `role`,
+  ADD KEY `default_certification_id` (`default_certification_id`),
+  ADD CONSTRAINT `users_default_certification_fk` FOREIGN KEY (`default_certification_id`) REFERENCES `certifications` (`id`) ON DELETE SET NULL;
+

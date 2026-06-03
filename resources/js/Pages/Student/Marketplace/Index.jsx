@@ -1,110 +1,299 @@
-import { useState } from 'react';
-import { Head, Link } from '@inertiajs/react';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import { ChevronDown, Loader2, Search } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import StudentShopCard from '@/Components/Student/StudentShopCard';
+import StudentShopModal from '@/Components/Student/StudentShopModal';
+import StudentShopShellPage from '@/Components/Student/StudentShopShellPage';
+import StudentLayout from '@/Layouts/StudentLayout';
+import { groupShopCatalog } from '@/utils/shopCatalog';
 
-/*
- * ==============================================================================
- * BACKEND INTEGRATION NOTES FOR MIKE & AHMAD:
- * ==============================================================================
- * Controller: app/Http/Controllers/Student/MarketplaceController.php @ index
- * Required Props:
- * 1. shells: Array of available certifications (excluding ones the user already owns).
- * [ { id, title, thumbnail, price, creator_name, rating, enrolled_count, category } ]
- * 2. categories: Array of strings for the filter pills.
- * ==============================================================================
- */
+const FALLBACK_CATEGORIES = ['Java', 'Laravel', 'React'];
 
-export default function MarketplaceIndex({ auth, shells = [], categories = ['All', 'Programming', 'Design', 'Business'] }) {
-    const [activeCategory, setActiveCategory] = useState('All');
-    const [searchQuery, setSearchQuery] = useState('');
+export default function Index({ certifications, filters = {}, categories = [], enrolledCertificationIds = [] }) {
+    const { flash } = usePage().props;
+    const [selectedCert, setSelectedCert] = useState(null);
+    const [selectedIndex, setSelectedIndex] = useState(0);
+    const [pageMode, setPageMode] = useState('browse');
+    const [modalView, setModalView] = useState(null);
+    const [search, setSearch] = useState(filters.search || '');
+    const [category, setCategory] = useState(filters.category || 'all');
+    const [sort, setSort] = useState(filters.sort || 'price-asc');
+    const [isFiltering, setIsFiltering] = useState(false);
+    const [searchFocused, setSearchFocused] = useState(false);
+    const [categoryFocused, setCategoryFocused] = useState(false);
+    const [sortFocused, setSortFocused] = useState(false);
+
+    const catalog = certifications.data;
+    const isSearchPending = search !== (filters.search || '');
+    const showSearchLoader = isSearchPending || isFiltering;
+
+    const categoryOptions = useMemo(() => {
+        const merged = [...new Set([...(categories ?? []), ...FALLBACK_CATEGORIES])];
+        return merged.sort((a, b) => a.localeCompare(b));
+    }, [categories]);
+
+    const catalogSections = useMemo(
+        () => groupShopCatalog(catalog, enrolledCertificationIds, filters.category || 'all'),
+        [catalog, enrolledCertificationIds, filters.category],
+    );
+
+    const applyFilters = useCallback((nextSearch, nextCategory, nextSort) => {
+        router.get(
+            route('marketplace.index'),
+            {
+                search: nextSearch || undefined,
+                category: nextCategory && nextCategory !== 'all' ? nextCategory : undefined,
+                sort: nextSort && nextSort !== 'price-asc' ? nextSort : undefined,
+            },
+            {
+                preserveState: true,
+                replace: true,
+                preserveScroll: true,
+                onStart: () => setIsFiltering(true),
+                onFinish: () => setIsFiltering(false),
+            },
+        );
+    }, []);
+
+    useEffect(() => {
+        setSearch(filters.search || '');
+    }, [filters.search]);
+
+    useEffect(() => {
+        setCategory(filters.category || 'all');
+    }, [filters.category]);
+
+    useEffect(() => {
+        setSort(filters.sort || 'price-asc');
+    }, [filters.sort]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (search !== (filters.search || '')) {
+                applyFilters(search, category, sort);
+            }
+        }, 400);
+
+        return () => clearTimeout(timer);
+    }, [search, filters.search, category, sort, applyFilters]);
+
+    useEffect(() => {
+        if (!flash?.shop_success) {
+            return;
+        }
+
+        const enrolled = certifications.data.find((cert) => cert.id === flash.shop_success);
+        if (enrolled) {
+            setSelectedCert(enrolled);
+            setSelectedIndex(certifications.data.findIndex((cert) => cert.id === enrolled.id));
+            setPageMode('browse');
+            setModalView('success');
+        }
+    }, [flash?.shop_success, certifications.data]);
+
+    function openShellDetail(cert) {
+        if (enrolledCertificationIds.includes(cert.id)) {
+            return;
+        }
+
+        const index = catalog.findIndex((item) => item.id === cert.id);
+        setSelectedCert(cert);
+        setSelectedIndex(index >= 0 ? index : 0);
+        setPageMode('detail');
+        setModalView(null);
+    }
+
+    function closeDetail() {
+        setPageMode('browse');
+        setSelectedCert(null);
+        setModalView(null);
+    }
+
+    function openEnrollmentToS() {
+        setModalView('enroll_tos');
+    }
+
+    function openVoucherFlow() {
+        setModalView('voucher_claim');
+    }
+
+    function closeModal() {
+        setModalView(null);
+    }
+
+    function handleModalBack() {
+        setModalView(null);
+    }
+
+    function handleCategoryChange(event) {
+        const value = event.target.value;
+        setCategory(value);
+        applyFilters(search, value, sort);
+    }
+
+    function handleSortChange(event) {
+        const value = event.target.value;
+        setSort(value);
+        applyFilters(search, category, value);
+    }
+
+    function clearFilters() {
+        setSearch('');
+        setCategory('all');
+        setSort('price-asc');
+        applyFilters('', 'all', 'price-asc');
+    }
+
+    const hasActiveFilters =
+        Boolean(filters.search) ||
+        (filters.category && filters.category !== 'all') ||
+        filters.sort === 'price-desc';
 
     return (
-        <AuthenticatedLayout user={auth.user} header={<h2 className="font-black text-2xl text-stone-900 tracking-tighter">Shell Marketplace</h2>}>
-            <Head title="Marketplace" />
+        <StudentLayout
+            activeNav="shop"
+            layoutMode="select"
+            workspaceModifier={pageMode === 'detail' ? 'shop-detail' : undefined}
+        >
+            <Head title="Shop — Available Shells" />
 
-            <div className="py-8 bg-[#FDFCFB] min-h-screen selection:bg-orange-500 selection:text-white">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    
-                    {/* Hero Banner */}
-                    <div className="bg-stone-900 rounded-[2rem] p-8 md:p-12 mb-10 text-white relative overflow-hidden shadow-xl shadow-stone-900/10">
-                        <div className="absolute top-[-50%] right-[-10%] w-[500px] h-[500px] bg-orange-500/20 rounded-full blur-3xl pointer-events-none"></div>
-                        <div className="relative z-10 max-w-2xl">
-                            <h1 className="text-4xl md:text-5xl font-black mb-4 tracking-tight">Expand your shoreline.</h1>
-                            <p className="text-stone-400 text-lg mb-8 font-medium">Discover new certifications, master modern tech stacks, and earn Sand Dollars to customize your profile.</p>
-                            
-                            {/* Search Bar */}
-                            <div className="flex bg-white/10 p-2 rounded-2xl backdrop-blur-md border border-white/20 focus-within:border-orange-500 transition-colors">
-                                <span className="pl-4 pr-2 flex items-center text-xl">🔍</span>
-                                <input 
-                                    type="text" 
-                                    placeholder="Search for shells, topics, or creators..." 
-                                    className="w-full bg-transparent border-none text-white placeholder-stone-400 focus:ring-0 px-2 font-medium"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                />
-                            </div>
+            {pageMode === 'detail' && selectedCert ? (
+                <StudentShopShellPage
+                    cert={selectedCert}
+                    catalogIndex={selectedIndex}
+                    onBack={closeDetail}
+                    onOpenEnroll={openEnrollmentToS}
+                    onOpenVoucher={openVoucherFlow}
+                />
+            ) : (
+                <div className="student-shop-page student-enter-stagger">
+                    <header className="student-home-header student-shop-page__header student-enter__item" style={{ '--student-enter-index': 0 }}>
+                        <h2 className="student-page-title">Available Shells</h2>
+                        <p className="student-page-subtitle">Browse the available certificates for taking!</p>
+                    </header>
+
+                    <div
+                        className={`student-shop-toolbar student-enter__item ${isFiltering ? 'student-shop-toolbar--loading' : ''}`}
+                        style={{ '--student-enter-index': 1 }}
+                    >
+                        <div
+                            className={`student-shop-search ${searchFocused ? 'is-focused' : ''} ${showSearchLoader ? 'is-loading' : ''}`}
+                        >
+                            {showSearchLoader ? (
+                                <Loader2 size={18} aria-hidden="true" className="student-shop-search__loader" />
+                            ) : (
+                                <Search size={18} aria-hidden="true" className="student-shop-search__icon" />
+                            )}
+                            <input
+                                type="search"
+                                placeholder="Search shells..."
+                                value={search}
+                                onChange={(event) => setSearch(event.target.value)}
+                                onFocus={() => setSearchFocused(true)}
+                                onBlur={() => setSearchFocused(false)}
+                                aria-label="Search shells"
+                                aria-busy={showSearchLoader}
+                            />
+                        </div>
+                        <div className={`student-shop-select-wrap ${categoryFocused ? 'is-focused' : ''}`}>
+                            <ChevronDown size={16} aria-hidden="true" className="student-shop-select-wrap__icon" />
+                            <select
+                                className="student-shop-select"
+                                value={category}
+                                onChange={handleCategoryChange}
+                                onFocus={() => setCategoryFocused(true)}
+                                onBlur={() => setCategoryFocused(false)}
+                                aria-label="Filter by technology"
+                            >
+                                <option value="all">Technology</option>
+                                <option value="purchased">Already Purchased</option>
+                                {categoryOptions.map((option) => (
+                                    <option key={option} value={option}>
+                                        {option}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className={`student-shop-select-wrap ${sortFocused ? 'is-focused' : ''}`}>
+                            <ChevronDown size={16} aria-hidden="true" className="student-shop-select-wrap__icon" />
+                            <select
+                                className="student-shop-select"
+                                value={sort}
+                                onChange={handleSortChange}
+                                onFocus={() => setSortFocused(true)}
+                                onBlur={() => setSortFocused(false)}
+                                aria-label="Sort shells"
+                            >
+                                <option value="price-asc">Low to high</option>
+                                <option value="price-desc">High to low</option>
+                            </select>
                         </div>
                     </div>
 
-                    {/* Categories Filter */}
-                    <div className="flex overflow-x-auto gap-3 mb-8 pb-2 scrollbar-hide">
-                        {categories.map(category => (
-                            <button
-                                key={category}
-                                onClick={() => setActiveCategory(category)}
-                                className={`px-6 py-2.5 rounded-xl font-bold whitespace-nowrap transition-all ${
-                                    activeCategory === category 
-                                    ? 'bg-orange-500 text-white shadow-md shadow-orange-500/25' 
-                                    : 'bg-white text-stone-500 border border-stone-200 hover:border-orange-300 hover:bg-orange-50'
-                                }`}
-                            >
-                                {category}
-                            </button>
-                        ))}
-                    </div>
+                    {catalog.length === 0 ? (
+                        <div className="student-empty student-enter__item" style={{ '--student-enter-index': 2 }}>
+                            <p className="student-empty__title">No shells match your filters</p>
+                            <p className="student-page-subtitle">Try clearing search or changing technology.</p>
+                            {hasActiveFilters ? (
+                                <button type="button" className="student-btn student-empty__cta" onClick={clearFilters}>
+                                    Clear filters
+                                </button>
+                            ) : null}
+                        </div>
+                    ) : (
+                        <div
+                            className={`student-shop-sections student-enter__item ${isFiltering ? 'student-shop-sections--loading' : ''}`}
+                            style={{ '--student-enter-index': 2 }}
+                        >
+                            {catalogSections.map((section, sectionIndex) => (
+                                <section key={section.id} className="student-shop-section">
+                                    <div className="student-shell-group__divider">
+                                        <span>{section.title}</span>
+                                    </div>
+                                    <div className="student-shop-grid student-shells-grid">
+                                        {section.items.map((cert, index) => (
+                                            <StudentShopCard
+                                                key={cert.id}
+                                                cert={cert}
+                                                index={sectionIndex * 10 + index}
+                                                isOwned={enrolledCertificationIds.includes(cert.id)}
+                                                onOpenDetails={openShellDetail}
+                                            />
+                                        ))}
+                                    </div>
+                                </section>
+                            ))}
+                        </div>
+                    )}
 
-                    {/* Shells Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {shells.length > 0 ? shells.map(shell => (
-                            <Link key={shell.id} href={route('marketplace.show', shell.id)} className="group bg-white rounded-3xl border border-stone-200 overflow-hidden hover:shadow-xl hover:shadow-stone-200/50 hover:border-orange-300 transition-all duration-300 flex flex-col h-full hover:-translate-y-1">
-                                {/* Thumbnail */}
-                                <div className="h-48 bg-stone-100 relative overflow-hidden">
-                                    {shell.thumbnail ? (
-                                        <img src={shell.thumbnail} alt={shell.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-100 to-orange-50 text-4xl">🐚</div>
-                                    )}
-                                    <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm text-stone-900 text-xs font-black px-3 py-1.5 rounded-lg shadow-sm">
-                                        ₱ {shell.price}
-                                    </div>
-                                </div>
-                                
-                                {/* Card Body */}
-                                <div className="p-5 flex-grow flex flex-col justify-between">
-                                    <div>
-                                        <h3 className="font-black text-lg text-stone-900 leading-tight mb-1 group-hover:text-orange-500 transition-colors">{shell.title}</h3>
-                                        <p className="text-sm font-medium text-stone-500 mb-4">By {shell.creator_name}</p>
-                                    </div>
-                                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-stone-100">
-                                        <div className="flex items-center gap-1.5 text-sm font-bold text-orange-500">
-                                            <span>⭐ {shell.rating || '4.8'}</span>
-                                        </div>
-                                        <div className="text-xs font-bold text-stone-400 uppercase tracking-widest">
-                                            {shell.enrolled_count || 0} Students
-                                        </div>
-                                    </div>
-                                </div>
-                            </Link>
-                        )) : (
-                            <div className="col-span-full py-24 text-center">
-                                <span className="text-5xl mb-4 block">🏝️</span>
-                                <h3 className="text-xl font-black text-stone-900">No Shells Found</h3>
-                                <p className="text-stone-500">Try adjusting your filters or search query.</p>
-                            </div>
-                        )}
-                    </div>
+                    {certifications.last_page > 1 ? (
+                        <nav className="student-shop-pagination student-enter__item" style={{ '--student-enter-index': 3 }} aria-label="Shell pages">
+                            {certifications.links.map((link, index) => (
+                                <Link
+                                    key={index}
+                                    href={link.url || '#'}
+                                    className={`student-shop-pagination__link ${link.active ? 'is-active' : ''} ${!link.url ? 'is-disabled' : ''}`}
+                                    preserveScroll
+                                    dangerouslySetInnerHTML={{ __html: link.label }}
+                                />
+                            ))}
+                        </nav>
+                    ) : null}
                 </div>
-            </div>
-        </AuthenticatedLayout>
+            )}
+
+            {selectedCert && modalView ? (
+                <StudentShopModal
+                    cert={selectedCert}
+                    view={modalView}
+                    catalogIndex={selectedIndex}
+                    flashError={flash?.error}
+                    onClose={closeModal}
+                    onBack={handleModalBack}
+                    onOpenEnroll={openEnrollmentToS}
+                    onOpenVoucher={openVoucherFlow}
+                />
+            ) : null}
+        </StudentLayout>
     );
 }

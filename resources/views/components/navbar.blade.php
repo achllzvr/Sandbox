@@ -1,14 +1,19 @@
-<header class="app-header">
+<header class="navbar app-header">
     <div class="container flex-between">
-        <div class="logo">
-            <a href="{{ route('home') }}">CertManage</a>
+        <div class="navbar-logo logo">
+            <a href="{{ route('home') }}">
+                <img src="{{ asset('images/Hermy.png') }}" alt="Hermit mascot" class="navbar-logo-img" width="48" height="48">
+                <span class="navbar-logo-text">SANDBOX</span>
+            </a>
         </div>
 
         <nav class="main-nav">
             <ul>
-                <li>
-                    <a href="{{ route('home') }}">Home</a>
-                </li>
+                @if($navRole === 'guest')
+                    <li>
+                        <a href="{{ route('home') }}">Home</a>
+                    </li>
+                @endif
 
                 @foreach($navLinks as $link)
                     <li>

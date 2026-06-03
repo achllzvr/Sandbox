@@ -3,12 +3,12 @@
 return [
     'guest' => [
         [
-            'label' => 'Login',
+            'label' => 'Log In',
             'route' => 'login',
             'class' => 'nav-link',
         ],
         [
-            'label' => 'Register as Taker',
+            'label' => 'Get Started',
             'route' => 'register.show',
             'class' => 'btn btn-primary nav-btn',
         ],

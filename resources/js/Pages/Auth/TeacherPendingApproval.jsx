@@ -1,29 +1,56 @@
-import React from 'react';
 import { Head, Link } from '@inertiajs/react';
-import GuestLayout from '@/Layouts/GuestLayout';
+import { assetUrl } from '@/utils/assetUrl';
 
-export default function TeacherPendingApproval() {
+export default function TeacherPendingApproval({ verified = false }) {
+    const heading = verified
+        ? 'Your Affiliated Hermit has been verified!'
+        : 'Your Affiliated Hermit is awaiting verification';
+
     return (
-        <GuestLayout>
-            <Head title="Pending Admin Approval" />
+        <>
+            <Head title={heading} />
+            <div className="auth-shell">
+                <header className="navbar app-header auth-header">
+                    <div className="container flex-between">
+                        <div className="navbar-logo logo">
+                            <Link href="/">
+                                <img
+                                    src={assetUrl('images/Hermy.png')}
+                                    alt=""
+                                    className="navbar-logo-img"
+                                    width={48}
+                                    height={48}
+                                />
+                                <span className="navbar-logo-text">SANDBOX</span>
+                            </Link>
+                        </div>
+                    </div>
+                </header>
 
-            <div className="text-center mb-8">
-                <div className="text-6xl mb-4 text-green-500">✓</div>
-                <h2 className="text-2xl font-bold text-stone-900">Email Verified!</h2>
-                <div className="mt-6 text-stone-600 bg-amber-50 p-6 rounded-xl border border-amber-200">
-                    <p className="mb-2 font-medium">Thank you for confirming your email address.</p>
-                    <p>
-                        Your teacher registration form is currently <strong>on validation of the system admin</strong>. 
-                        We will notify you once your account has been approved and you can log in.
-                    </p>
-                </div>
+                <section className="success-screen">
+                    <div className="success-content">
+                        <h1 className="success-heading">{heading}</h1>
+                        <div className="success-mascot">
+                            <img
+                                src={assetUrl('images/HermyLanding.png')}
+                                alt="Hermit mascot"
+                            />
+                            <Link
+                                href={route('login')}
+                                className={verified ? 'btn btn-primary' : 'btn btn-secondary'}
+                            >
+                                Proceed to Login
+                            </Link>
+                        </div>
+                    </div>
+                    {!verified && (
+                        <p className="auth-subtitle" style={{ maxWidth: 520 }}>
+                            We are reviewing your affiliation documents. You will be able to log in
+                            once an administrator approves your account.
+                        </p>
+                    )}
+                </section>
             </div>
-
-            <div className="mt-8 text-center border-t border-stone-200 pt-6">
-                <Link href={route('welcome')} className="text-sm font-medium text-amber-600 hover:text-amber-800 transition-colors">
-                    ← Return to Home
-                </Link>
-            </div>
-        </GuestLayout>
+        </>
     );
 }

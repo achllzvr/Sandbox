@@ -1,54 +1,90 @@
 import { Link, usePage } from '@inertiajs/react';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { LayoutDashboard, Shell, ShoppingBag } from 'lucide-react';
+import TeacherWorkspace from '@/Components/Teacher/TeacherWorkspace';
+import { assetUrl } from '@/utils/assetUrl';
 
-export default function TeacherLayout({ children }) {
-    const { url } = usePage();
+const NAV_ITEMS = [
+    { label: 'Dashboard', routeName: 'teacher.dashboard', key: 'dashboard', Icon: LayoutDashboard },
+    { label: 'Shop', routeName: 'teacher.shop.index', key: 'shop', Icon: ShoppingBag },
+    { label: 'My Shells', routeName: 'teacher.shells.index', key: 'shells', Icon: Shell },
+];
 
-    const navItems = [
-        { name: 'Dashboard', href: route('teacher.dashboard'), icon: '📊', active: url === '/teacher/dashboard' },
-        { name: 'Bulk Purchasing', href: route('teacher.purchasing'), icon: '🛒', active: url.startsWith('/teacher/purchasing') },
-        { name: 'Voucher Tracking', href: route('teacher.vouchers'), icon: '🎟️', active: url.startsWith('/teacher/vouchers') },
-        { name: 'Cohort Analytics', href: route('teacher.analytics'), icon: '📈', active: url.startsWith('/teacher/analytics') },
-    ];
+export default function TeacherLayout({ children, activeNav, layoutMode = 'standard', workspaceModifier }) {
+    const { flash } = usePage().props;
+    const usesWorkspace = layoutMode === 'shell' || layoutMode === 'select' || layoutMode === 'shop-detail';
+    const isShellPage = layoutMode === 'shell' || layoutMode === 'shop-detail';
+
+    function isNavActive(item) {
+        if (activeNav === item.key) {
+            return true;
+        }
+        try {
+            return route().current(item.routeName);
+        } catch {
+            return false;
+        }
+    }
 
     return (
-        <AuthenticatedLayout
-            auth={usePage().props.auth}
-            header={<h2 className="font-semibold text-xl text-stone-800 leading-tight">Teacher Portal</h2>}
-        >
-            <div className="py-8">
-                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 flex flex-col md:flex-row gap-6">
-                    {/* Sidebar */}
-                    <div className="w-full md:w-64 shrink-0">
-                        <div className="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden">
-                            <div className="p-4 bg-stone-50 border-b border-stone-100">
-                                <h3 className="text-xs font-bold text-stone-400 uppercase tracking-wider">Teacher Navigation</h3>
-                            </div>
-                            <nav className="p-2 space-y-1">
-                                {navItems.map((item) => (
-                                    <Link
-                                        key={item.name}
-                                        href={item.href}
-                                        className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-sm font-medium ${
-                                            item.active 
-                                            ? 'bg-amber-50 text-amber-700 shadow-sm border border-amber-100' 
-                                            : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900 border border-transparent'
-                                        }`}
-                                    >
-                                        <span className="text-lg">{item.icon}</span>
-                                        {item.name}
-                                    </Link>
-                                ))}
-                            </nav>
-                        </div>
-                    </div>
+        <div className={`student-shell ${isShellPage ? 'student-shell--shell-page' : ''}`}>
+            <aside className="student-nav student-fade-in-up" aria-label="Teacher navigation">
+                <div className="student-nav__inner">
+                    <Link href={route('teacher.dashboard')} className="student-nav__logo">
+                        <img
+                            src={assetUrl('images/Hermy.png')}
+                            alt=""
+                            className="student-nav__logo-mark"
+                            width={32}
+                            height={32}
+                        />
+                        <span>Sandbox</span>
+                    </Link>
 
-                    {/* Main Content Area */}
-                    <div className="flex-1">
-                        {children}
-                    </div>
+                    <nav className="student-nav__links">
+                        {NAV_ITEMS.map((item) => {
+                            const active = isNavActive(item);
+                            const Icon = item.Icon;
+
+                            return (
+                                <Link
+                                    key={item.key}
+                                    href={route(item.routeName)}
+                                    className={`student-nav__link ${active ? 'student-nav__link--active' : ''}`}
+                                >
+                                    <span className="student-nav__link-icon-wrap">
+                                        <Icon className="student-nav__link-icon" size={22} strokeWidth={2} aria-hidden="true" />
+                                    </span>
+                                    <span className="student-nav__link-text">{item.label}</span>
+                                </Link>
+                            );
+                        })}
+                    </nav>
                 </div>
-            </div>
-        </AuthenticatedLayout>
+            </aside>
+
+            <main className="student-main student-content--animated">
+                {usesWorkspace ? (
+                    <TeacherWorkspace layoutMode={layoutMode} modifier={workspaceModifier}>
+                        {children}
+                    </TeacherWorkspace>
+                ) : (
+                    children
+                )}
+            </main>
+
+            {flash?.success || flash?.error || flash?.teacher_purchase_success || flash?.voucher_email_sent ? (
+                <div
+                    className={`student-flash student-flash--floating ${flash.error ? 'student-flash--error' : 'student-flash--success'} student-fade-in-up`}
+                    role="status"
+                >
+                    {flash.error ||
+                        flash.success ||
+                        (flash.teacher_purchase_success
+                            ? `Purchase complete — ${flash.teacher_purchase_success.quantity} voucher${flash.teacher_purchase_success.quantity === 1 ? '' : 's'}.`
+                            : null) ||
+                        (flash.voucher_email_sent ? `Voucher sent to ${flash.voucher_email_sent.email}.` : null)}
+                </div>
+            ) : null}
+        </div>
     );
 }

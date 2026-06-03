@@ -25,11 +25,13 @@ class User extends Authenticatable
         'contact_no',
         'affiliation',
         'role',
+        'is_active',
         'status',
         'institutional_credentials_url',
         'verified_by',
         'verified_at',
         'sand_dollars',
+        'default_certification_id',
     ];
 
     protected $hidden = [
@@ -42,6 +44,7 @@ class User extends Authenticatable
         'verified_at' => 'datetime',
         'birthday' => 'date',
         'sand_dollars' => 'integer',
+        'is_active' => 'boolean',
     ];
     protected $appends = [
         'full_name',

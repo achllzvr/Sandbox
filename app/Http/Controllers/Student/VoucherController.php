@@ -31,6 +31,6 @@ class VoucherController extends Controller
             "status" => "active"
         ]);
 
-        return redirect()->route("student.dashboard")->with("success", "Voucher redeemed! You are now enrolled.");
+        return redirect()->route('marketplace.index')->with('shop_success', $voucher->certification_id);
     }
 }

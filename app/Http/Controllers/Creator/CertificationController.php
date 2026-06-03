@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Inertia\Inertia;
 use App\Models\Certification;
 use App\Services\CertificationService;
+use App\Services\CertificationThemeService;
 use App\Http\Requests\Creator\StoreCertificationRequest;
 use App\Http\Requests\Creator\UpdateCertificationRequest;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +16,7 @@ class CertificationController extends Controller {
 
     public function index() {
         return Inertia::render('Creator/Certifications/Index', [
-            'certifications' => auth()->user()->certifications()->latest()->get()
+            'certifications' => auth()->user()->certifications()->latest()->get(['id', 'title', 'description', 'status', 'thumbnail', 'accent_color', 'created_at']),
         ]);
     }
 
@@ -78,7 +79,20 @@ class CertificationController extends Controller {
     }
 
     public function update(UpdateCertificationRequest $request, Certification $certification) {
-        $certification->update($request->validated());
+        $data = $request->validated();
+
+        if ($request->hasFile('cover_image')) {
+            $data['thumbnail'] = $request->file('cover_image')->store('certification-covers', 'public');
+        }
+
+        unset($data['cover_image']);
+
+        $certification->update($data);
+
+        if ($request->hasFile('cover_image')) {
+            app(CertificationThemeService::class)->syncFromThumbnail($certification->fresh());
+        }
+
         return redirect()->back()->with('success', 'Certification updated!');
     }
 

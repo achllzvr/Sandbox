@@ -1,35 +1,39 @@
 @extends('layouts.app')
-@section('title', 'Certification Management Platform')
+@section('title', 'Sandbox — Learn & Grow')
 
 @section('content')
-<section class="hero-section">
-    <div class="container">
-        <h1 class="hero-title">Manage Certifications, Modules, and Certification Takers in One Platform</h1>
-        <p class="hero-subtitle">The ultimate professional solution for admins, content_creator, and certification takers.</p>
+<section class="hero">
+    <div class="hero-mascot">
+        <img src="{{ asset('images/HermyLanding.png') }}" alt="Hermit mascot welcoming you to Sandbox" class="hero-image">
+    </div>
+    <div class="hero-content">
+        <h1 class="hero-heading">Break out of your shell and start learning!</h1>
+        <p class="hero-subtitle">A warm, playful place to earn certifications, explore lessons, and grow at your own pace.</p>
         <div class="hero-actions">
-            <a href="{{ route('register.show') }}" class="btn btn-primary btn-lg">Register as Certification Taker</a>
-            <a href="{{ route('login') }}" class="btn btn-secondary btn-lg">Login to Portal</a>
+            <a href="{{ route('register.show') }}" class="btn btn-primary btn-block btn-lg">Get Started</a>
+            <a href="{{ route('login') }}" class="btn btn-secondary btn-block btn-lg">I Already Have a Shell</a>
         </div>
+        <a href="#roles" class="hero-link">Learn about platform roles</a>
     </div>
 </section>
 
-<section class="roles-section">
+<section class="roles-section" id="roles">
     <div class="container">
         <h2 class="section-title">Platform Roles</h2>
         <div class="grid-3">
             <div class="card role-card">
                 <h3>Admin</h3>
-                <p>Full control over the system. Admins manage content_creator accounts, create new certifications, and oversee the entire learning platform.</p>
+                <p>Full control over the system. Admins manage content creator accounts, create certifications, and oversee the learning platform.</p>
             </div>
 
             <div class="card role-card">
-                <h3>content_creator / Teacher</h3>
-                <p>Appointed by admins. content_creator members are responsible for uploading lessons, managing modules, and organizing examination materials.</p>
+                <h3>Content Creator</h3>
+                <p>Appointed by admins. Content creators upload lessons, manage modules, and organize examination materials.</p>
             </div>
 
             <div class="card role-card">
-                <h3>Certification Taker</h3>
-                <p>Students and professionals seeking to earn credentials. Browse available certifications, enroll, and take modules to earn your certificate.</p>
+                <h3>Learner</h3>
+                <p>Students and professionals seeking credentials. Browse certifications, enroll, and complete modules to earn your certificate.</p>
             </div>
         </div>
     </div>

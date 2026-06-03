@@ -95,12 +95,11 @@ class OtpVerificationController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        if ($role === 'teacher') {
-            return redirect()->route('teacher.pending-approval');
+        if (in_array($role, ['teacher', 'content_creator'], true)) {
+            return redirect()->route('registration.success', ['affiliate' => 1]);
         }
 
-        return redirect()->route('login')
-            ->with('status', 'Email verified! Please log in to continue. 🎉');
+        return redirect()->route('registration.success');
     }
 
     // POST /email/verification-notification

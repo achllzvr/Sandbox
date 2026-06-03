@@ -3,13 +3,13 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@yield('title', 'Dashboard') - Certification Platform</title>
-    <link rel="stylesheet" href="{{ asset('css/style.css') }}">
+    <title>@yield('title', 'Dashboard') — Sandbox</title>
+    @include('partials.sandbox-styles')
 </head>
 <body class="dashboard-body">
     <aside class="sidebar">
         <div class="sidebar-header">
-            <h2>CertManage</h2>
+            <h2>SANDBOX</h2>
         </div>
         <nav class="sidebar-nav">
             @yield('sidebar')
@@ -29,5 +29,7 @@
             @yield('content')
         </main>
     </div>
+    <script src="{{ asset('js/script.js') }}" defer></script>
+    @stack('scripts')
 </body>
 </html>

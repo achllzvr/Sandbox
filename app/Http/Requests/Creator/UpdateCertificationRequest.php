@@ -21,11 +21,11 @@ class UpdateCertificationRequest extends FormRequest
             'category' => ['sometimes', 'string', 'max:255'],
             'difficulty' => ['sometimes', 'string', 'max:255'],
             'estimated_duration' => ['sometimes', 'string', 'max:255'],
-            'thumbnail' => ['sometimes', 'string', 'max:255'],
+            'price' => ['sometimes', 'numeric', 'min:0'],
+            'cover_image' => ['sometimes', 'file', 'image', 'max:5120', 'mimes:jpg,jpeg,png,webp,gif'],
             'learning_objectives' => ['sometimes', 'string'],
             'prerequisites' => ['sometimes', 'string'],
             'tags' => ['sometimes', 'array'],
         ];
     }
 }
-

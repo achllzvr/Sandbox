@@ -13,8 +13,14 @@ class Question extends Model
         'created_by_user_id',
         'question_text',
         'question_type',
+        'interaction_type',
+        'metadata',
         'points',
         'order_index',
+    ];
+
+    protected $casts = [
+        'metadata' => 'array',
     ];
 
     public function createdBy()

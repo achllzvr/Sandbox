@@ -1,5 +1,11 @@
 <?php
 
+/*
+| Suppress PHP 8.4 deprecation notices from Laravel 9 / Symfony vendor code.
+| (Same policy as artisan.) Upgrade PHP to 8.2–8.3 or Laravel 10+ for a full fix.
+*/
+error_reporting(E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED);
+
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Http\Request;
 

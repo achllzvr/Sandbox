@@ -29,6 +29,6 @@ class EnrollmentController extends Controller
             "status" => "active"
         ]);
 
-        return redirect()->route("student.dashboard")->with("success", "Successfully enrolled! Please check your Active Shells.");
+        return redirect()->route('marketplace.index')->with('shop_success', $certification->id);
     }
 }

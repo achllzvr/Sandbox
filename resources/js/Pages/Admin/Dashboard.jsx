@@ -1,143 +1,220 @@
+/**
+ * Admin Dashboard
+ *
+ * WIRED (backend + database):
+ * - User/shell metric counts → AdminDashboardController
+ * - Recent users list → users table
+ * - Recent shells list → certifications table
+ *
+ * TODO (backend + database):
+ * - Shell metric card links → add status query params to certifications index filter
+ * - Enrollment trend chart → analytics API + enrollments table
+ * - Users by role chart → analytics API
+ * - Weekly revenue chart → finance/payments API
+ */
 import { Head, Link } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
+import AdminBadge from '@/Components/Admin/AdminBadge';
+import AdminMetricGroup from '@/Components/Admin/AdminMetricGroup';
+import { AdminBarChart, AdminLineChart } from '@/Components/Admin/AdminMockChart';
 
-/*
- * ==============================================================================
- * BACKEND INTEGRATION NOTES FOR MIKE & AHMAD:
- * ==============================================================================
- * Controller: app/Http/Controllers/Admin/AdminDashboardController.php @ index
- * Required Props:
- * 1. stats: { total_users: int, active_shells: int, total_revenue: string/float, pending_approvals: int }
- * 2. recent_activity: Array of { id, user_name, action, created_at, icon }
- * 3. pending_teachers: Array of { id, name, institution, applied_at }
- * ==============================================================================
- */
+const CHART_COLORS = ['#cf7860', '#6b7fd4', '#8ecf9f', '#e0b078', '#a8bdd0', '#e09890'];
 
-export default function AdminDashboard({ auth, stats, recent_activity = [], pending_teachers = [] }) {
+const USER_METRICS = [
+    {
+        key: 'total_users',
+        label: 'Students',
+        accent: '#6b9fd4',
+        href: () => route('admin.users.index', { role: 'user' }),
+    },
+    {
+        key: 'total_content_creator',
+        label: 'Content creators',
+        accent: '#6b7fd4',
+        href: () => route('admin.users.index', { role: 'content_creator' }),
+    },
+    {
+        key: 'total_teachers',
+        label: 'Teachers',
+        accent: '#8ecf9f',
+        href: () => route('admin.users.index', { role: 'teacher' }),
+    },
+    {
+        key: 'pending_teachers',
+        label: 'Pending teachers',
+        accent: '#e0b078',
+        href: () => route('admin.users.index', { tab: 'approvals', approval_status: 'pending' }),
+    },
+];
+
+// TODO: Add status query filters to shell metric links (pending, published, declined).
+const SHELL_METRICS = [
+    {
+        key: 'total_certifications',
+        label: 'Total shells',
+        accent: '#cf7860',
+        href: () => route('admin.certifications.index'),
+        // TODO[backend]: no filter applied — should link with ?status= or dedicated counts
+    },
+    {
+        key: 'pending_certifications',
+        label: 'Pending approval',
+        accent: '#e0b078',
+        href: () => route('admin.certifications.index', { status: 'pending_review' }),
+    },
+    {
+        key: 'published_certifications',
+        label: 'Published',
+        accent: '#8ecf9f',
+        href: () => route('admin.certifications.index', { status: 'published' }),
+    },
+    {
+        key: 'declined_certifications',
+        label: 'Declined',
+        accent: '#e09890',
+        href: () => route('admin.certifications.index', { status: 'denied' }),
+    },
+];
+
+// TODO: Replace MOCK_ENROLLMENT with live monthly enrollment data from the backend.
+const MOCK_ENROLLMENT = {
+    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+    values: [42, 58, 71, 65, 88, 94],
+};
+
+// TODO: Replace MOCK_ROLE_SPLIT with live platform role distribution from the backend.
+const MOCK_ROLE_SPLIT = {
+    labels: ['Students', 'Creators', 'Teachers', 'Admins'],
+    values: [120, 18, 24, 4],
+};
+
+// TODO: Replace MOCK_REVENUE with live certification purchase totals from the backend.
+const MOCK_REVENUE = {
+    labels: ['W1', 'W2', 'W3', 'W4'],
+    values: [12, 19, 15, 28],
+};
+
+export default function Dashboard({ metrics, recent_certifications, recent_users }) {
+    function formatDate(d) {
+        return new Date(d).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+        });
+    }
+
     return (
-        <AdminLayout user={auth.user} header={<h2 className="font-black text-2xl text-slate-900 tracking-tighter">System Overview</h2>}>
+        <AdminLayout pageTitle="Dashboard">
             <Head title="Admin Dashboard" />
 
-            <div className="py-8 bg-slate-50 min-h-screen selection:bg-slate-800 selection:text-white">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    
-                    {/* Welcome Header */}
-                    <div className="mb-8">
-                        <h1 className="text-3xl font-black text-slate-900 mb-2 tracking-tight">
-                            Platform Command Center
-                        </h1>
-                        <p className="text-slate-500 font-medium text-lg">
-                            Monitor user activity, approve teacher applications, and manage platform health.
-                        </p>
+            {/* TODO[backend]: Metric groups — counts wired; chart sections below use mock data only */}
+            <div className="admin-metric-groups">
+                <AdminMetricGroup
+                    title="Users"
+                    linkHref={route('admin.users.index')}
+                    metrics={USER_METRICS}
+                    metricsData={metrics}
+                />
+                <AdminMetricGroup
+                    title="Shells"
+                    linkHref={route('admin.certifications.index')}
+                    metrics={SHELL_METRICS}
+                    metricsData={metrics}
+                />
+            </div>
+
+            {/* TODO: Wire enrollment trend chart to live analytics API. */}
+            <div className="admin-grid-3 admin-grid-3--charts">
+                <AdminLineChart
+                    title="Enrollment trend"
+                    subtitle="TODO: Monthly enrollments across all shells"
+                    labels={MOCK_ENROLLMENT.labels}
+                    values={MOCK_ENROLLMENT.values}
+                    colors={CHART_COLORS}
+                />
+                {/* TODO: Wire users-by-role chart to live analytics API. */}
+                <AdminBarChart
+                    title="Users by role"
+                    subtitle="TODO: Current platform role distribution"
+                    labels={MOCK_ROLE_SPLIT.labels}
+                    values={MOCK_ROLE_SPLIT.values}
+                    colors={CHART_COLORS}
+                />
+                {/* TODO: Wire weekly revenue chart to live finance/analytics API. */}
+                <AdminBarChart
+                    title="Weekly revenue"
+                    subtitle="TODO: Certification purchase totals (₱)"
+                    labels={MOCK_REVENUE.labels}
+                    values={MOCK_REVENUE.values}
+                    colors={CHART_COLORS}
+                />
+            </div>
+
+            {/* TODO[backend]: Recent users — wired via AdminDashboardController → users table */}
+            <div className="admin-grid-2">
+                <div className="admin-card admin-card--chunky">
+                    <div className="admin-card__header">
+                        <h3>Recent users</h3>
+                        <Link href={route('admin.users.index')} className="admin-card__link">
+                            View all
+                        </Link>
                     </div>
-
-                    {/* KPI Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-                        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
-                            <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center text-2xl font-black mb-4">👥</div>
-                            <div>
-                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Users</p>
-                                <p className="text-3xl font-black text-slate-900">{stats?.total_users || '0'}</p>
-                            </div>
-                        </div>
-                        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
-                            <div className="w-12 h-12 bg-orange-100 text-orange-500 rounded-xl flex items-center justify-center text-2xl font-black mb-4">🐚</div>
-                            <div>
-                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Active Shells</p>
-                                <p className="text-3xl font-black text-slate-900">{stats?.active_shells || '0'}</p>
-                            </div>
-                        </div>
-                        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
-                            <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center text-2xl font-black mb-4">💳</div>
-                            <div>
-                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Platform Revenue</p>
-                                <p className="text-3xl font-black text-slate-900">₱ {stats?.total_revenue || '0.00'}</p>
-                            </div>
-                        </div>
-                        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow relative overflow-hidden">
-                            {/* Alert state if there are pending approvals */}
-                            {(stats?.pending_approvals > 0) && <div className="absolute top-0 right-0 w-2 h-full bg-red-500"></div>}
-                            <div className="w-12 h-12 bg-red-100 text-red-600 rounded-xl flex items-center justify-center text-2xl font-black mb-4">📋</div>
-                            <div>
-                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Pending Approvals</p>
-                                <p className="text-3xl font-black text-slate-900">{stats?.pending_approvals || '0'}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        {/* LEFT COLUMN: Pending Actions */}
-                        <div className="lg:col-span-2 space-y-8">
-                            
-                            {/* Pending Teachers Section */}
-                            <div>
-                                <div className="flex justify-between items-center mb-4">
-                                    <h3 className="text-xl font-black text-slate-900">Pending Teacher Applications</h3>
-                                    <Link href={route('admin.teachers.index')} className="text-sm font-bold text-blue-600 hover:text-blue-800 transition-colors">View All &rarr;</Link>
-                                </div>
-                                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-                                    {pending_teachers.length > 0 ? (
-                                        <ul className="divide-y divide-slate-100">
-                                            {pending_teachers.map(teacher => (
-                                                <li key={teacher.id} className="p-5 hover:bg-slate-50 transition-colors flex items-center justify-between gap-4">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="w-10 h-10 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center font-bold">
-                                                            {teacher.name.charAt(0)}
-                                                        </div>
-                                                        <div>
-                                                            <h4 className="font-bold text-slate-900">{teacher.name}</h4>
-                                                            <p className="text-sm font-medium text-slate-500">{teacher.institution}</p>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <Link href={route('admin.teachers.index')} className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors">
-                                                            Review
-                                                        </Link>
-                                                    </div>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    ) : (
-                                        <div className="p-10 text-center text-slate-500">
-                                            <div className="text-3xl mb-2">✅</div>
-                                            <p className="font-bold">All caught up! No pending applications.</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                        </div>
-
-                        {/* RIGHT COLUMN: System Activity */}
-                        <div className="lg:col-span-1">
-                            <h3 className="text-xl font-black text-slate-900 mb-4">System Activity</h3>
-                            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
-                                {recent_activity.length > 0 ? (
-                                    <div className="space-y-6">
-                                        {recent_activity.map((activity, idx) => (
-                                            <div key={idx} className="flex gap-4">
-                                                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0 mt-0.5">
-                                                    {activity.icon || '🔔'}
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm text-slate-900 font-medium leading-tight">
-                                                        <span className="font-bold">{activity.user_name}</span> {activity.action}
-                                                    </p>
-                                                    <p className="text-xs text-slate-400 font-bold mt-1">{activity.created_at}</p>
-                                                </div>
-                                            </div>
-                                        ))}
+                    <div className="admin-card__body admin-card__body--flush">
+                        {recent_users.length === 0 ? (
+                            <p className="admin-empty" style={{ padding: '2rem' }}>
+                                No users yet.
+                            </p>
+                        ) : (
+                            recent_users.map((u) => (
+                                <div key={u.id} className="admin-list-row">
+                                    <div>
+                                        <p className="admin-list-row__title">
+                                            {u.first_name} {u.last_name}
+                                        </p>
+                                        <p className="admin-list-row__meta">{u.email}</p>
                                     </div>
-                                ) : (
-                                    <p className="text-slate-500 text-center font-medium py-8">No recent activity.</p>
-                                )}
-                                <Link href={route('admin.audit-logs.index')} className="block w-full text-center mt-6 pt-4 border-t border-slate-100 text-sm font-bold text-slate-400 hover:text-slate-900 transition-colors">
-                                    View Full Audit Log
-                                </Link>
-                            </div>
-                        </div>
+                                    <div className="admin-list-row__badges">
+                                        <AdminBadge value={u.status} />
+                                        <AdminBadge type="role" value={u.role} />
+                                    </div>
+                                </div>
+                            ))
+                        )}
                     </div>
+                </div>
 
+                {/* TODO[backend]: Recent shells — wired via AdminDashboardController → certifications table */}
+                <div className="admin-card admin-card--chunky">
+                    <div className="admin-card__header">
+                        <h3>Recent shells</h3>
+                        <Link href={route('admin.certifications.index')} className="admin-card__link">
+                            View all
+                        </Link>
+                    </div>
+                    <div className="admin-card__body admin-card__body--flush">
+                        {recent_certifications.length === 0 ? (
+                            <p className="admin-empty" style={{ padding: '2rem' }}>
+                                No certifications yet.
+                            </p>
+                        ) : (
+                            recent_certifications.map((c) => (
+                                <div key={c.id} className="admin-list-row">
+                                    <div>
+                                        <p className="admin-list-row__title">{c.title}</p>
+                                        <p className="admin-list-row__meta">
+                                            by{' '}
+                                            {c.creator
+                                                ? `${c.creator.first_name} ${c.creator.last_name}`
+                                                : 'Unknown'}
+                                            {' · '}
+                                            {formatDate(c.created_at)}
+                                        </p>
+                                    </div>
+                                    <AdminBadge value={c.status} />
+                                </div>
+                            ))
+                        )}
+                    </div>
                 </div>
             </div>
         </AdminLayout>

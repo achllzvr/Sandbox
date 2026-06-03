@@ -1,268 +1,347 @@
-import { useState } from 'react';
+/**
+ * Admin User Management
+ *
+ * WIRED (backend + database):
+ * - User list + pagination → UserManagementController@index → users table
+ * - Search, role filter, approvals tab filters → query params on index
+ * - Teacher approve/decline → verifyTeacher → users table
+ * - Creator invite → invite → user_invitations + email
+ *
+ * TODO (backend + database):
+ * - Suspend / View / Archive buttons → no endpoints yet (placeholder modal)
+ * - Admin role invite → CreateUserFlow UI-only success
+ * - Affiliation dropdown → hardcoded list, needs institutions table/API
+ */
 import { Head, Link, router } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
-import Modal from '@/Components/Modal'; // Using your existing Inertia Modal component
+import AdminModal from '@/Components/Admin/AdminModal';
+import AdminUserCard from '@/Components/Admin/AdminUserCard';
+import CreateUserFlow from '@/Components/Admin/CreateUserFlow';
+import { useCallback, useEffect, useState } from 'react';
 
-/*
- * ==============================================================================
- * BACKEND INTEGRATION NOTES FOR MIKE & AHMAD:
- * ==============================================================================
- * Controller: app/Http/Controllers/Admin/UserManagementController.php @ index
- * Required Props:
- * 1. users: Array (or paginated object) of { id, name, email, role, status, joined_at }
- * * Endpoints for Actions:
- * route('admin.users.suspend', id)
- * route('admin.users.archive', id)
- * ==============================================================================
- */
+const APPROVAL_STATUS_OPTIONS = [
+    { value: '', label: 'All approval statuses' },
+    { value: 'pending', label: 'Not yet approved' },
+    { value: 'approved', label: 'Approved' },
+    { value: 'declined', label: 'Declined' },
+];
 
-export default function UserManagement({ auth, users = [] }) {
-    const [searchQuery, setSearchQuery] = useState('');
-    const [roleFilter, setRoleFilter] = useState('All');
-    
-    // Modal States
-    const [suspendModalOpen, setSuspendModalOpen] = useState(false);
-    const [archiveModalOpen, setArchiveModalOpen] = useState(false);
-    const [selectedUser, setSelectedUser] = useState(null);
-    const [isProcessing, setIsProcessing] = useState(false);
+export default function UsersIndex({ users, filters, pending_approvals_count = 0 }) {
+    const [activeTab, setActiveTab] = useState(filters?.tab === 'approvals' ? 'approvals' : 'management');
+    const [showCreateFlow, setShowCreateFlow] = useState(false);
+    const [reviewUser, setReviewUser] = useState(null);
+    const [actionModal, setActionModal] = useState(null);
+    const [search, setSearch] = useState(filters?.search || '');
+    const [roleFilter, setRoleFilter] = useState(filters?.role || '');
+    const [approvalFilter, setApprovalFilter] = useState(filters?.approval_status || '');
+    const [verifyProcessing, setVerifyProcessing] = useState(false);
 
-    // Filter Logic
-    const filteredUsers = (users.data || users).filter(user => {
-        const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                              user.email.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesRole = roleFilter === 'All' || user.role === roleFilter;
-        return matchesSearch && matchesRole;
-    });
+    useEffect(() => {
+        setActiveTab(filters?.tab === 'approvals' ? 'approvals' : 'management');
+    }, [filters?.tab]);
 
-    // Action Handlers
-    const confirmSuspend = (user) => {
-        setSelectedUser(user);
-        setSuspendModalOpen(true);
-    };
+    useEffect(() => {
+        setApprovalFilter(filters?.approval_status || '');
+    }, [filters?.approval_status]);
 
-    const confirmArchive = (user) => {
-        setSelectedUser(user);
-        setArchiveModalOpen(true);
-    };
+    const applyFilters = useCallback(
+        (nextSearch, nextRole, nextTab, nextApprovalStatus) => {
+            const tab = nextTab ?? activeTab;
+            router.get(
+                route('admin.users.index'),
+                {
+                    tab: tab === 'approvals' ? 'approvals' : undefined,
+                    search: nextSearch || undefined,
+                    role: tab === 'management' ? nextRole || undefined : undefined,
+                    approval_status: tab === 'approvals' ? nextApprovalStatus || undefined : undefined,
+                },
+                { preserveState: true, replace: true }
+            );
+        },
+        [activeTab]
+    );
 
-    const executeSuspend = () => {
-        setIsProcessing(true);
-        router.post(route('admin.users.suspend', selectedUser.id), {}, {
-            preserveScroll: true,
-            onFinish: () => {
-                setIsProcessing(false);
-                setSuspendModalOpen(false);
-                setSelectedUser(null);
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (search !== (filters?.search || '')) {
+                applyFilters(search, roleFilter, activeTab, approvalFilter);
             }
-        });
-    };
+        }, 400);
+        return () => clearTimeout(timer);
+    }, [search, filters?.search, roleFilter, activeTab, approvalFilter, applyFilters]);
 
-    const executeArchive = () => {
-        setIsProcessing(true);
-        router.post(route('admin.users.archive', selectedUser.id), {}, {
-            preserveScroll: true,
-            onFinish: () => {
-                setIsProcessing(false);
-                setArchiveModalOpen(false);
-                setSelectedUser(null);
+    function switchTab(tab) {
+        setActiveTab(tab);
+        applyFilters(search, roleFilter, tab, approvalFilter);
+    }
+
+    function handleRoleChange(e) {
+        const value = e.target.value;
+        setRoleFilter(value);
+        applyFilters(search, value, 'management', approvalFilter);
+    }
+
+    function handleApprovalStatusChange(e) {
+        const value = e.target.value;
+        setApprovalFilter(value);
+        applyFilters(search, roleFilter, 'approvals', value);
+    }
+
+    function handleVerify(action) {
+        if (!reviewUser || verifyProcessing) {
+            return;
+        }
+
+        setVerifyProcessing(true);
+
+        router.put(
+            route('admin.users.verify-teacher', reviewUser.id),
+            { action },
+            {
+                preserveScroll: true,
+                onSuccess: () => setReviewUser(null),
+                onFinish: () => setVerifyProcessing(false),
             }
-        });
-    };
+        );
+    }
 
-    const getStatusBadge = (status) => {
-        switch(status?.toLowerCase()) {
-            case 'active': return "bg-emerald-100 text-emerald-700 border-emerald-200";
-            case 'suspended': return "bg-red-100 text-red-700 border-red-200";
-            case 'archived': return "bg-slate-100 text-slate-500 border-slate-200";
-            case 'pending': return "bg-amber-100 text-amber-700 border-amber-200";
-            default: return "bg-slate-100 text-slate-600 border-slate-200";
-        }
-    };
+    // TODO: Replace placeholder modal with real suspend/view/archive API calls.
+    function handleUserAction(type, user) {
+        setActionModal({ type, user });
+    }
 
-    const getRoleBadge = (role) => {
-        switch(role?.toLowerCase()) {
-            case 'admin': return "bg-purple-100 text-purple-700";
-            case 'creator': return "bg-orange-100 text-orange-700";
-            case 'teacher': return "bg-blue-100 text-blue-700";
-            default: return "bg-stone-100 text-stone-600";
-        }
-    };
+    const isPendingTeacher = (user) =>
+        user.role === 'teacher' &&
+        (user.status === 'pending_verification' || user.status === 'pending');
+
+    const topbarTabs = (
+        <div className="admin-page-tabs admin-page-tabs--topbar">
+            <button
+                type="button"
+                className={`admin-page-tabs__btn ${activeTab === 'management' ? 'admin-page-tabs__btn--active' : ''}`}
+                onClick={() => switchTab('management')}
+            >
+                User management
+            </button>
+            <button
+                type="button"
+                className={`admin-page-tabs__btn ${activeTab === 'approvals' ? 'admin-page-tabs__btn--active' : ''}`}
+                onClick={() => switchTab('approvals')}
+            >
+                Approvals
+                {pending_approvals_count > 0 && (
+                    <span className="admin-page-tabs__count">{pending_approvals_count}</span>
+                )}
+            </button>
+        </div>
+    );
 
     return (
-        <AdminLayout user={auth.user} header={<h2 className="font-black text-2xl text-slate-900 tracking-tighter">User Management</h2>}>
+        <AdminLayout pageTitle="User Management" topbarEnd={topbarTabs}>
             <Head title="User Management" />
 
-            <div className="py-8 bg-slate-50 min-h-screen selection:bg-slate-800 selection:text-white">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    
-                    {/* Header */}
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 gap-4">
-                        <div>
-                            <p className="text-slate-500 text-lg font-medium">
-                                Manage access, roles, and status for all Sandbox accounts.
-                            </p>
-                        </div>
-                        <button className="bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 px-6 rounded-xl shadow-md transition-colors shrink-0">
-                            + Invite User
-                        </button>
-                    </div>
-
-                    {/* Data Table Card */}
-                    <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
-                        
-                        {/* Controls */}
-                        <div className="p-6 border-b border-slate-200 bg-slate-50/50 flex flex-col md:flex-row gap-4 justify-between items-center">
-                            <div className="w-full md:w-96 relative">
-                                <span className="absolute left-4 top-3 text-slate-400">🔍</span>
-                                <input 
-                                    type="text" 
-                                    placeholder="Search users by name or email..." 
-                                    className="w-full pl-11 pr-4 py-3 rounded-xl border-slate-200 focus:border-slate-800 focus:ring-slate-800 text-sm font-medium"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                />
-                            </div>
-                            <div className="w-full md:w-auto flex gap-3">
-                                <select 
-                                    className="rounded-xl border-slate-200 focus:border-slate-800 focus:ring-slate-800 text-sm font-bold text-slate-600 w-full md:w-auto"
-                                    value={roleFilter}
-                                    onChange={(e) => setRoleFilter(e.target.value)}
-                                >
-                                    <option value="All">All Roles</option>
-                                    <option value="Student">Student</option>
-                                    <option value="Teacher">Teacher</option>
-                                    <option value="Creator">Creator</option>
-                                    <option value="Admin">Admin</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        {/* Table */}
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse min-w-[900px]">
-                                <thead>
-                                    <tr className="bg-white border-b border-slate-200 text-xs font-black text-slate-400 uppercase tracking-widest">
-                                        <th className="p-6">User Profile</th>
-                                        <th className="p-6">Role</th>
-                                        <th className="p-6">Status</th>
-                                        <th className="p-6">Joined Date</th>
-                                        <th className="p-6 text-right">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    {filteredUsers.length > 0 ? filteredUsers.map((u) => (
-                                        <tr key={u.id} className="hover:bg-slate-50/50 transition-colors group">
-                                            <td className="p-6">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-10 h-10 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-lg shrink-0">
-                                                        {u.name.charAt(0)}
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-bold text-slate-900">{u.name}</p>
-                                                        <p className="text-xs font-medium text-slate-500">{u.email}</p>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="p-6">
-                                                <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-bold ${getRoleBadge(u.role)}`}>
-                                                    {u.role || 'Student'}
-                                                </span>
-                                            </td>
-                                            <td className="p-6">
-                                                <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold border ${getStatusBadge(u.status)}`}>
-                                                    {u.status || 'Active'}
-                                                </span>
-                                            </td>
-                                            <td className="p-6 text-sm font-medium text-slate-600">
-                                                {u.joined_at || 'Oct 24, 2026'}
-                                            </td>
-                                            <td className="p-6 text-right space-x-2">
-                                                {/* Edit Button */}
-                                                <button className="text-slate-400 hover:text-blue-600 font-medium p-2 transition-colors">
-                                                    ✎ Edit
-                                                </button>
-                                                
-                                                {/* Suspend Button (Hide if already suspended) */}
-                                                {u.status?.toLowerCase() !== 'suspended' && (
-                                                    <button onClick={() => confirmSuspend(u)} className="text-slate-400 hover:text-amber-600 font-medium p-2 transition-colors">
-                                                        ⏸ Suspend
-                                                    </button>
-                                                )}
-
-                                                {/* Archive/Delete Button */}
-                                                <button onClick={() => confirmArchive(u)} className="text-slate-400 hover:text-red-600 font-medium p-2 transition-colors">
-                                                    🗑 Archive
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    )) : (
-                                        <tr>
-                                            <td colSpan="5" className="p-12 text-center text-slate-500 font-medium">
-                                                No users match your search or filter.
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+            {/* Sub-toolbar: search wired to backend; Add user opens invite flow */}
+            <div className="admin-subtoolbar">
+                <input
+                    type="search"
+                    placeholder={
+                        activeTab === 'approvals'
+                            ? 'Search teacher accounts...'
+                            : 'Search users...'
+                    }
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="input-field admin-subtoolbar__search"
+                    aria-label="Search users"
+                />
+                {activeTab === 'management' ? (
+                    <select
+                        value={roleFilter}
+                        onChange={handleRoleChange}
+                        className="input-field admin-subtoolbar__role"
+                        aria-label="Filter by role"
+                    >
+                        <option value="">All roles</option>
+                        <option value="user">Student</option>
+                        <option value="content_creator">Content creator</option>
+                        <option value="teacher">Teacher</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                ) : (
+                    <select
+                        value={approvalFilter}
+                        onChange={handleApprovalStatusChange}
+                        className="input-field admin-subtoolbar__role"
+                        aria-label="Filter by approval status"
+                    >
+                        {APPROVAL_STATUS_OPTIONS.map((opt) => (
+                            <option key={opt.value || 'all'} value={opt.value}>
+                                {opt.label}
+                            </option>
+                        ))}
+                    </select>
+                )}
+                {activeTab === 'management' && (
+                    <button
+                        type="button"
+                        onClick={() => setShowCreateFlow(true)}
+                        className="admin-btn admin-btn--primary admin-subtoolbar__add"
+                    >
+                        + Add new user
+                    </button>
+                )}
             </div>
 
-            {/* MODAL: SUSPEND ACCOUNT */}
-            <Modal show={suspendModalOpen} onClose={() => !isProcessing && setSuspendModalOpen(false)} maxWidth="sm">
-                <div className="p-8 text-center">
-                    <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center text-3xl mx-auto mb-6 shadow-inner">⏸</div>
-                    <h2 className="text-2xl font-black text-slate-900 mb-2">Suspend Account?</h2>
-                    <p className="text-slate-500 font-medium mb-8 text-sm">
-                        Are you sure you want to suspend <strong className="text-slate-900">{selectedUser?.name}</strong>? They will temporarily lose access to Sandbox until the suspension is lifted.
-                    </p>
-                    <div className="flex gap-3">
-                        <button 
-                            onClick={() => setSuspendModalOpen(false)} 
-                            disabled={isProcessing}
-                            className="flex-1 bg-white border-2 border-slate-200 hover:border-slate-300 text-slate-600 font-bold py-3 rounded-xl transition-colors disabled:opacity-50"
-                        >
-                            Cancel
-                        </button>
-                        <button 
-                            onClick={executeSuspend}
-                            disabled={isProcessing}
-                            className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl shadow-md transition-colors disabled:opacity-50"
-                        >
-                            {isProcessing ? 'Processing...' : 'Yes, Suspend'}
-                        </button>
+            {/* User list cards — suspend/view/archive actions TODO[backend] */}
+            <div className="admin-user-list">
+                {users.data.length === 0 ? (
+                    <div className="admin-card admin-card--chunky">
+                        <p className="admin-empty" style={{ padding: '3rem' }}>
+                            {activeTab === 'approvals'
+                                ? 'No teacher accounts match this filter.'
+                                : 'No users found.'}
+                        </p>
                     </div>
-                </div>
-            </Modal>
+                ) : (
+                    users.data.map((u) => (
+                        <AdminUserCard
+                            key={u.id}
+                            user={u}
+                            mode={activeTab === 'approvals' ? 'approvals' : 'management'}
+                            onReview={setReviewUser}
+                            onAction={handleUserAction}
+                        />
+                    ))
+                )}
+            </div>
 
-            {/* MODAL: ARCHIVE ACCOUNT */}
-            <Modal show={archiveModalOpen} onClose={() => !isProcessing && setArchiveModalOpen(false)} maxWidth="sm">
-                <div className="p-8 text-center">
-                    <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-3xl mx-auto mb-6 shadow-inner">🗑</div>
-                    <h2 className="text-2xl font-black text-slate-900 mb-2">Archive Account?</h2>
-                    <p className="text-slate-500 font-medium mb-8 text-sm">
-                        Are you sure you want to permanently archive <strong className="text-slate-900">{selectedUser?.name}</strong>? This action will disable their account and preserve their data for audit purposes.
+            {users.last_page > 1 && (
+                <nav className="admin-pagination">
+                    {users.links.map((link, i) => (
+                        <Link
+                            key={i}
+                            href={link.url || '#'}
+                            preserveScroll
+                            className={
+                                link.active
+                                    ? 'admin-pagination__active'
+                                    : !link.url
+                                      ? 'admin-pagination__disabled'
+                                      : ''
+                            }
+                            dangerouslySetInnerHTML={{ __html: link.label }}
+                        />
+                    ))}
+                </nav>
+            )}
+
+            {/* Create user flow — creator invite wired; admin invite TODO[backend] */}
+            <CreateUserFlow show={showCreateFlow} onClose={() => setShowCreateFlow(false)} />
+
+            {/* Teacher review modal — approve/decline wired; credential preview uses storage path */}
+            <AdminModal
+                show={!!reviewUser}
+                onClose={() => setReviewUser(null)}
+                title="Review teacher registration"
+                subtitle={
+                    reviewUser
+                        ? `${reviewUser.first_name} ${reviewUser.last_name} · ${reviewUser.email}`
+                        : ''
+                }
+                size="xl"
+                footer={
+                    isPendingTeacher(reviewUser || {}) ? (
+                        <div className="admin-btn-group">
+                            <button
+                                type="button"
+                                onClick={() => handleVerify('decline')}
+                                disabled={verifyProcessing}
+                                className="admin-btn admin-btn--danger admin-btn--sm"
+                            >
+                                Decline
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleVerify('approve')}
+                                disabled={verifyProcessing}
+                                className="admin-btn admin-btn--success admin-btn--sm"
+                            >
+                                {verifyProcessing ? 'Saving…' : 'Approve & activate'}
+                            </button>
+                        </div>
+                    ) : (
+                        <button
+                            type="button"
+                            className="admin-btn admin-btn--ghost"
+                            onClick={() => setReviewUser(null)}
+                        >
+                            Close
+                        </button>
+                    )
+                }
+            >
+                {reviewUser?.affiliation && (
+                    <p className="admin-table__muted" style={{ marginBottom: '12px' }}>
+                        Affiliation: <strong>{reviewUser.affiliation}</strong>
                     </p>
-                    <div className="flex gap-3">
-                        <button 
-                            onClick={() => setArchiveModalOpen(false)} 
-                            disabled={isProcessing}
-                            className="flex-1 bg-white border-2 border-slate-200 hover:border-slate-300 text-slate-600 font-bold py-3 rounded-xl transition-colors disabled:opacity-50"
-                        >
-                            Cancel
-                        </button>
-                        <button 
-                            onClick={executeArchive}
-                            disabled={isProcessing}
-                            className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl shadow-md transition-colors disabled:opacity-50"
-                        >
-                            {isProcessing ? 'Archiving...' : 'Yes, Archive'}
-                        </button>
-                    </div>
+                )}
+                <div className="admin-modal__body--preview" style={{ minHeight: '50vh' }}>
+                    {reviewUser?.institutional_credentials_url ? (
+                        reviewUser.institutional_credentials_url.endsWith('.pdf') ? (
+                            <iframe
+                                src={`/storage/${reviewUser.institutional_credentials_url}`}
+                                className="w-full"
+                                style={{ height: '55vh', border: 'none', borderRadius: '12px' }}
+                                title="Credential document"
+                            />
+                        ) : (
+                            <img
+                                src={`/storage/${reviewUser.institutional_credentials_url}`}
+                                alt="Credential document"
+                                style={{ maxWidth: '100%', maxHeight: '55vh', objectFit: 'contain' }}
+                            />
+                        )
+                    ) : (
+                        <p className="admin-table__muted">No credential file attached.</p>
+                    )}
                 </div>
-            </Modal>
+            </AdminModal>
 
+            {/* TODO[backend]: Suspend / archive / view user — placeholder modal only */}
+            <AdminModal
+                show={!!actionModal}
+                onClose={() => setActionModal(null)}
+                title={
+                    actionModal?.type === 'suspend'
+                        ? 'Suspend user'
+                        : actionModal?.type === 'archive'
+                          ? 'Archive user'
+                          : 'View user'
+                }
+                footer={
+                    <button
+                        type="button"
+                        className="admin-btn admin-btn--ghost"
+                        onClick={() => setActionModal(null)}
+                    >
+                        Close
+                    </button>
+                }
+            >
+                <p className="admin-table__muted">
+                    {actionModal?.user && (
+                        <>
+                            {actionModal.user.first_name} {actionModal.user.last_name} (
+                            {actionModal.user.email})
+                        </>
+                    )}
+                </p>
+                <p className="admin-table__muted" style={{ marginTop: '12px' }}>
+                    <span className="admin-todo-badge admin-todo-badge--inline">
+                        TODO: wire {actionModal?.type} action to backend
+                    </span>
+                </p>
+            </AdminModal>
         </AdminLayout>
     );
 }
