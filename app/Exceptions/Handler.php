@@ -3,6 +3,9 @@
 namespace App\Exceptions;
 
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Http\Exceptions\PostTooLargeException;
+use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -45,6 +48,14 @@ class Handler extends ExceptionHandler
     {
         $this->reportable(function (Throwable $e) {
             //
+        });
+
+        $this->renderable(function (PostTooLargeException $e, Request $request) {
+            $message = app()->environment('local')
+                ? 'The file is too large. Maximum upload size is 50 MB. Restart the dev server with: composer dev:serve'
+                : 'The file is too large. Maximum upload size is 50 MB.';
+
+            throw ValidationException::withMessages(['file' => $message]);
         });
     }
 }

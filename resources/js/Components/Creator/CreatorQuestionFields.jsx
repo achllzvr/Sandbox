@@ -26,7 +26,25 @@ export default function CreatorQuestionFields({ question, onChange }) {
                 <select
                     className="input-field"
                     value={type}
-                    onChange={(e) => patch({ interaction_type: e.target.value })}
+                    onChange={(e) => {
+                        const nextType = e.target.value;
+                        const next = { ...question, interaction_type: nextType };
+
+                        if (nextType === 'multiple_choice') {
+                            next.answers = question.answers?.length === 4
+                                ? question.answers
+                                : [
+                                    { answer_text: '', is_correct: true },
+                                    { answer_text: '', is_correct: false },
+                                    { answer_text: '', is_correct: false },
+                                    { answer_text: '', is_correct: false },
+                                ];
+                        } else {
+                            delete next.answers;
+                        }
+
+                        onChange(next);
+                    }}
                 >
                     {INTERACTION_TYPES.map((opt) => (
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -41,7 +59,6 @@ export default function CreatorQuestionFields({ question, onChange }) {
                     value={question.question_text}
                     onChange={(e) => patch({ question_text: e.target.value })}
                     className="input-field"
-                    required
                 />
             </label>
 
@@ -73,7 +90,6 @@ export default function CreatorQuestionFields({ question, onChange }) {
                                         patch({ answers });
                                     }}
                                     className="input-field"
-                                    required
                                 />
                             </div>
                         </label>

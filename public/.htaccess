@@ -5,6 +5,12 @@
 
     RewriteEngine On
 
+    # Allow module uploads up to 50 MB (app validation); 64M leaves room for multipart overhead.
+    <IfModule mod_php.c>
+        php_value upload_max_filesize 64M
+        php_value post_max_size 64M
+    </IfModule>
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

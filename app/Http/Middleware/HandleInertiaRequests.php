@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\UserModuleProgress;
 use App\Services\GamificationService;
+use App\Support\UploadLimits;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 use Tightenco\Ziggy\Ziggy;
@@ -63,6 +64,7 @@ class HandleInertiaRequests extends Middleware
                 'voucher_email_sent' => fn () => $request->session()->get('voucher_email_sent'),
                 'xendit_checkout_url' => fn () => $request->session()->get('xendit_checkout_url'),
             ],
+            'uploadLimits' => fn () => UploadLimits::forFrontend(),
             'ziggy' => function () use ($request) {
                 return array_merge((new Ziggy)->toArray(), [
                     'location' => $request->url(),

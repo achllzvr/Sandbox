@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Module;
 use App\Models\ModuleContent;
 use App\Http\Requests\Creator\StoreModuleContentRequest;
+use App\Support\YoutubeEmbedUrl;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -17,7 +18,7 @@ class ModuleContentController extends Controller {
         $url = null;
 
         if ($data['type'] === 'youtube_embed') {
-            $url = $data['youtube_url'];
+            $url = YoutubeEmbedUrl::toEmbedUrl($data['youtube_url']);
         } else if ($request->hasFile('file')) {
             $url = $request->file('file')->store('module-contents', 'public');
         }

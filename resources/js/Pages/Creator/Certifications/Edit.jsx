@@ -11,7 +11,9 @@ import {
     formatEstimatedDurationLabel,
     parseEstimatedDurationFromStored,
 } from '@/utils/estimatedDuration';
-import { Head, useForm, router } from '@inertiajs/react';
+import { MAX_MODULE_UPLOAD_LABEL, validateModuleUploadFile } from '@/Utils/uploadLimits';
+import { prepareQuestionsForStore, validateQuestionsForStore } from '@/Utils/questionFormUtils';
+import { Head, useForm, router, usePage } from '@inertiajs/react';
 import {
     ArrowLeft,
     ChevronDown,
@@ -40,6 +42,7 @@ const COMPONENT_TYPE_LABELS = {
 };
 
 export default function Edit({ certification }) {
+    const { uploadLimits, errors: pageErrors } = usePage().props;
     // ── Extract modules from default lesson ────────────────
     const defaultLesson = certification.lessons?.[0] || null;
     const modules = defaultLesson ? (defaultLesson.modules || []) : [];
@@ -94,6 +97,22 @@ export default function Edit({ certification }) {
         file: null,
         youtube_url: '',
     });
+
+    const closeAddComponentModal = () => {
+        if (addComponentForm.processing) {
+            return;
+        }
+
+        setShowAddComponentModal(false);
+        addComponentForm.clearErrors();
+    };
+
+    useEffect(() => {
+        if (pageErrors?.file) {
+            setShowAddComponentModal(true);
+            addComponentForm.setError('file', pageErrors.file);
+        }
+    }, [pageErrors?.file]);
 
     const shellSettingsForm = useForm({
         title: certification.title ?? '',
@@ -186,12 +205,23 @@ export default function Edit({ certification }) {
     // ── Component Handlers ─────────────────────────────────
     const submitAddComponent = (e) => {
         e.preventDefault();
+
+        const fileError = validateModuleUploadFile(addComponentForm.data.file);
+        if (fileError) {
+            addComponentForm.setError('file', fileError);
+            return;
+        }
+
         addComponentForm.post(route('creator.modules.contents.store', activeModule.id), {
+            forceFormData: true,
             onSuccess: () => {
                 setShowAddComponentModal(false);
                 addComponentForm.reset();
             },
-            preserveScroll: true
+            onError: () => {
+                setShowAddComponentModal(true);
+            },
+            preserveScroll: true,
         });
     };
 
@@ -260,43 +290,26 @@ export default function Edit({ certification }) {
 
     const submitQuiz = (e) => {
         e.preventDefault();
-        if (questionsList.length < 5) {
-            alert('Practice quiz must contain at least 5 questions.');
+
+        const validationError = validateQuestionsForStore(questionsList, {
+            minCount: 5,
+            label: 'Practice quiz',
+        });
+
+        if (validationError) {
+            alert(validationError);
             return;
         }
 
-        // Validate
-        for (let i = 0; i < questionsList.length; i++) {
-            const q = questionsList[i];
-            if (!q.question_text.trim()) {
-                alert(`Question ${i + 1} has empty text.`);
-                return;
-            }
-
-            const type = q.interaction_type || 'multiple_choice';
-            if (type !== 'multiple_choice') {
-                continue;
-            }
-
-            let correctCount = 0;
-            for (let j = 0; j < (q.answers || []).length; j++) {
-                if (!q.answers[j].answer_text.trim()) {
-                    alert(`Choice option ${j + 1} for Question ${i + 1} is empty.`);
-                    return;
-                }
-                if (q.answers[j].is_correct) correctCount++;
-            }
-            if (correctCount !== 1) {
-                alert(`Question ${i + 1} must have exactly one correct answer selected.`);
-                return;
-            }
-        }
-
         router.post(route('creator.modules.questions.store', activeModule.id), {
-            questions: questionsList
+            questions: prepareQuestionsForStore(questionsList),
         }, {
             onSuccess: () => setShowQuizModal(false),
-            preserveScroll: true
+            onError: (errors) => {
+                const firstError = Object.values(errors)[0];
+                alert(typeof firstError === 'string' ? firstError : 'Could not save the short test. Check your questions and try again.');
+            },
+            preserveScroll: true,
         });
     };
 
@@ -997,12 +1010,12 @@ export default function Edit({ certification }) {
 
             <AdminModal
                 show={showAddComponentModal}
-                onClose={() => setShowAddComponentModal(false)}
+                onClose={closeAddComponentModal}
                 title="Add a module component"
                 size="lg"
                 footer={(
                     <>
-                        <button type="button" onClick={() => setShowAddComponentModal(false)} className="admin-btn admin-btn--ghost">Cancel</button>
+                        <button type="button" onClick={closeAddComponentModal} className="admin-btn admin-btn--ghost">Cancel</button>
                         <button type="submit" form="add-component-form" disabled={addComponentForm.processing} className="admin-btn admin-btn--primary">
                             {addComponentForm.processing ? 'Uploading…' : 'Proceed'}
                         </button>
@@ -1010,6 +1023,12 @@ export default function Edit({ certification }) {
                 )}
             >
                 <form id="add-component-form" onSubmit={submitAddComponent}>
+                    {!uploadLimits?.serverConfigured ? (
+                        <div className="admin-flash admin-flash--warning" style={{ marginBottom: '16px' }}>
+                            This server only accepts uploads up to {Math.round((uploadLimits?.effectiveMaxBytes || 0) / (1024 * 1024))} MB.
+                            Stop the server and restart with <code>php artisan serve</code> from the project root so large files can upload.
+                        </div>
+                    ) : null}
                     <label className="admin-field">
                         <span className="admin-field__label">Component type</span>
                         <select value={addComponentForm.data.type} onChange={(e) => addComponentForm.setData('type', e.target.value)} className="input-field">
@@ -1031,8 +1050,40 @@ export default function Edit({ certification }) {
                     ) : (
                         <label className="admin-field">
                             <span className="admin-field__label">File</span>
-                            <input type="file" onChange={(e) => addComponentForm.setData('file', e.target.files[0])} required className="input-field" />
-                            <p className="admin-field__hint">Accepted: PPTX, PDF, and video files.</p>
+                            <input
+                                type="file"
+                                accept={
+                                    addComponentForm.data.type === 'ppt'
+                                        ? '.ppt,.pptx,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation'
+                                        : addComponentForm.data.type === 'pdf'
+                                          ? '.pdf,application/pdf'
+                                          : 'video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm'
+                                }
+                                onChange={(e) => {
+                                    const file = e.target.files[0] ?? null;
+                                    addComponentForm.setData('file', file);
+                                    addComponentForm.clearErrors('file');
+
+                                    const fileError = validateModuleUploadFile(file);
+                                    if (fileError) {
+                                        addComponentForm.setError('file', fileError);
+                                    }
+                                }}
+                                required
+                                className="input-field"
+                            />
+                            <p className="admin-field__hint">
+                                {addComponentForm.data.type === 'ppt'
+                                    ? `Accepted: .ppt and .pptx PowerPoint files. Max ${MAX_MODULE_UPLOAD_LABEL}.`
+                                    : addComponentForm.data.type === 'pdf'
+                                      ? `Accepted: PDF files only. Max ${MAX_MODULE_UPLOAD_LABEL}.`
+                                      : `Accepted: MP4, MOV, and WebM video files. Max ${MAX_MODULE_UPLOAD_LABEL}.`}
+                            </p>
+                            {addComponentForm.errors.file ? (
+                                <p className="admin-field__hint" style={{ color: 'var(--admin-danger-text)' }}>
+                                    {addComponentForm.errors.file}
+                                </p>
+                            ) : null}
                         </label>
                     )}
                 </form>
@@ -1141,7 +1192,7 @@ export default function Edit({ certification }) {
                     </>
                 )}
             >
-                <form id="quiz-form" onSubmit={submitQuiz}>
+                <form id="quiz-form" onSubmit={submitQuiz} noValidate>
                     {questionsList.map((q, qIdx) => (
                         <div key={qIdx} className="admin-question-block">
                             <div className="admin-toolbar" style={{ marginBottom: '8px' }}>

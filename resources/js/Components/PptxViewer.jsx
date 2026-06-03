@@ -30,6 +30,18 @@ export default function PptxViewer({ fileUrl }) {
                 if (!res.ok) throw new Error(`Failed to fetch file (${res.status})`);
 
                 const blob = await res.blob();
+                const header = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
+                const isZipArchive = header[0] === 0x50 && header[1] === 0x4b;
+
+                if (!isZipArchive) {
+                    const contentType = res.headers.get('content-type') || blob.type || '';
+                    if (contentType.includes('pdf')) {
+                        throw new Error('This file is a PDF. Use the Document component type, or upload a .pptx PowerPoint file.');
+                    }
+
+                    throw new Error('This file is not a valid PowerPoint (.pptx). Upload a .pptx file or use the Document type for PDFs.');
+                }
+
                 const zip  = await JSZip.loadAsync(blob);
 
                 // ── Collect media blobs (images inside ppt/media/) ──────
