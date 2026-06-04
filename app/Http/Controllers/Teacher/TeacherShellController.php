@@ -8,6 +8,7 @@ use App\Models\Cohort;
 use App\Models\EnrollmentRequest;
 use App\Models\Voucher;
 use App\Services\Teacher\CohortBatchAnalyticsService;
+use App\Support\FormatAppDateTime;
 use Inertia\Inertia;
 
 class TeacherShellController extends Controller
@@ -49,7 +50,7 @@ class TeacherShellController extends Controller
 
         $batches = $cohorts->map(fn (Cohort $cohort) => [
             'id' => $cohort->id,
-            'label' => $cohort->cohort_name ?? 'Batch '.$cohort->created_at->format('M j, Y'),
+            'label' => $cohort->cohort_name ?? 'Batch '.(FormatAppDateTime::format($cohort->created_at) ?? ''),
         ])->values();
 
         $voucherGroups = $cohorts->map(function (Cohort $cohort) use ($teacherId, $certification) {
@@ -68,8 +69,10 @@ class TeacherShellController extends Controller
                         'status' => $voucher->is_used ? 'claimed' : 'unclaimed',
                         'student_name' => $student ? trim($student->first_name.' '.$student->last_name) : null,
                         'student_email' => $student?->email,
-                        'updated_at' => $voucher->used_at?->format('M d, Y; g:ia')
-                            ?? $voucher->updated_at?->format('M d, Y; g:ia'),
+                        'recipient_email' => $voucher->recipient_email,
+                        'final_exam_unlocked_at' => FormatAppDateTime::format($voucher->final_exam_unlocked_at),
+                        'updated_at' => FormatAppDateTime::format($voucher->used_at)
+                            ?? FormatAppDateTime::format($voucher->updated_at),
                         'email_status' => $voucher->is_used
                             ? null
                             : ($voucher->sent_to_email_at ? 'sent' : 'sendable'),
@@ -78,7 +81,7 @@ class TeacherShellController extends Controller
 
             return [
                 'batch_id' => $cohort->id,
-                'batch_label' => 'Bought on '.$cohort->created_at->format('M j, Y'),
+                'batch_label' => 'Bought on '.(FormatAppDateTime::format($cohort->created_at) ?? ''),
                 'vouchers' => $vouchers->values()->all(),
             ];
         })->filter(fn (array $group) => count($group['vouchers']) > 0)->values();
@@ -138,7 +141,7 @@ class TeacherShellController extends Controller
 
                 return [
                     'id' => $request->id,
-                    'purchased_at' => $request->reviewed_at?->format('M d, Y') ?? '—',
+                    'purchased_at' => FormatAppDateTime::format($request->reviewed_at) ?? '—',
                     'shell_title' => $request->certification->title ?? 'N/A',
                     'batch_label' => $cohort?->cohort_name ?? 'Batch',
                     'quantity' => $request->quantity,

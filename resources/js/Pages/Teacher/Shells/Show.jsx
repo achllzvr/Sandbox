@@ -1,7 +1,7 @@
 /**
  * Teacher shell landing — batch data + voucher manager for one purchased shell.
  */
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import TeacherBatchDataPanel from '@/Components/Teacher/TeacherBatchDataPanel';
@@ -63,6 +63,39 @@ export default function Show({
         );
         setEmailModalView('success');
     }, [flash?.voucher_email_sent]);
+
+    useEffect(() => {
+        const unlocked = flash?.voucher_exams_unlocked;
+        if (!unlocked?.count) {
+            return;
+        }
+
+        showAppToast('success', `Final exam unlocked for ${unlocked.count} voucher${unlocked.count === 1 ? '' : 's'}.`);
+        setSelectedIds([]);
+    }, [flash?.voucher_exams_unlocked]);
+
+    function handleUnlockExams() {
+        if (selectedIds.length === 0) {
+            return;
+        }
+
+        router.post(route('teacher.vouchers.unlock-final-exams'), { voucher_ids: selectedIds }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setVoucherGroups((current) =>
+                    current.map((group) => ({
+                        ...group,
+                        vouchers: group.vouchers.map((voucher) =>
+                            selectedIds.includes(voucher.id)
+                                ? { ...voucher, final_exam_unlocked_at: new Date().toISOString() }
+                                : voucher,
+                        ),
+                    })),
+                );
+            },
+            onError: () => showAppToast('error', 'Could not unlock final exams for the selected vouchers.'),
+        });
+    }
 
     function handleToggleSelect(id) {
         setSelectedIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
@@ -160,7 +193,7 @@ export default function Show({
                         onToggleSelectAll={handleToggleSelectAll}
                         onSendEmail={handleSendEmail}
                         onCancelSelection={() => setSelectedIds([])}
-                        onUnlockExams={() => showAppToast('info', 'Unlock final exams for selected vouchers — coming soon.')}
+                        onUnlockExams={handleUnlockExams}
                     />
                 </div>
 

@@ -42,13 +42,13 @@ class ReviewAssistantChatService
 
         $apiKey = trim((string) config('services.gemini.key', ''));
 
-        if ($apiKey === '') {
+        if ($apiKey === '' && ! GeminiKeyPool::isConfigured()) {
             throw new \RuntimeException('Review assistant is not configured.');
         }
 
         $parts = $this->buildParts($module, $cert, $user, $history, $message);
 
-        return $this->geminiClient->generateText($parts, $apiKey, (int) config('services.gemini.timeout', 45));
+        return $this->geminiClient->generateText($parts, null, (int) config('services.gemini.timeout', 45));
     }
 
     /**

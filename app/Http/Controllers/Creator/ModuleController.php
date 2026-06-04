@@ -19,14 +19,22 @@ class ModuleController extends Controller
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
+            'lesson_id' => ['nullable', 'integer', 'exists:lessons,id'],
         ]);
 
-        $lesson = $certification->lessons()->firstOrCreate([
-            'title' => 'Course Modules',
-        ], [
-            'created_by_user_id' => auth()->id(),
-            'description' => 'Default lesson containing all modules',
-        ]);
+        $lesson = isset($validated['lesson_id'])
+            ? $certification->lessons()->where('id', $validated['lesson_id'])->first()
+            : null;
+
+        if (! $lesson) {
+            $lesson = $certification->lessons()->firstOrCreate([
+                'title' => 'Course Modules',
+            ], [
+                'created_by_user_id' => auth()->id(),
+                'description' => 'Default lesson containing all modules',
+                'order_index' => 1,
+            ]);
+        }
 
         $orderIndex = $lesson->modules()->count() + 1;
 

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Certification;
 use App\Services\EnrollmentService;
 use App\Services\ExamService;
+use App\Services\FinalExamAccessService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -14,6 +15,7 @@ class ExamController extends Controller
     public function __construct(
         private ExamService $examService,
         private EnrollmentService $enrollmentService,
+        private FinalExamAccessService $finalExamAccess,
     ) {
     }
 
@@ -21,6 +23,21 @@ class ExamController extends Controller
     {
         $user = $request->user();
         $this->enrollmentService->assertEnrolled($user, (int) $certification->id);
+
+        $totalModules = (int) DB::table('modules')
+            ->join('lessons', 'modules.lesson_id', '=', 'lessons.id')
+            ->where('lessons.certification_id', $certification->id)
+            ->count();
+
+        $completedModules = (int) DB::table('user_module_progress')
+            ->join('modules', 'user_module_progress.module_id', '=', 'modules.id')
+            ->join('lessons', 'modules.lesson_id', '=', 'lessons.id')
+            ->where('lessons.certification_id', $certification->id)
+            ->where('user_module_progress.user_id', $user->id)
+            ->where('user_module_progress.is_completed', 1)
+            ->count();
+
+        $this->finalExamAccess->assertCanTakeFinalExam($user, $certification, $completedModules, $totalModules);
 
         if (DB::table('exam_attempts')
             ->where('user_id', $user->id)

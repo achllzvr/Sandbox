@@ -12,6 +12,7 @@
 import { Head, router, useForm, Link } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import AdminBadge from '@/Components/Admin/AdminBadge';
+import AdminConfirmModal from '@/Components/Admin/AdminConfirmModal';
 import AdminModal from '@/Components/Admin/AdminModal';
 import ModuleContentPreview from '@/Components/ModuleContentPreview';
 import { useState } from 'react';
@@ -50,6 +51,7 @@ const StatPill = ({ label, value }) => (
 
 export default function Show({ certification }) {
     const [action, setAction] = useState(null);
+    const [approveOpen, setApproveOpen] = useState(false);
     const [openLessons, setOpenLessons] = useState({});
     const [openModules, setOpenModules] = useState({});
     const [previewItem, setPreviewItem] = useState(null);
@@ -64,11 +66,10 @@ export default function Show({ certification }) {
     const toggleModule = (id) => setOpenModules((prev) => ({ ...prev, [id]: !prev[id] }));
 
     const handleApprove = () => {
-        if (confirm('Approve and publish this certification?')) {
-            router.put(route('admin.certifications.status.update', certification.id), {
-                status: 'published',
-            });
-        }
+        router.put(route('admin.certifications.status.update', certification.id), {
+            status: 'published',
+        });
+        setApproveOpen(false);
     };
 
     const submitForm = (e) => {
@@ -113,7 +114,7 @@ export default function Show({ certification }) {
                             <div className="admin-btn-group">
                                 <button
                                     type="button"
-                                    onClick={handleApprove}
+                                    onClick={() => setApproveOpen(true)}
                                     className="admin-btn admin-btn--success"
                                 >
                                     Approve & Publish
@@ -439,6 +440,15 @@ export default function Show({ certification }) {
                     )}
                 </form>
             </AdminModal>
+
+            <AdminConfirmModal
+                show={approveOpen}
+                onClose={() => setApproveOpen(false)}
+                title="Approve and publish"
+                body={`Approve and publish "${certification.title}"? It will become available in the shop.`}
+                confirmLabel="Approve & publish"
+                onConfirm={handleApprove}
+            />
         </AdminLayout>
     );
 }

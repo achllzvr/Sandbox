@@ -19,5 +19,13 @@ class StoreLessonRequest extends FormRequest
             'description' => ['nullable', 'string'],
         ];
     }
-}
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->route('certification')) {
+            $this->merge([
+                'certification_id' => $this->route('certification')->id,
+            ]);
+        }
+    }
+}

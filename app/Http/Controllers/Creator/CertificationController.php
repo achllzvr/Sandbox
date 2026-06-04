@@ -55,6 +55,7 @@ class CertificationController extends Controller
         $certification->load([
             'learningMaterials.quizQuestions.answers',
             'examQuestions.answers',
+            'diagnosticQuestions.answers',
             'quizQuestions.answers',
             'lessons.modules.contents',
             'lessons.modules.questions.answers',
@@ -62,7 +63,7 @@ class CertificationController extends Controller
 
         return Inertia::render('Creator/Certifications/Edit', [
             'certification' => $certification,
-            'hasSystemApiKey' => ! empty(config('services.gemini.key')),
+            'hasSystemApiKey' => \App\Services\Ai\GeminiKeyPool::isConfigured(),
         ]);
     }
 
@@ -93,6 +94,38 @@ class CertificationController extends Controller
         });
 
         return redirect()->back()->with('success', 'Final Exam questions saved successfully!');
+    }
+
+    public function storeDiagnosticQuestions(\Illuminate\Http\Request $request, Certification $certification)
+    {
+        $this->authorizeCertificationEditing($certification);
+
+        $validated = $request->validate([
+            'questions' => ['required', 'array', 'min:1', 'max:5'],
+            'questions.*.question_text' => ['required', 'string'],
+            'questions.*.answers' => ['required', 'array', 'size:4'],
+            'questions.*.answers.*.answer_text' => ['required', 'string'],
+            'questions.*.answers.*.is_correct' => ['required', 'boolean'],
+        ]);
+
+        DB::transaction(function () use ($validated, $certification) {
+            $certification->diagnosticQuestions()->delete();
+
+            foreach ($validated['questions'] as $index => $qData) {
+                $question = $certification->diagnosticQuestions()->create([
+                    'question_text' => $qData['question_text'],
+                    'question_type' => 'diagnostic',
+                    'order_index' => $index + 1,
+                    'created_by_user_id' => auth()->id(),
+                ]);
+
+                foreach ($qData['answers'] as $aData) {
+                    $question->answers()->create($aData);
+                }
+            }
+        });
+
+        return redirect()->back()->with('success', 'Quick Test questions saved successfully!');
     }
 
     public function update(UpdateCertificationRequest $request, Certification $certification)

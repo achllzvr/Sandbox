@@ -981,6 +981,14 @@ function ShowShellPage() {
                     openModule(module, { review: options.review || (completed && !options.retake) });
                 }}
                 onTakeFinalExam={() => {
+                    if (!examStatus.can_take_final_exam && !examStatus.has_passed && !examStatus.has_attempted) {
+                        if (examStatus.exam_state === 'waiting_instructor') {
+                            showAppToastError('Your instructor has not unlocked the final exam yet.');
+                        } else {
+                            showAppToastError('Complete all sandboxes before taking the final exam.');
+                        }
+                        return;
+                    }
                     if (examStatus.has_attempted && !examStatus.has_passed) {
                         setAssessmentResult({
                             type: 'exam',

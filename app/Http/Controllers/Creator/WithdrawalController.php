@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Creator;
 use App\Http\Controllers\Controller;
 use App\Models\CreatorEarning;
 use App\Models\WithdrawalRequest;
+use App\Services\CreatorEarningService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class WithdrawalController extends Controller
@@ -14,10 +14,9 @@ class WithdrawalController extends Controller
     public function index()
     {
         $userId = auth()->id();
+        $earningService = app(CreatorEarningService::class);
 
-        $availableBalance = (float) CreatorEarning::where('creator_id', $userId)
-            ->where('status', 'available')
-            ->sum('amount');
+        $availableBalance = $earningService->availableBalance($userId);
 
         $pendingBalance = (float) CreatorEarning::where('creator_id', $userId)
             ->where('status', 'pending')
@@ -52,14 +51,13 @@ class WithdrawalController extends Controller
     public function store(Request $request)
     {
         $userId = auth()->id();
+        $earningService = app(CreatorEarningService::class);
 
         $validated = $request->validate([
             'amount' => ['required', 'numeric', 'min:1'],
         ]);
 
-        $available = (float) CreatorEarning::where('creator_id', $userId)
-            ->where('status', 'available')
-            ->sum('amount');
+        $available = $earningService->availableBalance($userId);
 
         if ($validated['amount'] > $available) {
             return back()->with('error', 'Withdrawal amount exceeds available balance.');

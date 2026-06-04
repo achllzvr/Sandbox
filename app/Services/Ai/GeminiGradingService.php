@@ -73,16 +73,14 @@ PROMPT;
 
     private function callGemini(string $systemPrompt, string $userPrompt): ?array
     {
-        $apiKey = trim((string) config('services.gemini.key', ''));
-
-        if ($apiKey === '') {
+        if (! GeminiKeyPool::isConfigured()) {
             return null;
         }
 
         try {
             $decoded = $this->geminiClient->generateJson(
                 [['text' => $systemPrompt."\n\n".$userPrompt]],
-                $apiKey,
+                null,
                 min(30, (int) config('services.gemini.timeout', 45)),
             );
 

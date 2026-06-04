@@ -9,11 +9,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->unsignedBigInteger('default_certification_id')->nullable()->after('role');
-            $table->foreign('default_certification_id')
-                ->references('id')
-                ->on('certifications')
-                ->nullOnDelete();
+            if (! Schema::hasColumn('users', 'default_certification_id')) {
+                $table->unsignedBigInteger('default_certification_id')->nullable()->after('role');
+                $table->foreign('default_certification_id')
+                    ->references('id')
+                    ->on('certifications')
+                    ->nullOnDelete();
+            }
         });
     }
 

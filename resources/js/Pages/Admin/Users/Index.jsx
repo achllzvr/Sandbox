@@ -12,6 +12,23 @@ const APPROVAL_STATUS_OPTIONS = [
     { value: 'declined', label: 'Declined' },
 ];
 
+const SORT_OPTIONS = [
+    { value: 'newest', label: 'Newest first' },
+    { value: 'oldest', label: 'Oldest first' },
+    { value: 'name_asc', label: 'Name A–Z' },
+    { value: 'name_desc', label: 'Name Z–A' },
+    { value: 'email_asc', label: 'Email A–Z' },
+    { value: 'role_asc', label: 'Role A–Z' },
+    { value: 'status_asc', label: 'Status A–Z' },
+];
+
+const STATUS_OPTIONS = [
+    { value: '', label: 'All statuses' },
+    { value: 'active', label: 'Active' },
+    { value: 'inactive', label: 'Inactive' },
+    { value: 'suspended', label: 'Suspended' },
+];
+
 export default function UsersIndex({ users, filters, pending_approvals_count = 0 }) {
     const [activeTab, setActiveTab] = useState(filters?.tab === 'approvals' ? 'approvals' : 'management');
     const [showCreateFlow, setShowCreateFlow] = useState(false);
@@ -19,6 +36,8 @@ export default function UsersIndex({ users, filters, pending_approvals_count = 0
     const [search, setSearch] = useState(filters?.search || '');
     const [roleFilter, setRoleFilter] = useState(filters?.role || '');
     const [approvalFilter, setApprovalFilter] = useState(filters?.approval_status || '');
+    const [statusFilter, setStatusFilter] = useState(filters?.status || '');
+    const [sortFilter, setSortFilter] = useState(filters?.sort || 'newest');
     const [verifyProcessing, setVerifyProcessing] = useState(false);
 
     useEffect(() => {
@@ -30,7 +49,7 @@ export default function UsersIndex({ users, filters, pending_approvals_count = 0
     }, [filters?.approval_status]);
 
     const applyFilters = useCallback(
-        (nextSearch, nextRole, nextTab, nextApprovalStatus) => {
+        (nextSearch, nextRole, nextTab, nextApprovalStatus, nextStatus, nextSort) => {
             const tab = nextTab ?? activeTab;
             router.get(
                 route('admin.users.index'),
@@ -39,6 +58,8 @@ export default function UsersIndex({ users, filters, pending_approvals_count = 0
                     search: nextSearch || undefined,
                     role: tab === 'management' ? nextRole || undefined : undefined,
                     approval_status: tab === 'approvals' ? nextApprovalStatus || undefined : undefined,
+                    status: tab === 'management' ? nextStatus || undefined : undefined,
+                    sort: nextSort || undefined,
                 },
                 { preserveState: true, replace: true }
             );
@@ -49,27 +70,39 @@ export default function UsersIndex({ users, filters, pending_approvals_count = 0
     useEffect(() => {
         const timer = setTimeout(() => {
             if (search !== (filters?.search || '')) {
-                applyFilters(search, roleFilter, activeTab, approvalFilter);
+                applyFilters(search, roleFilter, activeTab, approvalFilter, statusFilter, sortFilter);
             }
         }, 400);
         return () => clearTimeout(timer);
-    }, [search, filters?.search, roleFilter, activeTab, approvalFilter, applyFilters]);
+    }, [search, filters?.search, roleFilter, activeTab, approvalFilter, statusFilter, sortFilter, applyFilters]);
 
     function switchTab(tab) {
         setActiveTab(tab);
-        applyFilters(search, roleFilter, tab, approvalFilter);
+        applyFilters(search, roleFilter, tab, approvalFilter, statusFilter, sortFilter);
     }
 
     function handleRoleChange(e) {
         const value = e.target.value;
         setRoleFilter(value);
-        applyFilters(search, value, 'management', approvalFilter);
+        applyFilters(search, value, 'management', approvalFilter, statusFilter, sortFilter);
     }
 
     function handleApprovalStatusChange(e) {
         const value = e.target.value;
         setApprovalFilter(value);
-        applyFilters(search, roleFilter, 'approvals', value);
+        applyFilters(search, roleFilter, 'approvals', value, statusFilter, sortFilter);
+    }
+
+    function handleStatusChange(e) {
+        const value = e.target.value;
+        setStatusFilter(value);
+        applyFilters(search, roleFilter, 'management', approvalFilter, value, sortFilter);
+    }
+
+    function handleSortChange(e) {
+        const value = e.target.value;
+        setSortFilter(value);
+        applyFilters(search, roleFilter, activeTab, approvalFilter, statusFilter, value);
     }
 
     function handleVerify(action) {
@@ -135,18 +168,44 @@ export default function UsersIndex({ users, filters, pending_approvals_count = 0
                     aria-label="Search users"
                 />
                 {activeTab === 'management' ? (
-                    <select
-                        value={roleFilter}
-                        onChange={handleRoleChange}
-                        className="input-field admin-subtoolbar__role"
-                        aria-label="Filter by role"
-                    >
-                        <option value="">All roles</option>
-                        <option value="user">Student</option>
-                        <option value="content_creator">Content creator</option>
-                        <option value="teacher">Teacher</option>
-                        <option value="admin">Admin</option>
-                    </select>
+                    <>
+                        <select
+                            value={roleFilter}
+                            onChange={handleRoleChange}
+                            className="input-field admin-subtoolbar__role"
+                            aria-label="Filter by role"
+                        >
+                            <option value="">All roles</option>
+                            <option value="user">Student</option>
+                            <option value="content_creator">Content creator</option>
+                            <option value="teacher">Teacher</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                        <select
+                            value={statusFilter}
+                            onChange={handleStatusChange}
+                            className="input-field admin-subtoolbar__role"
+                            aria-label="Filter by status"
+                        >
+                            {STATUS_OPTIONS.map((opt) => (
+                                <option key={opt.value || 'all'} value={opt.value}>
+                                    {opt.label}
+                                </option>
+                            ))}
+                        </select>
+                        <select
+                            value={sortFilter}
+                            onChange={handleSortChange}
+                            className="input-field admin-subtoolbar__role"
+                            aria-label="Sort users"
+                        >
+                            {SORT_OPTIONS.map((opt) => (
+                                <option key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                </option>
+                            ))}
+                        </select>
+                    </>
                 ) : (
                     <select
                         value={approvalFilter}

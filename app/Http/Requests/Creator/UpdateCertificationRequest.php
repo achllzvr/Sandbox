@@ -9,6 +9,7 @@ class UpdateCertificationRequest extends FormRequest
     public function authorize()
     {
         $certification = $this->route('certification');
+
         return request()->user()->id === $certification->created_by_user_id
             && in_array($certification->status, ['draft', 'revision_required']);
     }
@@ -26,6 +27,9 @@ class UpdateCertificationRequest extends FormRequest
             'learning_objectives' => ['sometimes', 'string'],
             'prerequisites' => ['sometimes', 'string'],
             'tags' => ['sometimes', 'array'],
+            'badge_type' => ['sometimes', 'in:professional_certificate,custom'],
+            'badge_label' => ['required_if:badge_type,custom', 'nullable', 'string', 'max:255'],
+            'show_verified_icon' => ['sometimes', 'boolean'],
         ];
     }
 }

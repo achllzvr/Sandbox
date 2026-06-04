@@ -26,13 +26,25 @@ class VoucherController extends Controller
 
         $voucher->update(['is_used' => true, 'used_by' => $userId, 'used_at' => now()]);
 
-        Enrollment::firstOrCreate([
-            'user_id' => $userId,
-            'certification_id' => $voucher->certification_id,
-        ], [
-            'enrolled_at' => now(),
-            'status' => 'active',
-        ]);
+        $enrollment = Enrollment::updateOrCreate(
+            [
+                'user_id' => $userId,
+                'certification_id' => $voucher->certification_id,
+            ],
+            [
+                'enrolled_at' => now(),
+                'status' => 'active',
+                'access_type' => 'voucher',
+            ],
+        );
+
+        if ($enrollment->access_type !== 'voucher') {
+            $enrollment->update(['access_type' => 'voucher']);
+        }
+
+        if ($voucher->final_exam_unlocked_at) {
+            app(\App\Services\FinalExamAccessService::class)->applyUnlockFromVoucher($voucher);
+        }
 
         if ($voucher->cohort_id) {
             DB::table('cohort_students')->updateOrInsert(

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\WithdrawalRequest;
 use App\Services\AuditLogService;
+use App\Services\CreatorEarningService;
 use Illuminate\Http\Request;
 
 class WithdrawalController extends Controller
@@ -36,7 +37,13 @@ class WithdrawalController extends Controller
             }
         }
 
+        $wasPaid = $withdrawal->status === 'paid';
+
         $withdrawal->update($updates);
+
+        if (! $wasPaid && $dbStatus === 'paid') {
+            app(CreatorEarningService::class)->settleWithdrawalPaid($withdrawal->fresh());
+        }
 
         $auditLog->log('withdrawal_status_updated', auth()->id(), [
             'withdrawal_id' => $withdrawal->id,

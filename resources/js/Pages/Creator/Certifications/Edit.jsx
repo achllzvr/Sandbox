@@ -4,6 +4,7 @@ import AdminBadge from '@/Components/Admin/AdminBadge';
 import AdminModal from '@/Components/Admin/AdminModal';
 import ModuleContentPreview from '@/Components/ModuleContentPreview';
 import GenerateQuizModal from '@/Components/Creator/GenerateQuizModal';
+import CreatorShellEditorExtras from '@/Components/Creator/CreatorShellEditorExtras';
 import CreatorGeminiPanel from '@/Components/Creator/CreatorGeminiPanel';
 import CreatorQuestionFields from '@/Components/Creator/CreatorQuestionFields';
 import CreatorStatusPill from '@/Components/Creator/CreatorStatusPill';
@@ -46,11 +47,11 @@ const COMPONENT_TYPE_LABELS = {
 export default function Edit({ certification, hasSystemApiKey = false }) {
     const { uploadLimits, errors: pageErrors } = usePage().props;
     // ── Extract modules from default lesson ────────────────
-    const defaultLesson = certification.lessons?.[0] || null;
-    const modules = defaultLesson ? (defaultLesson.modules || []) : [];
-    
-    // Sort modules by order_index
-    const sortedModules = [...modules].sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+    const lessons = [...(certification.lessons || [])].sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+    const defaultLesson = lessons[0] || null;
+    const sortedModules = lessons.flatMap((lesson) =>
+        [...(lesson.modules || [])].sort((a, b) => (a.order_index || 0) - (b.order_index || 0)),
+    );
 
     // ── Navigation / Page View State ───────────────────────
     // If activeModuleId is set, we display the Sandbox Creator Studio view.
@@ -77,7 +78,8 @@ export default function Edit({ certification, hasSystemApiKey = false }) {
     // ── Forms ──────────────────────────────────────────────
     const addSandboxForm = useForm({
         title: '',
-        description: ''
+        description: '',
+        lesson_id: defaultLesson?.id ?? '',
     });
 
     const updateModuleForm = useForm({
@@ -129,6 +131,9 @@ export default function Edit({ certification, hasSystemApiKey = false }) {
         learning_objectives: certification.learning_objectives ?? '',
         price: certification.price != null ? String(certification.price) : '',
         cover_image: null,
+        badge_type: certification.badge_type ?? 'professional_certificate',
+        badge_label: certification.badge_label ?? '',
+        show_verified_icon: certification.show_verified_icon !== false,
     });
 
     const [coverPreview, setCoverPreview] = useState(certification.thumbnail_url ?? null);
@@ -144,6 +149,9 @@ export default function Edit({ certification, hasSystemApiKey = false }) {
             learning_objectives: certification.learning_objectives ?? '',
             price: certification.price != null ? String(certification.price) : '',
             cover_image: null,
+            badge_type: certification.badge_type ?? 'professional_certificate',
+            badge_label: certification.badge_label ?? '',
+            show_verified_icon: certification.show_verified_icon !== false,
         });
         setCoverPreview(certification.thumbnail_url ?? null);
     }, [certification.id, certification.updated_at]);
@@ -478,6 +486,9 @@ export default function Edit({ certification, hasSystemApiKey = false }) {
             estimated_duration: estimatedDurationForStore(shellSettingsForm.data.estimated_duration),
             learning_objectives: shellSettingsForm.data.learning_objectives,
             price: shellSettingsForm.data.price === '' ? 0 : shellSettingsForm.data.price,
+            badge_type: shellSettingsForm.data.badge_type,
+            badge_label: shellSettingsForm.data.badge_type === 'custom' ? shellSettingsForm.data.badge_label : null,
+            show_verified_icon: shellSettingsForm.data.show_verified_icon,
         };
 
         if (shellSettingsForm.data.cover_image) {
@@ -839,6 +850,12 @@ export default function Edit({ certification, hasSystemApiKey = false }) {
                         </div>
                     ) : null}
 
+                    <CreatorShellEditorExtras
+                        certification={certification}
+                        isEditable={isEditable}
+                        shellSettingsForm={shellSettingsForm}
+                    />
+
                     <div className="creator-editor-grid creator-editor-grid--overview">
                         <div className="admin-card admin-card--chunky">
                             <div className="admin-card__header">
@@ -1138,6 +1155,18 @@ export default function Edit({ certification, hasSystemApiKey = false }) {
                 )}
             >
                 <form id="add-sandbox-form" onSubmit={submitAddSandbox}>
+                    <label className="admin-field">
+                        <span className="admin-field__label">Shell unit</span>
+                        <select
+                            className="input-field"
+                            value={addSandboxForm.data.lesson_id}
+                            onChange={(e) => addSandboxForm.setData('lesson_id', e.target.value)}
+                        >
+                            {lessons.map((lesson) => (
+                                <option key={lesson.id} value={lesson.id}>{lesson.title}</option>
+                            ))}
+                        </select>
+                    </label>
                     <label className="admin-field">
                         <span className="admin-field__label">Sandbox title</span>
                         <input type="text" value={addSandboxForm.data.title} onChange={(e) => addSandboxForm.setData('title', e.target.value)} required className="input-field" placeholder="e.g. Introduction to JSX" />

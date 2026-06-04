@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Module;
 use App\Services\Ai\GeminiClient;
 use App\Services\Ai\GeminiContentSynthesizer;
+use App\Services\Ai\GeminiKeyPool;
 use App\Services\Ai\GeminiQuestionNormalizer;
 use App\Services\Ai\GeminiUploadProcessor;
 use App\Support\UploadLimits;
@@ -65,6 +66,8 @@ class GeminiController extends Controller
             return $apiKey;
         }
 
+        $geminiKey = $request->input('api_key_type') === 'system' ? null : $apiKey;
+
         $sourceUnitCount = $this->countSourceUnits($request, $uploads);
         set_time_limit(min(180, 60 + ($sourceUnitCount * 45)));
 
@@ -72,7 +75,7 @@ class GeminiController extends Controller
         $allowedTypes = $this->questionNormalizer->allowedTypes($request->input('question_types'));
 
         try {
-            $studyContext = $this->buildStudyContext($request, $uploads, $apiKey);
+            $studyContext = $this->buildStudyContext($request, $uploads, $geminiKey);
         } catch (\InvalidArgumentException $e) {
             return response()->json(['error' => $e->getMessage()], 422);
         } catch (\RuntimeException $e) {
@@ -86,7 +89,7 @@ class GeminiController extends Controller
         ];
 
         try {
-            $decoded = $this->geminiClient->generateJson($parts, $apiKey, min(90, (int) config('services.gemini.timeout', 45) + 30));
+            $decoded = $this->geminiClient->generateJson($parts, $geminiKey, min(90, (int) config('services.gemini.timeout', 45) + 30));
 
             if (! isset($decoded['questions']) || ! is_array($decoded['questions'])) {
                 return response()->json(['error' => 'Invalid JSON structure returned by AI (missing "questions" key).'], 500);
@@ -127,14 +130,13 @@ class GeminiController extends Controller
             return $apiKey;
         }
 
-        $apiKey = trim((string) config('services.gemini.key', ''));
-        if ($apiKey === '') {
+        if (! \App\Services\Ai\GeminiKeyPool::isConfigured()) {
             return response()->json([
                 'error' => 'The Sandbox system API Key is not configured yet. Please ask the administrator to configure it, or switch to "Use Personal API Key".',
             ], 422);
         }
 
-        return $apiKey;
+        return '';
     }
 
     /**
@@ -167,8 +169,10 @@ class GeminiController extends Controller
     /**
      * @param  array<int, \Illuminate\Http\UploadedFile>  $uploads
      */
-    private function buildStudyContext(Request $request, array $uploads, string $apiKey): string
+    private function buildStudyContext(Request $request, array $uploads, ?string $apiKey): string
     {
+        $effectiveKey = $apiKey ?? GeminiKeyPool::systemKeys()[0] ?? '';
+
         if ($request->input('source_mode') === 'module_contents') {
             $module = Module::findOrFail((int) $request->input('module_id'));
 
@@ -176,7 +180,7 @@ class GeminiController extends Controller
                 $module,
                 $request->user(),
                 $request->input('module_content_ids'),
-                $apiKey,
+                $effectiveKey,
             );
         }
 
@@ -184,6 +188,6 @@ class GeminiController extends Controller
             return $this->contentSynthesizer->buildFromText((string) $request->input('text_prompt'));
         }
 
-        return $this->contentSynthesizer->buildFromUploads($uploads, $apiKey);
+        return $this->contentSynthesizer->buildFromUploads($uploads, $effectiveKey);
     }
 }

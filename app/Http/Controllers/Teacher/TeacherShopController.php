@@ -7,12 +7,15 @@ use App\Models\Certification;
 use App\Models\EnrollmentRequest;
 use App\Models\Voucher;
 use App\Services\XenditService;
+use App\Support\FormatAppDateTime;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class TeacherShopController extends Controller
 {
-    public function __construct(private XenditService $xenditService) {}
+    public function __construct(private XenditService $xenditService)
+    {
+    }
 
     public function index(Request $request)
     {
@@ -85,9 +88,7 @@ class TeacherShopController extends Controller
                 'quantity' => $order->quantity,
                 'amount' => (float) $order->amount,
                 'payment_reference' => $order->payment_reference,
-                'requested_at' => $order->requested_at
-                    ? $order->requested_at->format('M d, Y; g:ia')
-                    : 'N/A',
+                'requested_at' => FormatAppDateTime::format($order->requested_at) ?? 'N/A',
             ]);
 
         return Inertia::render('Teacher/Shop/Index', [

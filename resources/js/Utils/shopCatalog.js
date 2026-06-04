@@ -39,18 +39,23 @@ export function shopProviderLine(cert) {
 }
 
 export function shopBadgeLabel(cert) {
-    const title = (cert?.title ?? '').toLowerCase();
-
-    if (title.includes('java') || title.includes('github')) {
-        return 'GitHub Verified Certificate';
+    if (cert?.badge_type === 'custom' && cert?.badge_label?.trim()) {
+        return cert.badge_label.trim();
     }
 
     return 'Professional Certificate';
 }
 
+export function shopShowVerifiedIcon(cert) {
+    if (cert?.badge_type === 'custom') {
+        return cert.show_verified_icon !== false;
+    }
+
+    return true;
+}
+
 export function shopIsGithubVerified(cert) {
-    const title = (cert?.title ?? '').toLowerCase();
-    return title.includes('java') || title.includes('github');
+    return shopShowVerifiedIcon(cert);
 }
 
 export function shopDurationLabel(cert) {

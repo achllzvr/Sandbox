@@ -123,38 +123,58 @@ function FinalExamBubble({ isAllCompleted, examStatus = {}, hasDraft = false, on
         attempt_count: attemptCount = 0,
         latest_score: latestScore,
         latest_total: latestTotal,
+        exam_state: examState = 'locked_modules',
+        can_take_final_exam: canTakeFinalExam = false,
     } = examStatus;
 
     let ctaLabel = 'Start final exam';
     let ctaAction = onTakeFinalExam;
     let subcopy = 'An exam covering all previous sandboxes';
+    let bubbleState = 'locked';
 
     if (hasPassed) {
         ctaLabel = 'View Hermit certificate';
         ctaAction = onViewCertificate;
         subcopy = 'You passed! View your Hermit certificate anytime.';
+        bubbleState = 'ready';
     } else if (hasAttempted) {
         ctaLabel = 'View exam results';
         ctaAction = onViewExamResults ?? onTakeFinalExam;
         subcopy = `Final exam submitted · Score ${latestScore ?? '—'}/${latestTotal ?? '—'}`;
-    } else if (hasDraft) {
-        ctaLabel = 'Continue final exam';
-        subcopy = 'Pick up where you left off — your progress is saved.';
-    } else if (attemptCount > 0) {
-        subcopy = `An exam covering all previous sandboxes · ${attemptCount} attempt${attemptCount === 1 ? '' : 's'} recorded`;
+        bubbleState = 'ready';
+    } else if (! isAllCompleted) {
+        subcopy = 'Finish all sandboxes above to unlock this!';
+        bubbleState = 'locked';
+    } else if (examState === 'waiting_instructor') {
+        subcopy = 'All sandboxes complete — waiting for your instructor to unlock the final exam.';
+        bubbleState = 'waiting';
+    } else if (canTakeFinalExam) {
+        bubbleState = 'ready';
+        if (hasDraft) {
+            ctaLabel = 'Continue final exam';
+            subcopy = 'Pick up where you left off — your progress is saved.';
+        } else if (attemptCount > 0) {
+            subcopy = `An exam covering all previous sandboxes · ${attemptCount} attempt${attemptCount === 1 ? '' : 's'} recorded`;
+        }
     }
+
+    const showCta = bubbleState === 'ready' && (hasPassed || hasAttempted || canTakeFinalExam);
 
     return (
         <div
-            className={`student-shell-map__bubble ${isAllCompleted ? 'student-shell-map__bubble--ready' : 'student-shell-map__bubble--locked'}`}
+            className={`student-shell-map__bubble ${
+                bubbleState === 'ready'
+                    ? 'student-shell-map__bubble--ready'
+                    : bubbleState === 'waiting'
+                      ? 'student-shell-map__bubble--waiting'
+                      : 'student-shell-map__bubble--locked'
+            }`}
             role="dialog"
             aria-label="Final exam"
         >
             <h3 className="student-shell-map__bubble-title">Final exam</h3>
-            <p className="student-shell-map__bubble-sub">
-                {isAllCompleted ? subcopy : 'Finish all sandboxes above to unlock this!'}
-            </p>
-            {isAllCompleted ? (
+            <p className="student-shell-map__bubble-sub">{subcopy}</p>
+            {showCta ? (
                 <button
                     type="button"
                     className={`student-shell-map__play-btn student-shell-map__play-btn--exam ${hasPassed ? 'student-shell-map__play-btn--certificate' : ''}`}
@@ -163,7 +183,9 @@ function FinalExamBubble({ isAllCompleted, examStatus = {}, hasDraft = false, on
                     {ctaLabel}
                 </button>
             ) : (
-                <span className="student-shell-map__status-pill student-shell-map__status-pill--locked">Locked</span>
+                <span className="student-shell-map__status-pill student-shell-map__status-pill--locked">
+                    {bubbleState === 'waiting' ? 'Waiting for instructor' : 'Locked'}
+                </span>
             )}
         </div>
     );
@@ -330,9 +352,8 @@ export default function StudentShellMap({
         setActiveNode((current) => (current === nodeId ? null : nodeId));
     }
 
-    const badgeType = shellMeta.badge_type ?? 'pro';
     const badgeLabel = shellMeta.badge_label ?? 'Professional Certificate';
-    const githubVerified = shellMeta.github_verified ?? badgeType === 'github';
+    const showVerifiedIcon = shellMeta.show_verified_icon !== false;
     const { className: themeKey, style: themeStyle } = resolveShellMapTheme(shellMeta);
 
     let globalModuleIndex = 0;
@@ -371,19 +392,10 @@ export default function StudentShellMap({
                     aria-haspopup="dialog"
                 >
                     <h2 className="student-shell-map__title">{certification.title}</h2>
-                    {githubVerified && (
+                    {showVerifiedIcon && (
                         <CheckCircle2 className="student-shell-map__verified-icon" size={20} strokeWidth={2.5} aria-hidden="true" />
                     )}
-                    {badgeType === 'github' ? (
-                        <span className="student-shell-map__badge student-shell-map__badge--github">
-                            <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" fill="currentColor">
-                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
-                            </svg>
-                            {badgeLabel}
-                        </span>
-                    ) : (
-                        <span className="student-shell-map__badge student-shell-map__badge--pro">{badgeLabel}</span>
-                    )}
+                    <span className="student-shell-map__badge student-shell-map__badge--pro">{badgeLabel}</span>
                 </button>
             </div>
 

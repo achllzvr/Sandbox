@@ -11,9 +11,9 @@ class GeminiClient
     /**
      * @param  array<int, array<string, mixed>>  $parts
      */
-    public function generateText(array $parts, string $apiKey, int $timeoutSeconds = 45): string
+    public function generateText(array $parts, ?string $apiKey = null, int $timeoutSeconds = 45): string
     {
-        $result = $this->generateContent($parts, $apiKey, null, $timeoutSeconds);
+        $result = $this->generateContent($parts, $this->resolveApiKeys($apiKey), null, $timeoutSeconds);
         $text = $result['candidates'][0]['content']['parts'][0]['text'] ?? null;
 
         if (! is_string($text) || trim($text) === '') {
@@ -27,9 +27,9 @@ class GeminiClient
      * @param  array<int, array<string, mixed>>  $parts
      * @return array<string, mixed>
      */
-    public function generateJson(array $parts, string $apiKey, int $timeoutSeconds = 60): array
+    public function generateJson(array $parts, ?string $apiKey = null, int $timeoutSeconds = 60): array
     {
-        $result = $this->generateContent($parts, $apiKey, 'application/json', $timeoutSeconds);
+        $result = $this->generateContent($parts, $this->resolveApiKeys($apiKey), 'application/json', $timeoutSeconds);
         $text = $result['candidates'][0]['content']['parts'][0]['text'] ?? null;
 
         if (! is_string($text) || trim($text) === '') {
@@ -43,6 +43,26 @@ class GeminiClient
         }
 
         return $decoded;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function resolveApiKeys(?string $apiKey): array
+    {
+        $apiKey = trim((string) $apiKey);
+
+        if ($apiKey !== '') {
+            return [$apiKey];
+        }
+
+        $keys = GeminiKeyPool::systemKeys();
+
+        if ($keys === []) {
+            throw new \RuntimeException('Gemini API key is not configured.');
+        }
+
+        return $keys;
     }
 
     /**
@@ -67,64 +87,80 @@ class GeminiClient
 
     /**
      * @param  array<int, array<string, mixed>>  $parts
+     * @param  array<int, string>  $apiKeys
      * @return array<string, mixed>
      */
-    private function generateContent(array $parts, string $apiKey, ?string $responseMimeType, int $timeoutSeconds): array
+    private function generateContent(array $parts, array $apiKeys, ?string $responseMimeType, int $timeoutSeconds): array
     {
         GeminiAvailability::assertAvailable();
 
         $timeoutSeconds = min($timeoutSeconds, (int) config('services.gemini.timeout', 45));
         $lastResponse = null;
-        $quotaHit = false;
+        $allKeysQuotaHit = count($apiKeys) > 1;
 
-        foreach ($this->modelsToTry() as $model) {
-            try {
-                $response = $this->postGenerateContent($model, $parts, $apiKey, $responseMimeType, $timeoutSeconds);
+        foreach ($apiKeys as $keyIndex => $apiKey) {
+            $quotaHitForKey = false;
 
-                if ($response->successful()) {
-                    return $response->json();
+            foreach ($this->modelsToTry() as $model) {
+                try {
+                    $response = $this->postGenerateContent($model, $parts, $apiKey, $responseMimeType, $timeoutSeconds);
+
+                    if ($response->successful()) {
+                        if ($keyIndex > 0) {
+                            Log::info('Gemini request succeeded using rotated API key index '.$keyIndex);
+                        }
+
+                        return $response->json();
+                    }
+
+                    $lastResponse = $response;
+                    $errorMessage = $this->extractErrorMessage($response);
+
+                    if ($response->status() === 401) {
+                        throw new \RuntimeException($errorMessage ?: 'Gemini API key is invalid.');
+                    }
+
+                    if ($this->isQuotaError($response, $errorMessage)) {
+                        $quotaHitForKey = true;
+                        Log::warning("Gemini key index {$keyIndex} model {$model} quota/rate limit: {$errorMessage}");
+
+                        continue;
+                    }
+
+                    $allKeysQuotaHit = false;
+
+                    if ($this->isModelNotFoundError($response, $errorMessage)) {
+                        Log::warning("Gemini model {$model} is unavailable.");
+
+                        continue;
+                    }
+
+                    if ($response->status() === 400) {
+                        throw new \RuntimeException($errorMessage ?: 'Gemini rejected the request.');
+                    }
+
+                    if ($response->status() === 503) {
+                        Log::warning("Gemini model {$model} temporarily unavailable (503).");
+
+                        continue;
+                    }
+
+                    Log::warning("Gemini model {$model} returned status {$response->status()}.");
+                } catch (\RuntimeException $e) {
+                    throw $e;
+                } catch (\Throwable $e) {
+                    $allKeysQuotaHit = false;
+                    Log::warning("Gemini model {$model} exception: ".$e->getMessage());
                 }
+            }
 
-                $lastResponse = $response;
-                $errorMessage = $this->extractErrorMessage($response);
-
-                if ($response->status() === 401) {
-                    throw new \RuntimeException($errorMessage ?: 'Gemini API key is invalid.');
-                }
-
-                if ($this->isQuotaError($response, $errorMessage)) {
-                    $quotaHit = true;
-                    Log::warning("Gemini model {$model} quota/rate limit: {$errorMessage}");
-
-                    continue;
-                }
-
-                if ($this->isModelNotFoundError($response, $errorMessage)) {
-                    Log::warning("Gemini model {$model} is unavailable.");
-
-                    continue;
-                }
-
-                if ($response->status() === 400) {
-                    throw new \RuntimeException($errorMessage ?: 'Gemini rejected the request.');
-                }
-
-                if ($response->status() === 503) {
-                    Log::warning("Gemini model {$model} temporarily unavailable (503).");
-
-                    continue;
-                }
-
-                Log::warning("Gemini model {$model} returned status {$response->status()}.");
-            } catch (\RuntimeException $e) {
-                throw $e;
-            } catch (\Throwable $e) {
-                Log::warning("Gemini model {$model} exception: ".$e->getMessage());
+            if (! $quotaHitForKey) {
+                $allKeysQuotaHit = false;
             }
         }
 
-        if ($quotaHit) {
-            $message = 'Gemini API quota or rate limit reached. Wait a few minutes and try again, or upgrade your Gemini plan.';
+        if ($allKeysQuotaHit) {
+            $message = 'AI is temporarily unavailable — all API keys are rate-limited.';
             GeminiAvailability::markUnavailable($message);
 
             throw new \RuntimeException($message);

@@ -9,6 +9,7 @@ use App\Models\Module;
 use App\Models\ModuleQuizAttempt;
 use App\Services\ContentStreamService;
 use App\Services\EnrollmentService;
+use App\Services\FinalExamAccessService;
 use App\Services\GamificationService;
 use App\Services\QuizService;
 use App\Support\StudentQuizPayload;
@@ -22,6 +23,7 @@ class MyShellController extends Controller
         private ContentStreamService $contentStreamService,
         private GamificationService $gamificationService,
         private QuizService $quizService,
+        private FinalExamAccessService $finalExamAccess,
     ) {
     }
 
@@ -200,21 +202,33 @@ class MyShellController extends Controller
             'latest_passed' => (bool) ($latestAttempt?->passed ?? false),
             'latestAttempt' => $latestAttemptBreakdown,
             'attemptHistory' => $examAttemptHistory,
+            'exam_state' => $this->finalExamAccess->examState(
+                $user,
+                $certification,
+                $progress['completed_modules'],
+                $progress['total_modules'],
+            ),
+            'can_take_final_exam' => $this->finalExamAccess->canTakeFinalExam(
+                $user,
+                $certification,
+                $progress['completed_modules'],
+                $progress['total_modules'],
+            ),
         ];
 
-        $shellMeta = [
-            'id' => (int) $id,
-            'title' => strtoupper($certification->title),
-            'badge_type' => stripos($certification->title, 'java') !== false ? 'github' : 'pro',
-            'badge_label' => stripos($certification->title, 'java') !== false ? 'GITHUB VERIFIED CERTIFICATE' : 'Professional Certificate',
-            'github_verified' => stripos($certification->title, 'java') !== false,
-            'progress' => $progress['percentage'],
-            'completed_modules' => $progress['completed_modules'],
-            'total_modules' => $progress['total_modules'],
-            'cover_image' => \App\Support\CertificationCover::url($certification->thumbnail, (int) $certification->id),
-            'accent_color' => $certification->accent_color,
-            'theme' => ['pink', 'blue', 'green'][((int) $id - 1) % 3],
-        ];
+        $shellMeta = array_merge(
+            [
+                'id' => (int) $id,
+                'title' => strtoupper($certification->title),
+                'progress' => $progress['percentage'],
+                'completed_modules' => $progress['completed_modules'],
+                'total_modules' => $progress['total_modules'],
+                'cover_image' => \App\Support\CertificationCover::url($certification->thumbnail, (int) $certification->id),
+                'accent_color' => $certification->accent_color,
+                'theme' => ['pink', 'blue', 'green'][((int) $id - 1) % 3],
+            ],
+            \App\Support\CertificationBadge::meta($certification),
+        );
 
         return Inertia::render('Student/Shells/Show', [
             'certification' => StudentQuizPayload::certification($certification, $user->id, $this->contentStreamService),

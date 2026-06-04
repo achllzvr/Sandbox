@@ -1,5 +1,7 @@
 import { Link, router } from '@inertiajs/react';
+import { useState } from 'react';
 import AdminBadge from '@/Components/Admin/AdminBadge';
+import AdminConfirmModal from '@/Components/Admin/AdminConfirmModal';
 
 function IconPause() {
     return (
@@ -58,6 +60,7 @@ function isPendingTeacher(user) {
 }
 
 export default function AdminUserCard({ user, onReview, mode = 'management', processing = false }) {
+    const [pendingAction, setPendingAction] = useState(null);
     const initials = `${user.first_name?.charAt(0) || ''}${user.last_name?.charAt(0) || ''}`;
     const approvalsMode = mode === 'approvals';
     const canReview =
@@ -65,76 +68,105 @@ export default function AdminUserCard({ user, onReview, mode = 'management', pro
         (isPendingTeacher(user) || user.institutional_credentials_url);
     const canManage = user.role !== 'admin';
 
-    function confirmAction(type) {
-        const label = type === 'suspend' ? 'suspend' : 'archive';
-        if (!confirm(`${label} ${user.first_name} ${user.last_name}?`)) return;
-        router.put(route(`admin.users.${type}`, user.id), {}, { preserveScroll: true });
+    function runPendingAction() {
+        if (!pendingAction) {
+            return;
+        }
+
+        router.put(route(`admin.users.${pendingAction}`, user.id), {}, { preserveScroll: true });
+        setPendingAction(null);
     }
 
+    const actionCopy = pendingAction === 'suspend'
+        ? {
+              title: 'Suspend user',
+              body: `Suspend ${user.first_name} ${user.last_name}? They will lose access until reactivated.`,
+              confirmLabel: 'Suspend',
+              destructive: true,
+          }
+        : {
+              title: 'Archive user',
+              body: `Archive ${user.first_name} ${user.last_name}? This marks the account inactive.`,
+              confirmLabel: 'Archive',
+              destructive: true,
+          };
+
     return (
-        <article className="admin-user-card admin-card--chunky">
-            <div className="admin-user-card__main">
-                <span className="admin-user-card__avatar">{initials}</span>
-                <div className="admin-user-card__info">
-                    <p className="admin-user-card__name">
-                        {user.first_name} {user.last_name}
-                    </p>
-                    <p className="admin-user-card__email">{user.email}</p>
-                    {approvalsMode && user.affiliation && (
-                        <p className="admin-user-card__affiliation">{user.affiliation}</p>
-                    )}
-                    <div className="admin-user-card__badges">
-                        <AdminBadge type="role" value={user.role} />
-                        <AdminBadge value={user.status} />
+        <>
+            <article className="admin-user-card admin-card--chunky">
+                <div className="admin-user-card__main">
+                    <span className="admin-user-card__avatar">{initials}</span>
+                    <div className="admin-user-card__info">
+                        <p className="admin-user-card__name">
+                            {user.first_name} {user.last_name}
+                        </p>
+                        <p className="admin-user-card__email">{user.email}</p>
+                        {approvalsMode && user.affiliation && (
+                            <p className="admin-user-card__affiliation">{user.affiliation}</p>
+                        )}
+                        <div className="admin-user-card__badges">
+                            <AdminBadge type="role" value={user.role} />
+                            <AdminBadge value={user.status} />
+                        </div>
                     </div>
+                    <p className="admin-user-card__date">
+                        {user.verified_at
+                            ? `Verified ${new Date(user.verified_at).toLocaleDateString()}`
+                            : `Joined ${new Date(user.created_at).toLocaleDateString()}`}
+                    </p>
                 </div>
-                <p className="admin-user-card__date">
-                    {user.verified_at
-                        ? `Verified ${new Date(user.verified_at).toLocaleDateString()}`
-                        : `Joined ${new Date(user.created_at).toLocaleDateString()}`}
-                </p>
-            </div>
-            <div className="admin-user-card__actions">
-                {canReview && onReview && (
-                    <button
-                        type="button"
-                        className="admin-action-btn admin-action-btn--accent"
-                        onClick={() => onReview(user)}
-                    >
-                        <IconCheck />
-                        <span>{isPendingTeacher(user) ? 'Review' : 'View credentials'}</span>
-                    </button>
-                )}
-                {!approvalsMode && canManage && (
-                    <>
+                <div className="admin-user-card__actions">
+                    {canReview && onReview && (
                         <button
                             type="button"
-                            className="admin-action-btn admin-action-btn--warning"
-                            disabled={processing || user.status === 'inactive'}
-                            onClick={() => confirmAction('suspend')}
+                            className="admin-action-btn admin-action-btn--accent"
+                            onClick={() => onReview(user)}
                         >
-                            <IconPause />
-                            <span>Suspend</span>
+                            <IconCheck />
+                            <span>{isPendingTeacher(user) ? 'Review' : 'View credentials'}</span>
                         </button>
-                        <Link
-                            href={route('admin.users.show', user.id)}
-                            className="admin-action-btn admin-action-btn--info"
-                        >
-                            <IconEye />
-                            <span>View</span>
-                        </Link>
-                        <button
-                            type="button"
-                            className="admin-action-btn admin-action-btn--danger"
-                            disabled={processing}
-                            onClick={() => confirmAction('archive')}
-                        >
-                            <IconTrash />
-                            <span>Archive</span>
-                        </button>
-                    </>
-                )}
-            </div>
-        </article>
+                    )}
+                    {!approvalsMode && canManage && (
+                        <>
+                            <button
+                                type="button"
+                                className="admin-action-btn admin-action-btn--warning"
+                                disabled={processing || user.status === 'inactive'}
+                                onClick={() => setPendingAction('suspend')}
+                            >
+                                <IconPause />
+                                <span>Suspend</span>
+                            </button>
+                            <Link
+                                href={route('admin.users.show', user.id)}
+                                className="admin-action-btn admin-action-btn--info"
+                            >
+                                <IconEye />
+                                <span>View</span>
+                            </Link>
+                            <button
+                                type="button"
+                                className="admin-action-btn admin-action-btn--danger"
+                                disabled={processing}
+                                onClick={() => setPendingAction('archive')}
+                            >
+                                <IconTrash />
+                                <span>Archive</span>
+                            </button>
+                        </>
+                    )}
+                </div>
+            </article>
+
+            <AdminConfirmModal
+                show={!!pendingAction}
+                onClose={() => setPendingAction(null)}
+                title={actionCopy.title}
+                body={actionCopy.body}
+                confirmLabel={actionCopy.confirmLabel}
+                destructive={actionCopy.destructive}
+                onConfirm={runPendingAction}
+            />
+        </>
     );
 }

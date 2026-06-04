@@ -33,8 +33,19 @@ class UserManagementController extends Controller
                     default => null,
                 };
             }
-        } elseif ($request->filled('role')) {
-            $query->where('role', $request->role);
+        } else {
+            if ($request->filled('role')) {
+                $query->where('role', $request->role);
+            }
+
+            if ($request->filled('status')) {
+                match ($request->status) {
+                    'active' => $query->where('status', 'active')->where('is_active', true),
+                    'inactive' => $query->where('status', 'inactive')->where('is_active', true),
+                    'suspended' => $query->where('is_active', false),
+                    default => null,
+                };
+            }
         }
 
         if ($request->filled('search')) {
@@ -47,11 +58,26 @@ class UserManagementController extends Controller
             });
         }
 
-        $users = $query->latest()->paginate(10)->withQueryString();
+        $sort = $request->get('sort', 'newest');
+
+        match ($sort) {
+            'name_asc' => $query->orderBy('first_name')->orderBy('last_name'),
+            'name_desc' => $query->orderByDesc('first_name')->orderByDesc('last_name'),
+            'email_asc' => $query->orderBy('email'),
+            'email_desc' => $query->orderByDesc('email'),
+            'role_asc' => $query->orderBy('role'),
+            'role_desc' => $query->orderByDesc('role'),
+            'status_asc' => $query->orderBy('status'),
+            'status_desc' => $query->orderByDesc('status'),
+            'oldest' => $query->oldest(),
+            default => $query->latest(),
+        };
+
+        $users = $query->paginate(10)->withQueryString();
 
         return Inertia::render('Admin/Users/Index', [
             'users' => $users,
-            'filters' => $request->only(['role', 'search', 'tab', 'approval_status']),
+            'filters' => $request->only(['role', 'search', 'tab', 'approval_status', 'status', 'sort']),
             'pending_approvals_count' => User::where('role', 'teacher')
                 ->whereIn('status', ['pending_verification', 'pending'])
                 ->count(),

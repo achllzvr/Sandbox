@@ -284,7 +284,7 @@ export default function FinanceIndex({
                                 <span>Transaction ID</span>
                                 <span>Item sold</span>
                                 <span>Creator</span>
-                                <span>Gross</span>
+                                <span>Total paid</span>
                                 <span>Platform cut</span>
                                 <span>Creator cut</span>
                             </div>
@@ -304,7 +304,7 @@ export default function FinanceIndex({
                                             <span className="admin-finance-row__cell">
                                                 <span className="admin-finance-pill admin-finance-pill--info">{row.creator}</span>
                                             </span>
-                                            <span className="admin-finance-row__cell admin-finance-row__amount">{formatCurrency(row.gross_amount)}</span>
+                                            <span className="admin-finance-row__cell admin-finance-row__amount">{formatCurrency(row.total_paid ?? row.gross_amount)}</span>
                                             <span className="admin-finance-row__cell admin-finance-row__amount">{formatCurrency(row.platform_cut)}</span>
                                             <span className="admin-finance-row__cell admin-finance-row__amount">{formatCurrency(row.creator_cut)}</span>
                                         </article>

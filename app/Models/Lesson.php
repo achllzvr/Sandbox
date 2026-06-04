@@ -11,6 +11,7 @@ class Lesson extends Model
         'title',
         'description',
         'created_by_user_id',
+        'order_index',
     ];
 
     public function certification()
@@ -20,6 +21,6 @@ class Lesson extends Model
 
     public function modules()
     {
-        return $this->hasMany(Module::class)->orderBy('sequence');
+        return $this->hasMany(Module::class)->orderBy('order_index')->orderBy('sequence');
     }
 }

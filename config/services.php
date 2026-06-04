@@ -33,6 +33,13 @@ return [
 
     'gemini' => [
         'key' => env('GEMINI_API_KEY'),
+        'keys' => [
+            1 => env('GEMINI_API_KEY_1'),
+            2 => env('GEMINI_API_KEY_2'),
+            3 => env('GEMINI_API_KEY_3'),
+            4 => env('GEMINI_API_KEY_4'),
+            5 => env('GEMINI_API_KEY_5'),
+        ],
         'model' => env('GEMINI_MODEL'),
         'timeout' => (int) env('GEMINI_TIMEOUT', 45),
     ],

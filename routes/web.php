@@ -14,6 +14,7 @@ use App\Http\Controllers\Creator\CertificationController;
 use App\Http\Controllers\Creator\CreatorDashboardController;
 use App\Http\Controllers\Creator\GeminiController;
 use App\Http\Controllers\Creator\LearningMaterialController;
+use App\Http\Controllers\Creator\LessonController;
 use App\Http\Controllers\Creator\ModuleContentController;
 use App\Http\Controllers\Creator\ModuleController;
 use App\Http\Controllers\Creator\QuestionController;
@@ -124,6 +125,18 @@ Route::middleware(['auth', 'otp.verified', 'role:content_creator'])
 
         Route::post('certifications/{certification}/exam-questions', [CertificationController::class, 'storeExamQuestions'])
             ->name('certifications.exam-questions.store');
+
+        Route::post('certifications/{certification}/diagnostic-questions', [CertificationController::class, 'storeDiagnosticQuestions'])
+            ->name('certifications.diagnostic-questions.store');
+
+        Route::post('certifications/{certification}/lessons', [LessonController::class, 'store'])
+            ->name('lessons.store');
+        Route::put('lessons/{lesson}', [LessonController::class, 'update'])
+            ->name('lessons.update');
+        Route::post('certifications/{certification}/lessons/reorder', [LessonController::class, 'reorder'])
+            ->name('lessons.reorder');
+        Route::delete('lessons/{lesson}', [LessonController::class, 'destroy'])
+            ->name('lessons.destroy');
 
         Route::post('certifications/{certification}/materials/{material}/quiz-questions', [LearningMaterialController::class, 'storeQuizQuestions'])
             ->name('certifications.materials.quiz-questions.store');
@@ -263,8 +276,13 @@ Route::middleware(['auth', 'otp.verified', 'role:user'])
     });
 
 Route::middleware(['auth', 'otp.verified', 'role:user'])
-    ->get('/marketplace', [MarketplaceController::class, 'index'])
-    ->name('marketplace.index');
+    ->group(function () {
+        Route::get('/marketplace', [MarketplaceController::class, 'index'])->name('marketplace.index');
+        Route::get('/marketplace/{certification}/diagnostic', [MarketplaceController::class, 'diagnostic'])
+            ->name('marketplace.diagnostic');
+        Route::post('/marketplace/{certification}/diagnostic/grade', [MarketplaceController::class, 'gradeDiagnostic'])
+            ->name('marketplace.diagnostic.grade');
+    });
 
 /*
 |--------------------------------------------------------------------------
@@ -291,6 +309,7 @@ Route::middleware(['auth', 'otp.verified', 'role:teacher'])
         Route::get('/shells/{certification}/batches/{cohort}', [\App\Http\Controllers\Teacher\TeacherShellController::class, 'batch'])->name('shells.batch');
 
         Route::post('/vouchers/{voucher}/send-email', [\App\Http\Controllers\Teacher\VoucherController::class, 'sendEmail'])->name('vouchers.send-email');
+        Route::post('/vouchers/unlock-final-exams', [\App\Http\Controllers\Teacher\VoucherController::class, 'unlockFinalExams'])->name('vouchers.unlock-final-exams');
     });
 
 require __DIR__.'/auth.php';

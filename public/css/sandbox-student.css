@@ -3564,6 +3564,12 @@
     box-shadow: 0 4px 0 0 var(--shell-popup-bg-dark);
 }
 
+.student-shell-map__bubble--waiting {
+    background: #fff7ed;
+    border-color: #f59e0b;
+    box-shadow: 0 4px 0 0 #d97706;
+}
+
 .student-shell-map__bubble--locked {
     background: var(--shell-popup-locked-bg);
     border-color: var(--shell-popup-locked-border);
@@ -3584,6 +3590,10 @@
     color: #fff;
 }
 
+.student-shell-map__bubble--waiting .student-shell-map__bubble-title {
+    color: #92400e;
+}
+
 .student-shell-map__bubble--locked .student-shell-map__bubble-title {
     color: #a0aec0;
 }
@@ -3597,6 +3607,10 @@
 .student-shell-map__bubble--ready .student-shell-map__bubble-sub,
 .student-shell-map__bubble--done .student-shell-map__bubble-sub {
     color: rgba(255, 255, 255, 0.88);
+}
+
+.student-shell-map__bubble--waiting .student-shell-map__bubble-sub {
+    color: #b45309;
 }
 
 .student-shell-map__bubble--locked .student-shell-map__bubble-sub {

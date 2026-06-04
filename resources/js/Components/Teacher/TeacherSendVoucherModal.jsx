@@ -56,6 +56,12 @@ export default function TeacherSendVoucherModal({ voucher, view, onBack, onClose
                                 required
                             />
 
+                            {form.errors.email ? (
+                                <p className="teacher-send-voucher-modal__error" role="alert">
+                                    {form.errors.email}
+                                </p>
+                            ) : null}
+
                             <label className="student-shop-check">
                                 <input
                                     type="checkbox"

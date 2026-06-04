@@ -15,6 +15,9 @@ class Certification extends Model
         'estimated_duration',
         'thumbnail',
         'accent_color',
+        'badge_type',
+        'badge_label',
+        'show_verified_icon',
         'learning_objectives',
         'prerequisites',
         'tags',
@@ -35,6 +38,7 @@ class Certification extends Model
         'submitted_at' => 'datetime',
         'price' => 'decimal:2',
         'tags' => 'array',
+        'show_verified_icon' => 'boolean',
     ];
 
     protected $appends = [
@@ -78,9 +82,16 @@ class Certification extends Model
         return $this->hasMany(Question::class, 'certification_id')->where('question_type', 'final_exam');
     }
 
+    public function diagnosticQuestions()
+    {
+        return $this->hasMany(Question::class, 'certification_id')
+            ->where('question_type', 'diagnostic')
+            ->orderBy('order_index');
+    }
+
     public function lessons()
     {
-        return $this->hasMany(Lesson::class);
+        return $this->hasMany(Lesson::class)->orderBy('order_index');
     }
 
     public function knowledgeBase()

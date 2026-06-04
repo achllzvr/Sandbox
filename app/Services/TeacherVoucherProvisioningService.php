@@ -56,7 +56,7 @@ class TeacherVoucherProvisioningService
             'xendit_invoice_id' => $paymentAttributes['provider_invoice_id'] ?? $enrollmentRequest->xendit_invoice_id,
         ]);
 
-        Payment::create([
+        $payment = Payment::create([
             'enrollment_request_id' => $enrollmentRequest->id,
             'provider' => $paymentAttributes['provider'] ?? 'xendit',
             'provider_invoice_id' => $paymentAttributes['provider_invoice_id'] ?? null,
@@ -69,6 +69,8 @@ class TeacherVoucherProvisioningService
                 ? (is_string($paymentAttributes['raw_payload']) ? $paymentAttributes['raw_payload'] : json_encode($paymentAttributes['raw_payload']))
                 : null,
         ]);
+
+        app(CreatorEarningService::class)->recordForPayment($payment);
 
         $cohort = Cohort::create([
             'teacher_id' => $enrollmentRequest->user_id,

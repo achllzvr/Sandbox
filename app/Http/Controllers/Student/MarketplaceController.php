@@ -130,4 +130,75 @@ class MarketplaceController extends Controller
     {
         return addcslashes($value, '%_\\');
     }
+
+    public function diagnostic(Certification $certification)
+    {
+        if (! in_array($certification->status, ['approved', 'published'], true)) {
+            abort(404);
+        }
+
+        $certification->load(['diagnosticQuestions.answers']);
+
+        return response()->json([
+            'certification_id' => $certification->id,
+            'title' => $certification->title,
+            'questions' => $certification->diagnosticQuestions->map(fn ($question) => [
+                'id' => $question->id,
+                'question_text' => $question->question_text,
+                'answers' => $question->answers->map(fn ($answer) => [
+                    'id' => $answer->id,
+                    'answer_text' => $answer->answer_text,
+                ])->values(),
+            ])->values(),
+        ]);
+    }
+
+    public function gradeDiagnostic(Request $request, Certification $certification)
+    {
+        if (! in_array($certification->status, ['approved', 'published'], true)) {
+            abort(404);
+        }
+
+        $validated = $request->validate([
+            'answers' => ['required', 'array', 'min:1'],
+            'answers.*.question_id' => ['required', 'integer'],
+            'answers.*.answer_id' => ['required', 'integer'],
+        ]);
+
+        $questions = $certification->diagnosticQuestions()->with('answers')->get()->keyBy('id');
+        $total = $questions->count();
+        $correct = 0;
+        $breakdown = [];
+
+        foreach ($validated['answers'] as $entry) {
+            $question = $questions->get((int) $entry['question_id']);
+
+            if (! $question) {
+                continue;
+            }
+
+            $selected = $question->answers->firstWhere('id', (int) $entry['answer_id']);
+            $correctAnswer = $question->answers->firstWhere('is_correct', true);
+            $isCorrect = $selected && (bool) $selected->is_correct;
+
+            if ($isCorrect) {
+                $correct++;
+            }
+
+            $breakdown[] = [
+                'question_id' => $question->id,
+                'question_text' => $question->question_text,
+                'is_correct' => $isCorrect,
+                'selected_answer' => $selected?->answer_text,
+                'correct_answer' => $correctAnswer?->answer_text,
+            ];
+        }
+
+        return response()->json([
+            'score' => $correct,
+            'total' => $total,
+            'percentage' => $total > 0 ? round(($correct / $total) * 100) : 0,
+            'breakdown' => $breakdown,
+        ]);
+    }
 }

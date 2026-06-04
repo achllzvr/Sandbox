@@ -1,6 +1,6 @@
 import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { useState } from 'react';
-import { showAppToast } from '@/Utils/appToast';
+import StudentDiagnosticModal from '@/Components/Student/StudentDiagnosticModal';
 import { assetUrl } from '@/utils/assetUrl';
 import { resolveShopTheme } from '@/utils/shellThemes';
 import {
@@ -9,6 +9,7 @@ import {
     shopDifficultyLabel,
     shopDurationLabel,
     shopProviderLine,
+    shopShowVerifiedIcon,
 } from '@/utils/shopCatalog';
 
 const HERMYS_FALLBACK = 'images/Hermy.png';
@@ -17,7 +18,9 @@ export default function StudentShopShellPage({ cert, catalogIndex = 0, onBack, o
     const { className: theme, style: themeStyle } = resolveShopTheme(cert, catalogIndex);
     const provider = shopProviderLine(cert);
     const badgeLabel = shopBadgeLabel(cert);
+    const showVerifiedIcon = shopShowVerifiedIcon(cert);
     const [coverError, setCoverError] = useState(false);
+    const [diagnosticOpen, setDiagnosticOpen] = useState(false);
 
     const coverSrc = !coverError && (cert?.thumbnail_url ?? (cert?.thumbnail ? assetUrl(`storage/${cert.thumbnail}`) : null));
 
@@ -38,7 +41,7 @@ export default function StudentShopShellPage({ cert, catalogIndex = 0, onBack, o
             <section className="student-shop-shell-page__info" aria-labelledby="shop-shell-title">
                 <h1 id="shop-shell-title" className="student-shop-shell-page__title">
                     <span className="student-shop-shell-page__title-main">{cert.title.toUpperCase()}</span>
-                    <CheckCircle2 size={22} strokeWidth={2.5} aria-hidden="true" />
+                    {showVerifiedIcon ? <CheckCircle2 size={22} strokeWidth={2.5} aria-hidden="true" /> : null}
                     <span className="student-shop-shell-page__provider">
                         {provider.prefix} {provider.name}
                     </span>
@@ -65,7 +68,7 @@ export default function StudentShopShellPage({ cert, catalogIndex = 0, onBack, o
                 <button
                     type="button"
                     className="student-shop-shell-page__quick-test"
-                    onClick={() => showAppToast('info', 'Diagnostic pre-assessment coming soon.')}
+                    onClick={() => setDiagnosticOpen(true)}
                 >
                     Try a quick test
                 </button>
@@ -83,6 +86,13 @@ export default function StudentShopShellPage({ cert, catalogIndex = 0, onBack, o
                     </div>
                 </div>
             </div>
+
+            <StudentDiagnosticModal
+                show={diagnosticOpen}
+                onClose={() => setDiagnosticOpen(false)}
+                certificationId={cert.id}
+                certificationTitle={cert.title}
+            />
         </div>
     );
 }

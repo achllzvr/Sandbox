@@ -1,8 +1,8 @@
-// TODO: Replace mock chart data with live analytics from the backend.
+// Live analytics charts for the admin dashboard.
 
 const DEFAULT_COLORS = ['#cf7860', '#6b7fd4', '#8ecf9f', '#e0b078', '#a8bdd0', '#e09890'];
 
-export function AdminBarChart({ title, subtitle, labels, values, maxValue, colors = DEFAULT_COLORS }) {
+export function AdminBarChart({ title, subtitle, labels, values, maxValue, colors = DEFAULT_COLORS, isLive = true }) {
     const peak = maxValue || Math.max(...values, 1);
 
     return (
@@ -12,7 +12,7 @@ export function AdminBarChart({ title, subtitle, labels, values, maxValue, color
                     <h3>{title}</h3>
                     {subtitle && <p className="admin-chart__subtitle">{subtitle}</p>}
                 </div>
-                <span className="admin-todo-badge">TODO: live data</span>
+                {!isLive ? <span className="admin-todo-badge">TODO: live data</span> : null}
             </div>
             <div className="admin-card__body">
                 <div className="admin-bar-chart">
@@ -50,7 +50,7 @@ export function AdminBarChart({ title, subtitle, labels, values, maxValue, color
     );
 }
 
-export function AdminLineChart({ title, subtitle, labels, values, colors = DEFAULT_COLORS }) {
+export function AdminLineChart({ title, subtitle, labels, values, colors = DEFAULT_COLORS, isLive = true }) {
     const max = Math.max(...values, 1);
     const width = 320;
     const height = 120;
@@ -69,7 +69,7 @@ export function AdminLineChart({ title, subtitle, labels, values, colors = DEFAU
                     <h3>{title}</h3>
                     {subtitle && <p className="admin-chart__subtitle">{subtitle}</p>}
                 </div>
-                <span className="admin-todo-badge">TODO: live data</span>
+                {!isLive ? <span className="admin-todo-badge">TODO: live data</span> : null}
             </div>
             <div className="admin-card__body">
                 <svg

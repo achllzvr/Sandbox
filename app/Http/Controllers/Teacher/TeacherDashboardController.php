@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Teacher;
 use App\Http\Controllers\Controller;
 use App\Models\Cohort;
 use App\Models\Voucher;
+use App\Support\FormatAppDateTime;
 use Inertia\Inertia;
 
 class TeacherDashboardController extends Controller
@@ -40,7 +41,7 @@ class TeacherDashboardController extends Controller
                     'email' => $student->email ?? 'N/A',
                     'shell_title' => $voucher->certification->title ?? 'N/A',
                     'shell_accent' => $voucher->certification->accent_color ?? null,
-                    'claimed_at' => $voucher->used_at ? $voucher->used_at->format('M d, Y; g:ia') : 'N/A',
+                    'claimed_at' => FormatAppDateTime::format($voucher->used_at) ?? 'N/A',
                 ];
             });
 

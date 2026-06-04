@@ -1,5 +1,6 @@
 import { Head, router, useForm } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
+import AdminConfirmModal from '@/Components/Admin/AdminConfirmModal';
 import AdminModal from '@/Components/Admin/AdminModal';
 import AdminCertificationCard from '@/Components/Admin/AdminCertificationCard';
 import AdminTablePagination from '@/Components/Admin/AdminTablePagination';
@@ -22,6 +23,7 @@ export default function CertificationsIndex({ certifications, filters }) {
     const [search, setSearch] = useState(filters?.search || '');
     const [statusFilter, setStatusFilter] = useState(filters?.status || '');
     const [declineTarget, setDeclineTarget] = useState(null);
+    const [confirmAction, setConfirmAction] = useState(null);
     const declineForm = useForm({ status: 'denied', decline_reason: '' });
 
     // TODO[backend]: Approvals tab uses client-side filter; consider server tab=approvals query
@@ -69,8 +71,33 @@ export default function CertificationsIndex({ certifications, filters }) {
     }
 
     function handleAccept(cert) {
-        if (!confirm(`Publish "${cert.title}"?`)) return;
-        router.put(route('admin.certifications.status.update', cert.id), { status: 'published' });
+        setConfirmAction({ type: 'publish', cert });
+    }
+
+    function runConfirmAction() {
+        if (!confirmAction) {
+            return;
+        }
+
+        const { type, cert } = confirmAction;
+
+        if (type === 'publish') {
+            router.put(route('admin.certifications.status.update', cert.id), { status: 'published' });
+        } else if (type === 'archive') {
+            router.put(route('admin.certifications.archive', cert.id), {}, { preserveScroll: true });
+        } else if (type === 'restore') {
+            router.put(route('admin.certifications.restore', cert.id), {}, { preserveScroll: true });
+        }
+
+        setConfirmAction(null);
+    }
+
+    function handleArchive(cert) {
+        setConfirmAction({ type: 'archive', cert });
+    }
+
+    function handleRestore(cert) {
+        setConfirmAction({ type: 'restore', cert });
     }
 
     function handleDeclineSubmit(e) {
@@ -88,15 +115,26 @@ export default function CertificationsIndex({ certifications, filters }) {
         declineForm.setData({ status: 'denied', decline_reason: '' });
     }
 
-    function handleArchive(cert) {
-        if (!confirm(`Archive "${cert.title}"?`)) return;
-        router.put(route('admin.certifications.archive', cert.id), {}, { preserveScroll: true });
-    }
-
-    function handleRestore(cert) {
-        if (!confirm(`Restore "${cert.title}"?`)) return;
-        router.put(route('admin.certifications.restore', cert.id), {}, { preserveScroll: true });
-    }
+    const confirmCopy = confirmAction
+        ? {
+              publish: {
+                  title: 'Publish certification',
+                  body: `Publish "${confirmAction.cert.title}"? Students and teachers will be able to purchase or assign this shell.`,
+                  confirmLabel: 'Publish',
+              },
+              archive: {
+                  title: 'Archive certification',
+                  body: `Archive "${confirmAction.cert.title}"? This removes it from active shop listings.`,
+                  confirmLabel: 'Archive',
+                  destructive: true,
+              },
+              restore: {
+                  title: 'Restore certification',
+                  body: `Restore "${confirmAction.cert.title}" to its previous published state?`,
+                  confirmLabel: 'Restore',
+              },
+          }[confirmAction.type]
+        : null;
 
     const topbarTabs = (
         <div className="admin-page-tabs admin-page-tabs--topbar">
@@ -240,6 +278,16 @@ export default function CertificationsIndex({ certifications, filters }) {
                     </div>
                 </form>
             </AdminModal>
+
+            <AdminConfirmModal
+                show={!!confirmAction}
+                onClose={() => setConfirmAction(null)}
+                title={confirmCopy?.title}
+                body={confirmCopy?.body}
+                confirmLabel={confirmCopy?.confirmLabel}
+                destructive={confirmCopy?.destructive}
+                onConfirm={runConfirmAction}
+            />
 
         </AdminLayout>
     );

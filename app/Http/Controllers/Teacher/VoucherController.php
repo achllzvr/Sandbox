@@ -29,16 +29,51 @@ class VoucherController extends Controller
             return back()->withErrors(['email' => 'This voucher was already sent and cannot be resent.']);
         }
 
-        Mail::to($validated['email'])->send(new VoucherInvitationMail($record, $validated['email']));
+        try {
+            $record->update([
+                'recipient_email' => $validated['email'],
+                'sent_to_email_at' => now(),
+            ]);
 
-        $record->update([
-            'recipient_email' => $validated['email'],
-            'sent_to_email_at' => now(),
-        ]);
+            Mail::to($validated['email'])->send(new VoucherInvitationMail($record, $validated['email']));
+        } catch (\Throwable $e) {
+            $record->update([
+                'recipient_email' => null,
+                'sent_to_email_at' => null,
+            ]);
+
+            report($e);
+
+            return back()->withErrors(['email' => 'Could not send the voucher email. Please try again.']);
+        }
 
         return back()->with('voucher_email_sent', [
             'voucher_id' => $record->id,
             'email' => $validated['email'],
+        ]);
+    }
+
+    public function unlockFinalExams(Request $request)
+    {
+        $validated = $request->validate([
+            'voucher_ids' => ['required', 'array', 'min:1'],
+            'voucher_ids.*' => ['integer', 'exists:vouchers,id'],
+        ]);
+
+        $teacherId = $request->user()->id;
+
+        $vouchers = Voucher::where('teacher_id', $teacherId)
+            ->whereIn('id', $validated['voucher_ids'])
+            ->get();
+
+        if ($vouchers->isEmpty()) {
+            return back()->withErrors(['voucher_ids' => 'No valid vouchers were selected.']);
+        }
+
+        $count = app(\App\Services\FinalExamAccessService::class)->unlockForVouchers($vouchers);
+
+        return back()->with('voucher_exams_unlocked', [
+            'count' => $count,
         ]);
     }
 }

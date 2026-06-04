@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Support\FormatAppDateTime;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -115,10 +117,11 @@ class FinanceController extends Controller
 
             return [
                 'id' => $row->id,
-                'timestamp' => $timestamp ? (string) $timestamp : null,
+                'timestamp' => FormatAppDateTime::format($timestamp ? Carbon::parse($timestamp) : null),
                 'transaction_id' => $row->provider_invoice_id ?: ('PAY-'.$row->id),
                 'item_sold' => $row->item_sold,
                 'creator' => $creatorName,
+                'total_paid' => $gross,
                 'gross_amount' => $gross,
                 'platform_cut' => $platformCut,
                 'creator_cut' => $creatorCut,
@@ -170,7 +173,7 @@ class FinanceController extends Controller
 
             return [
                 'id' => $row->id,
-                'timestamp' => (string) ($row->requested_at ?? $row->created_at),
+                'timestamp' => FormatAppDateTime::format(Carbon::parse($row->requested_at ?? $row->created_at)),
                 'creator_name' => trim($row->first_name.' '.$row->last_name),
                 'requested_amount' => (float) $row->amount,
                 'payment_method' => 'GCash',
@@ -235,7 +238,7 @@ class FinanceController extends Controller
         return $rows->map(function ($row) use ($voucherCodes) {
             return [
                 'id' => $row->id,
-                'timestamp' => (string) ($row->paid_at ?? $row->created_at),
+                'timestamp' => FormatAppDateTime::format(Carbon::parse($row->paid_at ?? $row->created_at)),
                 'transaction_id' => $row->provider_invoice_id ?: ('PAY-'.$row->id),
                 'user_name' => trim($row->first_name.' '.$row->last_name),
                 'user_email' => $row->email,
