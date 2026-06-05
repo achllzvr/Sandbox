@@ -3,7 +3,7 @@ import AdminLayout from '@/Layouts/AdminLayout';
 import AdminModal from '@/Components/Admin/AdminModal';
 import AdminUserCard from '@/Components/Admin/AdminUserCard';
 import CreateUserFlow from '@/Components/Admin/CreateUserFlow';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 const APPROVAL_STATUS_OPTIONS = [
     { value: '', label: 'All approval statuses' },
@@ -29,52 +29,123 @@ const STATUS_OPTIONS = [
     { value: 'suspended', label: 'Suspended' },
 ];
 
-export default function UsersIndex({ users, filters, pending_approvals_count = 0 }) {
-    const [activeTab, setActiveTab] = useState(filters?.tab === 'approvals' ? 'approvals' : 'management');
+const EMPTY_USERS_PAGE = {
+    data: [],
+    links: [],
+    last_page: 1,
+};
+
+function normalizeFilters(rawFilters) {
+    if (!rawFilters || Array.isArray(rawFilters)) {
+        return {};
+    }
+
+    return rawFilters;
+}
+
+function usersIndexUrl() {
+    try {
+        return route('admin.users.index');
+    } catch {
+        return '/admin/users';
+    }
+}
+
+export default function UsersIndex({
+    users: usersProp,
+    filters: rawFilters,
+    pending_approvals_count = 0,
+}) {
+    const filters = useMemo(() => normalizeFilters(rawFilters), [rawFilters]);
+    const users = usersProp?.data ? usersProp : EMPTY_USERS_PAGE;
+    const userRows = users.data ?? [];
+    const paginationLinks = users.links ?? [];
+
+    const [activeTab, setActiveTab] = useState(() =>
+        filters.tab === 'approvals' ? 'approvals' : 'management'
+    );
     const [showCreateFlow, setShowCreateFlow] = useState(false);
     const [reviewUser, setReviewUser] = useState(null);
-    const [search, setSearch] = useState(filters?.search || '');
-    const [roleFilter, setRoleFilter] = useState(filters?.role || '');
-    const [approvalFilter, setApprovalFilter] = useState(filters?.approval_status || '');
-    const [statusFilter, setStatusFilter] = useState(filters?.status || '');
-    const [sortFilter, setSortFilter] = useState(filters?.sort || 'newest');
+    const [search, setSearch] = useState(() => filters.search || '');
+    const [roleFilter, setRoleFilter] = useState(() => filters.role || '');
+    const [approvalFilter, setApprovalFilter] = useState(() => filters.approval_status || '');
+    const [statusFilter, setStatusFilter] = useState(() => filters.status || '');
+    const [sortFilter, setSortFilter] = useState(() => filters.sort || 'newest');
     const [verifyProcessing, setVerifyProcessing] = useState(false);
+    const searchEditedRef = useRef(false);
 
-    useEffect(() => {
-        setActiveTab(filters?.tab === 'approvals' ? 'approvals' : 'management');
-    }, [filters?.tab]);
+    const filterStateRef = useRef({
+        roleFilter,
+        activeTab,
+        approvalFilter,
+        statusFilter,
+        sortFilter,
+    });
 
-    useEffect(() => {
-        setApprovalFilter(filters?.approval_status || '');
-    }, [filters?.approval_status]);
+    filterStateRef.current = {
+        roleFilter,
+        activeTab,
+        approvalFilter,
+        statusFilter,
+        sortFilter,
+    };
 
-    const applyFilters = useCallback(
+    const buildFilterQuery = useCallback(
         (nextSearch, nextRole, nextTab, nextApprovalStatus, nextStatus, nextSort) => {
             const tab = nextTab ?? activeTab;
-            router.get(
-                route('admin.users.index'),
-                {
-                    tab: tab === 'approvals' ? 'approvals' : undefined,
-                    search: nextSearch || undefined,
-                    role: tab === 'management' ? nextRole || undefined : undefined,
-                    approval_status: tab === 'approvals' ? nextApprovalStatus || undefined : undefined,
-                    status: tab === 'management' ? nextStatus || undefined : undefined,
-                    sort: nextSort || undefined,
-                },
-                { preserveState: true, replace: true }
-            );
+
+            return {
+                tab: tab === 'approvals' ? 'approvals' : undefined,
+                search: nextSearch || undefined,
+                role: tab === 'management' ? nextRole || undefined : undefined,
+                approval_status: tab === 'approvals' ? nextApprovalStatus || undefined : undefined,
+                status: tab === 'management' ? nextStatus || undefined : undefined,
+                sort: nextSort && nextSort !== 'newest' ? nextSort : undefined,
+            };
         },
         [activeTab]
     );
 
+    const applyFilters = useCallback(
+        (nextSearch, nextRole, nextTab, nextApprovalStatus, nextStatus, nextSort) => {
+            router.get(
+                usersIndexUrl(),
+                buildFilterQuery(nextSearch, nextRole, nextTab, nextApprovalStatus, nextStatus, nextSort),
+                {
+                    preserveState: true,
+                    preserveScroll: true,
+                }
+            );
+        },
+        [buildFilterQuery]
+    );
+
+    // Debounce search only after the user edits the field — never on initial mount.
     useEffect(() => {
-        const timer = setTimeout(() => {
-            if (search !== (filters?.search || '')) {
-                applyFilters(search, roleFilter, activeTab, approvalFilter, statusFilter, sortFilter);
-            }
+        if (!searchEditedRef.current) {
+            return undefined;
+        }
+
+        const serverSearch = filters.search || '';
+
+        if (search === serverSearch) {
+            return undefined;
+        }
+
+        const timer = window.setTimeout(() => {
+            const state = filterStateRef.current;
+            applyFilters(
+                search,
+                state.roleFilter,
+                state.activeTab,
+                state.approvalFilter,
+                state.statusFilter,
+                state.sortFilter
+            );
         }, 400);
-        return () => clearTimeout(timer);
-    }, [search, filters?.search, roleFilter, activeTab, approvalFilter, statusFilter, sortFilter, applyFilters]);
+
+        return () => window.clearTimeout(timer);
+    }, [search, filters.search, applyFilters]);
 
     function switchTab(tab) {
         setActiveTab(tab);
@@ -153,7 +224,6 @@ export default function UsersIndex({ users, filters, pending_approvals_count = 0
         <AdminLayout pageTitle="User Management" topbarEnd={topbarTabs}>
             <Head title="User Management" />
 
-            {/* Sub-toolbar: search wired to backend; Add user opens invite flow */}
             <div className="admin-subtoolbar">
                 <input
                     type="search"
@@ -163,7 +233,10 @@ export default function UsersIndex({ users, filters, pending_approvals_count = 0
                             : 'Search users...'
                     }
                     value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    onChange={(e) => {
+                        searchEditedRef.current = true;
+                        setSearch(e.target.value);
+                    }}
                     className="input-field admin-subtoolbar__search"
                     aria-label="Search users"
                 />
@@ -232,7 +305,7 @@ export default function UsersIndex({ users, filters, pending_approvals_count = 0
             </div>
 
             <div className="admin-user-list">
-                {users.data.length === 0 ? (
+                {userRows.length === 0 ? (
                     <div className="admin-card admin-card--chunky">
                         <p className="admin-empty" style={{ padding: '3rem' }}>
                             {activeTab === 'approvals'
@@ -241,7 +314,7 @@ export default function UsersIndex({ users, filters, pending_approvals_count = 0
                         </p>
                     </div>
                 ) : (
-                    users.data.map((u) => (
+                    userRows.map((u) => (
                         <AdminUserCard
                             key={u.id}
                             user={u}
@@ -252,9 +325,9 @@ export default function UsersIndex({ users, filters, pending_approvals_count = 0
                 )}
             </div>
 
-            {users.last_page > 1 && (
+            {(users.last_page ?? 1) > 1 && (
                 <nav className="admin-pagination">
-                    {users.links.map((link, i) => (
+                    {paginationLinks.map((link, i) => (
                         <Link
                             key={i}
                             href={link.url || '#'}
@@ -274,7 +347,6 @@ export default function UsersIndex({ users, filters, pending_approvals_count = 0
 
             <CreateUserFlow show={showCreateFlow} onClose={() => setShowCreateFlow(false)} />
 
-            {/* Teacher review modal — approve/decline wired; credential preview uses storage path */}
             <AdminModal
                 show={!!reviewUser}
                 onClose={() => setReviewUser(null)}
@@ -342,7 +414,6 @@ export default function UsersIndex({ users, filters, pending_approvals_count = 0
                     )}
                 </div>
             </AdminModal>
-
         </AdminLayout>
     );
 }

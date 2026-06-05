@@ -36,7 +36,7 @@ export default function AdminLayout({ children, pageTitle, topbarEnd }) {
 
 function AdminLayoutShell({ children, pageTitle, topbarEnd }) {
     const { auth } = usePage().props;
-    const user = auth.user;
+    const user = auth?.user;
     const { theme, highContrast } = useAdminTheme();
     const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
 
@@ -190,8 +190,8 @@ function AdminLayoutShell({ children, pageTitle, topbarEnd }) {
                                 className="admin-sidebar__user admin-sidebar__user-link admin-sidebar__user-link--icon-only"
                             >
                                 <span className="admin-sidebar__avatar">
-                                    {user.first_name?.charAt(0)}
-                                    {user.last_name?.charAt(0)}
+                                    {user?.first_name?.charAt(0)}
+                                    {user?.last_name?.charAt(0)}
                                 </span>
                             </AdminCollapsedSidebarItem>
                             <AdminCollapsedSidebarItem
@@ -216,14 +216,14 @@ function AdminLayoutShell({ children, pageTitle, topbarEnd }) {
                         <>
                             <Link href={route('profile.edit')} className="admin-sidebar__user admin-sidebar__user-link">
                                 <span className="admin-sidebar__avatar">
-                                    {user.first_name?.charAt(0)}
-                                    {user.last_name?.charAt(0)}
+                                    {user?.first_name?.charAt(0)}
+                                    {user?.last_name?.charAt(0)}
                                 </span>
                                 <div className="admin-sidebar__user-meta">
                                     <p className="admin-sidebar__user-name">
-                                        {user.first_name} {user.last_name}
+                                        {user?.first_name} {user?.last_name}
                                     </p>
-                                    <p className="admin-sidebar__user-email">{user.email}</p>
+                                    <p className="admin-sidebar__user-email">{user?.email}</p>
                                 </div>
                             </Link>
                             <Link

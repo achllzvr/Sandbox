@@ -20,7 +20,7 @@ class GeminiContentSynthesizer
     /**
      * @param  array<int, UploadedFile>  $uploadFiles
      */
-    public function buildFromUploads(array $uploadFiles, string $apiKey): string
+    public function buildFromUploads(array $uploadFiles, ?string $apiKey): string
     {
         $units = [];
 
@@ -48,7 +48,7 @@ class GeminiContentSynthesizer
     /**
      * @param  array<int, int>|null  $contentIds
      */
-    public function buildFromModuleContents(Module $module, User $creator, ?array $contentIds, string $apiKey): string
+    public function buildFromModuleContents(Module $module, User $creator, ?array $contentIds, ?string $apiKey): string
     {
         $units = $this->contentExtractor->extractUnitsForGemini($module, $creator, $contentIds);
 
@@ -58,7 +58,7 @@ class GeminiContentSynthesizer
     /**
      * @param  array<int, array{label: string, parts: array<int, array<string, mixed>>}>  $units
      */
-    private function synthesizeUnits(array $units, string $apiKey): string
+    private function synthesizeUnits(array $units, ?string $apiKey): string
     {
         if ($units === []) {
             throw new \InvalidArgumentException('No materials to process.');

@@ -3061,6 +3061,13 @@ a.admin-btn--block {
     }
 }
 
+@keyframes adminForceVisible {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 @keyframes adminBackdropIn {
     from {
         opacity: 0;
@@ -3081,7 +3088,8 @@ a.admin-btn--block {
 
 .admin-content--animated > * {
     opacity: 0;
-    animation: adminFadeInUp 0.55s var(--admin-ease-out) forwards;
+    animation: adminFadeInUp 0.55s var(--admin-ease-out) forwards,
+        adminForceVisible 0s 1.25s forwards;
 }
 
 .admin-content--animated > *:nth-child(1) { animation-delay: 0.1s; }
@@ -3102,7 +3110,8 @@ a.admin-btn--block {
 .admin-content--animated .admin-grid-2 > *,
 .admin-content--animated .admin-grid-3 > * {
     opacity: 0;
-    animation: adminFadeInUp 0.45s var(--admin-ease-out) forwards;
+    animation: adminFadeInUp 0.45s var(--admin-ease-out) forwards,
+        adminForceVisible 0s 1.1s forwards;
     animation-delay: 0.32s;
 }
 

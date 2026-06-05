@@ -77,7 +77,9 @@ class UserManagementController extends Controller
 
         return Inertia::render('Admin/Users/Index', [
             'users' => $users,
-            'filters' => $request->only(['role', 'search', 'tab', 'approval_status', 'status', 'sort']),
+            'filters' => json_decode(json_encode($request->only([
+                'role', 'search', 'tab', 'approval_status', 'status', 'sort',
+            ]) ?: new \stdClass())),
             'pending_approvals_count' => User::where('role', 'teacher')
                 ->whereIn('status', ['pending_verification', 'pending'])
                 ->count(),

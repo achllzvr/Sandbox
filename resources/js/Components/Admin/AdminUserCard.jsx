@@ -73,7 +73,12 @@ export default function AdminUserCard({ user, onReview, mode = 'management', pro
             return;
         }
 
-        router.put(route(`admin.users.${pendingAction}`, user.id), {}, { preserveScroll: true });
+        try {
+            router.put(route(`admin.users.${pendingAction}`, user.id), {}, { preserveScroll: true });
+        } catch {
+            return;
+        }
+
         setPendingAction(null);
     }
 
@@ -90,6 +95,14 @@ export default function AdminUserCard({ user, onReview, mode = 'management', pro
               confirmLabel: 'Archive',
               destructive: true,
           };
+
+    function resolveShowHref() {
+        try {
+            return route('admin.users.show', user.id);
+        } catch {
+            return `/admin/users/${user.id}`;
+        }
+    }
 
     return (
         <>
@@ -138,7 +151,7 @@ export default function AdminUserCard({ user, onReview, mode = 'management', pro
                                 <span>Suspend</span>
                             </button>
                             <Link
-                                href={route('admin.users.show', user.id)}
+                                href={resolveShowHref()}
                                 className="admin-action-btn admin-action-btn--info"
                             >
                                 <IconEye />

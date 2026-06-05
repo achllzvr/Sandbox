@@ -168,10 +168,73 @@ function ShowShellPage() {
     );
 
     useEffect(() => {
-        if (flash?.assessment_result) {
-            setAssessmentResult(flash.assessment_result);
+        const result = flash?.assessment_result;
+        if (!result) {
+            return;
         }
-    }, [flash?.assessment_result]);
+
+        setAssessmentResult(result);
+
+        if (result.type === 'exam') {
+            setIsTakingFinalExam(false);
+            setIsViewingQuiz(false);
+            setViewingModule(null);
+            setFlowKey('exam-results');
+            setIsViewingResults(true);
+            return;
+        }
+
+        if (!result.module_id) {
+            return;
+        }
+
+        const module = allModules.find((m) => m.id === result.module_id);
+        if (!module) {
+            return;
+        }
+
+        setViewingModule(module);
+        setIsViewingQuiz(false);
+        setFlowKey(`results-${module.id}`);
+        setIsViewingResults(true);
+    }, [flash?.assessment_result, allModules]);
+
+    useEffect(() => {
+        if (!viewingModule || isReviewMode || isViewingQuiz || isViewingResults || isViewingSummary) {
+            return;
+        }
+
+        const contents = viewingModule.contents || [];
+        const current = contents[contentIndex];
+        if (!current) {
+            return;
+        }
+
+        const previewKind = studentMaterialPreviewKind({
+            type: current.content_type,
+            file_url: current.file_url,
+            stream_url: current.stream_url,
+            file_extension: current.file_extension,
+        });
+
+        if (!previewKind) {
+            return;
+        }
+
+        const hasPages = studentMaterialHasPageNavigation(previewKind) && previewPageCount > 0;
+        if (hasPages && previewPage >= previewPageCount - 1) {
+            setContentFinished(true);
+        }
+    }, [
+        viewingModule,
+        contentIndex,
+        previewPage,
+        previewPageCount,
+        isReviewMode,
+        isViewingQuiz,
+        isViewingResults,
+        isViewingSummary,
+    ]);
 
     useEffect(() => {
         if (!isTakingFinalExam || !userId) {
@@ -235,6 +298,10 @@ function ShowShellPage() {
                     preserveState: true,
                     onFinish: () => {
                         reloadShellProgress();
+                        resolve();
+                    },
+                    onError: () => {
+                        showAppToastError('Could not save sandbox progress. Please try again.');
                         resolve();
                     },
                 });
@@ -532,11 +599,12 @@ function ShowShellPage() {
                 preserveState: true,
                 onSuccess: (page) => {
                     const result = page.props.flash?.assessment_result;
+                    const moduleId = viewingModule?.id ?? result?.module_id;
                     const moduleType = getModuleType(viewingModule);
                     setAssessmentResult(
                         result ?? {
                             type: moduleType,
-                            module_id: viewingModule.id,
+                            module_id: moduleId,
                             score,
                             total: questions.length,
                             answers: finalAnswersList,
@@ -544,7 +612,9 @@ function ShowShellPage() {
                     );
                     setIsViewingQuiz(false);
                     setUserAnswers([]);
-                    setFlowKey(`results-${viewingModule.id}`);
+                    if (moduleId) {
+                        setFlowKey(`results-${moduleId}`);
+                    }
                     setIsViewingResults(true);
                     reloadShellProgress();
                 },
@@ -716,10 +786,10 @@ function ShowShellPage() {
                     setFlowKey(`quiz-${viewingModule.id}`);
                     setIsViewingQuiz(true);
                 } else {
-                    markModuleComplete(viewingModule.id).then(() => {
-                        setFlowKey(`summary-${viewingModule.id}`);
-                        setIsViewingSummary(true);
-                    });
+                    const moduleId = viewingModule.id;
+                    setFlowKey(`summary-${moduleId}`);
+                    setIsViewingSummary(true);
+                    markModuleComplete(moduleId);
                 }
                 return;
             }

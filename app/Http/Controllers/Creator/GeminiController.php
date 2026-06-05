@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Module;
 use App\Services\Ai\GeminiClient;
 use App\Services\Ai\GeminiContentSynthesizer;
-use App\Services\Ai\GeminiKeyPool;
 use App\Services\Ai\GeminiQuestionNormalizer;
 use App\Services\Ai\GeminiUploadProcessor;
 use App\Support\UploadLimits;
@@ -171,8 +170,6 @@ class GeminiController extends Controller
      */
     private function buildStudyContext(Request $request, array $uploads, ?string $apiKey): string
     {
-        $effectiveKey = $apiKey ?? GeminiKeyPool::systemKeys()[0] ?? '';
-
         if ($request->input('source_mode') === 'module_contents') {
             $module = Module::findOrFail((int) $request->input('module_id'));
 
@@ -180,7 +177,7 @@ class GeminiController extends Controller
                 $module,
                 $request->user(),
                 $request->input('module_content_ids'),
-                $effectiveKey,
+                $apiKey,
             );
         }
 
@@ -188,6 +185,6 @@ class GeminiController extends Controller
             return $this->contentSynthesizer->buildFromText((string) $request->input('text_prompt'));
         }
 
-        return $this->contentSynthesizer->buildFromUploads($uploads, $effectiveKey);
+        return $this->contentSynthesizer->buildFromUploads($uploads, $apiKey);
     }
 }

@@ -96,7 +96,7 @@ class GeminiClient
 
         $timeoutSeconds = min($timeoutSeconds, (int) config('services.gemini.timeout', 45));
         $lastResponse = null;
-        $allKeysQuotaHit = count($apiKeys) > 1;
+        $keysWithQuotaHit = 0;
 
         foreach ($apiKeys as $keyIndex => $apiKey) {
             $quotaHitForKey = false;
@@ -127,8 +127,6 @@ class GeminiClient
                         continue;
                     }
 
-                    $allKeysQuotaHit = false;
-
                     if ($this->isModelNotFoundError($response, $errorMessage)) {
                         Log::warning("Gemini model {$model} is unavailable.");
 
@@ -149,17 +147,16 @@ class GeminiClient
                 } catch (\RuntimeException $e) {
                     throw $e;
                 } catch (\Throwable $e) {
-                    $allKeysQuotaHit = false;
                     Log::warning("Gemini model {$model} exception: ".$e->getMessage());
                 }
             }
 
-            if (! $quotaHitForKey) {
-                $allKeysQuotaHit = false;
+            if ($quotaHitForKey) {
+                $keysWithQuotaHit++;
             }
         }
 
-        if ($allKeysQuotaHit) {
+        if ($keysWithQuotaHit > 0 && $keysWithQuotaHit === count($apiKeys)) {
             $message = 'AI is temporarily unavailable — all API keys are rate-limited.';
             GeminiAvailability::markUnavailable($message);
 

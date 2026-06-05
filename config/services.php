@@ -33,12 +33,18 @@ return [
 
     'gemini' => [
         'key' => env('GEMINI_API_KEY'),
+        // Supports GEMINI_API_KEY_1 or GEMINI_API_KEY1 (without underscore before the index).
         'keys' => [
-            1 => env('GEMINI_API_KEY_1'),
-            2 => env('GEMINI_API_KEY_2'),
-            3 => env('GEMINI_API_KEY_3'),
-            4 => env('GEMINI_API_KEY_4'),
-            5 => env('GEMINI_API_KEY_5'),
+            1 => env('GEMINI_API_KEY_1') ?: env('GEMINI_API_KEY1'),
+            2 => env('GEMINI_API_KEY_2') ?: env('GEMINI_API_KEY2'),
+            3 => env('GEMINI_API_KEY_3') ?: env('GEMINI_API_KEY3'),
+            4 => env('GEMINI_API_KEY_4') ?: env('GEMINI_API_KEY4'),
+            5 => env('GEMINI_API_KEY_5') ?: env('GEMINI_API_KEY5'),
+            6 => env('GEMINI_API_KEY_6') ?: env('GEMINI_API_KEY6'),
+            7 => env('GEMINI_API_KEY_7') ?: env('GEMINI_API_KEY7'),
+            8 => env('GEMINI_API_KEY_8') ?: env('GEMINI_API_KEY8'),
+            9 => env('GEMINI_API_KEY_9') ?: env('GEMINI_API_KEY9'),
+            10 => env('GEMINI_API_KEY_10') ?: env('GEMINI_API_KEY10'),
         ],
         'model' => env('GEMINI_MODEL'),
         'timeout' => (int) env('GEMINI_TIMEOUT', 45),
